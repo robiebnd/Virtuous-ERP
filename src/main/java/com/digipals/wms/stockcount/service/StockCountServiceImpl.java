@@ -4,7 +4,11 @@ import com.digipals.wms.common.document.DocumentType;
 import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.mapper.StockCountMapper;
 import com.digipals.wms.inventory.entity.Inventory;
-import com.digipals.wms.inventory.repository.InventoryRepository;
+import com.digipals.wms.inventorybin.entity.InventoryBin;
+import com.digipals.wms.inventorybin.repository.InventoryBinRepository;
+
+
+
 import com.digipals.wms.stockadjustment.dto.StockAdjustmentResponse;
 import com.digipals.wms.stockadjustment.entity.StockAdjustment;
 import com.digipals.wms.stockadjustment.repository.StockAdjustmentRepository;
@@ -16,6 +20,7 @@ import com.digipals.wms.stockcount.entity.StockCountLine;
 import com.digipals.wms.stockcount.entity.StockCountStatus;
 import com.digipals.wms.stockcount.repository.StockCountLineRepository;
 import com.digipals.wms.stockcount.repository.StockCountRepository;
+import com.digipals.wms.stockcount.validation.StockCountValidator;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +41,13 @@ public class StockCountServiceImpl implements StockCountService {
         private final StockCountRepository repository;
         private final StockCountLineRepository lineRepository;
         private final WarehouseRepository warehouseRepository;
-        private final InventoryRepository inventoryRepository;
+      
+        private final InventoryBinRepository inventoryBinRepository;
         private final DocumentNumberService documentNumberService;
         private final StockAdjustmentService stockAdjustmentService;
         private final StockAdjustmentRepository stockAdjustmentRepository;
+        private final StockCountValidator stockCountValidator;
+
 
         @Override
         public StockCountResponse create(CreateStockCountRequest request) {
@@ -93,7 +101,8 @@ public class StockCountServiceImpl implements StockCountService {
                         throw new RuntimeException("Inventory can only be loaded for Draft Stock Counts.");
                 }
 
-                List<Inventory> inventories = inventoryRepository.findByWarehouseId(stockCount.getWarehouse().getId());
+               List<InventoryBin> inventories = inventoryBinRepository.findByWarehouseId(
+                stockCount.getWarehouse().getId());
 
                 if (inventories.isEmpty()) {
                         throw new RuntimeException("No inventory found for warehouse.");
@@ -101,10 +110,15 @@ public class StockCountServiceImpl implements StockCountService {
 
                 List<StockCountLine> linesToSave = new ArrayList<>();
 
-                for (Inventory inventory : inventories) {
-                        boolean exists = lineRepository.existsByStockCountIdAndProductId(
+                for (InventoryBin inventory : inventories) {
+                       /*  boolean exists = lineRepository.existsByStockCountIdAndProductId(
                                         stockCount.getId(),
-                                        inventory.getProduct().getId());
+                                        inventory.getProduct().getId());*/
+
+                boolean exists = lineRepository.existsByStockCountIdAndProductIdAndBinId(
+                stockCount.getId(),
+                inventory.getProduct().getId(),
+                inventory.getBin().getId());
 
                         if (exists) {
                                 continue;
@@ -113,6 +127,7 @@ public class StockCountServiceImpl implements StockCountService {
                         StockCountLine line = StockCountLine.builder()
                                         .stockCount(stockCount)
                                         .product(inventory.getProduct())
+                                        .bin(inventory.getBin())
                                         .systemQuantity(inventory.getQuantityOnHand())
                                         .countedQuantity(BigDecimal.ZERO)
                                         .variance(null)
@@ -169,7 +184,7 @@ public class StockCountServiceImpl implements StockCountService {
 
                 List<StockCountLine> updatedLines = lineRepository.saveAll(lines);
 
-
+                stockCountValidator.validateCanComplete(stockCount);
                 stockCount.setStatus(StockCountStatus.COUNT_COMPLETED);
                 stockCount.setCompletedAt(LocalDateTime.now());
               
@@ -180,34 +195,45 @@ public class StockCountServiceImpl implements StockCountService {
         }
 
         @Override
-        public StockCountResponse generateAdjustment(UUID id) {
-                StockCount stockCount = repository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Stock Count not found"));
+@Transactional
+public StockCountResponse generateAdjustment(UUID id) {
 
-                if (stockCount.getStatus() == StockCountStatus.ADJUSTMENT_CREATED) {
-                        throw new RuntimeException(
-                                        "A Stock Adjustment has already been generated for this Stock Count.");
-                }
+    StockCount stockCount =
+            repository.findById(id)
+                    .orElseThrow(() ->
+                            new RuntimeException("Stock Count not found"));
 
-                if (stockCount.getStatus() != StockCountStatus.COUNT_COMPLETED) {
-                        throw new RuntimeException("Only COMPLETED Stock Counts can generate Stock Adjustments.");
-                }
+    // Validate business rules
+    stockCountValidator.validateCanGenerateAdjustment(stockCount);
 
-                StockAdjustmentResponse adjustmentResponse = stockAdjustmentService.createFromStockCount(stockCount);
+    // Create Stock Adjustment
+    StockAdjustmentResponse adjustmentResponse =
+            stockAdjustmentService.createFromStockCount(stockCount);
 
-                StockAdjustment adjustment = stockAdjustmentRepository.findById(adjustmentResponse.getId())
-                                .orElseThrow(() -> new RuntimeException("Generated Stock Adjustment not found."));
+    StockAdjustment adjustment =
+            stockAdjustmentRepository.findById(adjustmentResponse.getId())
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Generated Stock Adjustment not found."));
 
-                stockCount.setStockAdjustment(adjustment);
-                stockCount.setStatus(StockCountStatus.ADJUSTMENT_CREATED);
+    // Link Stock Count to Adjustment
+    stockCount.setStockAdjustment(adjustment);
 
-                stockCount = repository.save(stockCount);
+    stockCount.setStatus(
+            StockCountStatus.ADJUSTMENT_CREATED);
 
-                // Fetch lines so the mapper can compute summary counts correctly
-                List<StockCountLine> lines = lineRepository.findByStockCountId(stockCount.getId());
+    stockCount =
+            repository.save(stockCount);
 
-                return StockCountMapper.toResponse(stockCount, lines);
-        }
+    // Reload lines for summary calculations
+    List<StockCountLine> lines =
+            lineRepository.findByStockCountId(
+                    stockCount.getId());
+
+    return StockCountMapper.toResponse(
+            stockCount,
+            lines);
+}
 
         @Override
         public void delete(UUID id) {

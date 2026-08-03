@@ -25,6 +25,20 @@ public enum TransactionType {
 
     SUPPLIER_RETURN,
 
-    WRITE_OFF
+    WRITE_OFF,
+    PUTAWAY,
+    PICK,
+
+    REPLENISHMENT_OUT,
+    REPLENISHMENT_IN,
+
+    ADJUSTMENT_IN,
+    ADJUSTMENT_OUT,
+
+    COUNT,
+
+    RETURN_IN,
+    RETURN_OUT
+
 
 }

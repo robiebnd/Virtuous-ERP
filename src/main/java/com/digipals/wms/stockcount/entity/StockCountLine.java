@@ -1,5 +1,7 @@
 package com.digipals.wms.stockcount.entity;
 
+import com.digipals.wms.bin.entity.Bin;
+
 import com.digipals.wms.products.Product;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +33,12 @@ public class StockCountLine {
             name = "product_id",
             nullable = false)
     private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(
+        name = "bin_id",
+        nullable = false)
+private Bin bin;
 
     @Column(nullable = false)
     private BigDecimal systemQuantity;

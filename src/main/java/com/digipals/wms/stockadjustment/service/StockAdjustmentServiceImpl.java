@@ -2,10 +2,15 @@ package com.digipals.wms.stockadjustment.service;
 
 import com.digipals.wms.common.mapper.StockAdjustmentMapper;
 import com.digipals.wms.inventory.entity.Inventory;
-import com.digipals.wms.inventory.repository.InventoryRepository;
 import com.digipals.wms.inventorytransaction.entity.InventoryTransaction;
 import com.digipals.wms.inventorytransaction.entity.TransactionType;
 import com.digipals.wms.inventorytransaction.repository.InventoryTransactionRepository;
+
+import com.digipals.wms.bin.entity.Bin;
+import com.digipals.wms.bin.repository.BinRepository;
+import com.digipals.wms.inventorybin.entity.InventoryBin;
+import com.digipals.wms.inventorybin.repository.InventoryBinRepository;
+
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.stockadjustment.dto.CreateStockAdjustmentRequest;
 import com.digipals.wms.stockadjustment.dto.StockAdjustmentResponse;
@@ -47,7 +52,9 @@ public class StockAdjustmentServiceImpl
 
         private final WarehouseRepository warehouseRepository;
 
-        private final InventoryRepository inventoryRepository;
+        private final InventoryBinRepository inventoryBinRepository;
+
+        private final BinRepository binRepository;
 
         private final InventoryTransactionRepository inventoryTransactionRepository;
 
@@ -59,103 +66,145 @@ public class StockAdjustmentServiceImpl
 
         private final CurrentUserService currentUserService;
 
-        @Override
-        public StockAdjustmentResponse create(
-                        CreateStockAdjustmentRequest request) {
 
-                Warehouse warehouse = warehouseRepository.findById(
-                                request.getWarehouseId())
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Warehouse not found"));
+        private InventoryBin getInventoryBin(
+        UUID warehouseId,
+        UUID binId,
+        UUID productId) {
 
-                if (!Boolean.TRUE.equals(
-                                warehouse.getActive())) {
+    return inventoryBinRepository
+            .findByWarehouseIdAndBinIdAndProductId(
+                    warehouseId,
+                    binId,
+                    productId)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Inventory not found for the selected Warehouse, Bin and Product."));
+}
 
-                        throw new RuntimeException(
-                                        "Warehouse is inactive.");
-                }
+private BigDecimal getQuantityOnHand(
+        InventoryBin inventoryBin) {
 
-                StockAdjustment adjustment = StockAdjustment.builder()
-                                .adjustmentNumber(
-                                                documentNumberService.next(
-                                                                DocumentType.STOCK_ADJUSTMENT))
-                                .warehouse(warehouse)
-                                .reason(request.getReason())
-                                .remarks(request.getRemarks())
-                                .status(
-                                                AdjustmentStatus.DRAFT)
-                                .build();
+    return inventoryBin.getQuantityOnHand() == null
+            ? BigDecimal.ZERO
+            : inventoryBin.getQuantityOnHand();
+}
 
-                adjustment = repository.save(
-                                adjustment);
+private InventoryTransaction buildTransaction(
+        InventoryBin inventoryBin,
+        TransactionType transactionType,
+        BigDecimal quantity,
+        BigDecimal balanceAfter,
+        String referenceNumber,
+        String referenceType,
+        String remarks) {
 
-                return StockAdjustmentMapper.toResponse(
-                                adjustment);
-        }
+    return InventoryTransaction.builder()
+            .inventoryBin(inventoryBin)
+            .transactionType(transactionType)
+            .quantity(quantity)
+            .balanceAfter(balanceAfter)
+            .referenceNumber(referenceNumber)
+            .referenceType(referenceType)
+            .performedBy(currentUserService.getCurrentUser())
+            .remarks(remarks)
+            .transactionDate(LocalDateTime.now())
+            .fromBin(inventoryBin.getBin())
+            .toBin(inventoryBin.getBin())
+            .build();
+}
 
-        @Override
-        @Transactional(readOnly = true)
-        public List<StockAdjustmentResponse> findAll() {
 
-                return repository.findAll()
-                                .stream()
-                                .map(StockAdjustmentMapper::toResponse)
-                                .toList();
-        }
+@Override
+public StockAdjustmentResponse create(
+        CreateStockAdjustmentRequest request) {
 
-        @Override
-        @Transactional(readOnly = true)
-        public StockAdjustmentResponse findById(
-                        UUID id) {
+    Warehouse warehouse = warehouseRepository.findById(
+            request.getWarehouseId())
+            .orElseThrow(() ->
+                    new RuntimeException("Warehouse not found."));
 
-                StockAdjustment adjustment = repository.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Stock Adjustment not found"));
+    if (!Boolean.TRUE.equals(warehouse.getActive())) {
+        throw new RuntimeException(
+                "Warehouse is inactive.");
+    }
 
-                return StockAdjustmentMapper.toResponse(
-                                adjustment);
-        }
+    StockAdjustment adjustment = StockAdjustment.builder()
+            .adjustmentNumber(
+                    documentNumberService.next(
+                            DocumentType.STOCK_ADJUSTMENT))
+            .warehouse(warehouse)
+            .reason(request.getReason())
+            .remarks(request.getRemarks())
+            .status(AdjustmentStatus.DRAFT)
+            .build();
 
-        @Override
-        public StockAdjustmentResponse approve(
-                        UUID id) {
+    adjustment = repository.save(adjustment);
 
-                StockAdjustment adjustment = repository.findById(id)
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Adjustment not found"));
-
-                if (adjustment.getStatus() != AdjustmentStatus.DRAFT) {
-
-                        throw new RuntimeException(
-                                        "Only Draft adjustments can be approved.");
-                }
-
-                List<StockAdjustmentLine> lines = lineRepository.findByStockAdjustmentId(
-                                adjustment.getId());
-
-                if (lines.isEmpty()) {
-
-                        throw new RuntimeException(
-                                        "Adjustment has no lines.");
-                }
-
-                adjustment.setStatus(
-                                AdjustmentStatus.APPROVED);
-
-                adjustment = repository.save(
-                                adjustment);
-
-                return StockAdjustmentMapper.toResponse(
-                                adjustment);
-        }
+    return StockAdjustmentMapper.toResponse(adjustment);
+}
 
       @Override
+@Transactional(readOnly = true)
+public List<StockAdjustmentResponse> findAll() {
+
+    return repository.findAll()
+            .stream()
+            .map(StockAdjustmentMapper::toResponse)
+            .toList();
+}
+
+        @Override
+@Transactional(readOnly = true)
+public StockAdjustmentResponse findById(UUID id) {
+
+    StockAdjustment adjustment = repository.findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Stock Adjustment not found."));
+
+    return StockAdjustmentMapper.toResponse(adjustment);
+}
+
+       @Override
+public StockAdjustmentResponse approve(UUID id) {
+
+    StockAdjustment adjustment = repository.findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Adjustment not found."));
+
+    if (adjustment.getStatus() != AdjustmentStatus.DRAFT) {
+        throw new RuntimeException(
+                "Only DRAFT adjustments can be approved.");
+    }
+
+    List<StockAdjustmentLine> lines =
+            lineRepository.findByStockAdjustmentId(
+                    adjustment.getId());
+
+    if (lines.isEmpty()) {
+        throw new RuntimeException(
+                "Adjustment has no lines.");
+    }
+
+    adjustment.setStatus(
+            AdjustmentStatus.APPROVED);
+
+    adjustment = repository.save(adjustment);
+
+    return StockAdjustmentMapper.toResponse(adjustment);
+}
+      
+
+
+@Override
 @Transactional
 public StockAdjustmentResponse post(UUID id) {
 
     StockAdjustment adjustment = repository.findById(id)
             .orElseThrow(() -> new RuntimeException(
-                    "Stock Adjustment not found"));
+                    "Stock Adjustment not found."));
 
     if (adjustment.getStatus() != AdjustmentStatus.APPROVED) {
 
@@ -175,69 +224,66 @@ public StockAdjustmentResponse post(UUID id) {
 
     for (StockAdjustmentLine line : lines) {
 
-        Inventory inventory = inventoryRepository
-                .findByWarehouseIdAndProductId(
+        InventoryBin inventory =
+                getInventoryBin(
                         adjustment.getWarehouse().getId(),
-                        line.getProduct().getId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Inventory not found for "
-                                + line.getProduct().getName()));
+                        line.getBin().getId(),
+                        line.getProduct().getId());
 
-        // Current stock before adjustment
-        BigDecimal oldQty = inventory.getQuantityOnHand();
+        BigDecimal oldQty =
+                getQuantityOnHand(inventory);
 
-        // Counted quantity
-        BigDecimal newQty = line.getCountedQuantity();
+        BigDecimal countedQty =
+                line.getCountedQuantity();
 
-        // Calculate variance
-        BigDecimal difference = newQty.subtract(oldQty);
+        BigDecimal difference =
+                countedQty.subtract(oldQty);
 
-        // Update inventory
-        inventory.setQuantityOnHand(newQty);
+        inventory.setQuantityOnHand(countedQty);
 
-        inventory = inventoryRepository.save(inventory);
+        inventory =
+                inventoryBinRepository.save(inventory);
 
-        // Record inventory transaction
-        InventoryTransaction transaction = InventoryTransaction.builder()
-                .inventory(inventory)
-                .transactionType(TransactionType.ADJUSTMENT)
-                .quantity(difference)
-                .balanceAfter(newQty)
-                .referenceNumber(adjustment.getAdjustmentNumber())
-                .referenceType("STOCK_ADJUSTMENT")
-                .transactionDate(LocalDateTime.now())
-                .performedBy(currentUserService.getCurrentUser())
-                .remarks("Stock Adjustment")
-                .build();
+        TransactionType transactionType =
+                difference.compareTo(BigDecimal.ZERO) >= 0
+                        ? TransactionType.ADJUSTMENT_IN
+                        : TransactionType.ADJUSTMENT_OUT;
+
+        InventoryTransaction transaction =
+                buildTransaction(
+                        inventory,
+                        transactionType,
+                        difference,
+                        countedQty,
+                        adjustment.getAdjustmentNumber(),
+                        "STOCK_ADJUSTMENT",
+                        "Stock Adjustment");
 
         inventoryTransactionRepository.save(transaction);
     }
 
-    // Mark adjustment as posted
     adjustment.setPostedAt(LocalDateTime.now());
     adjustment.setStatus(AdjustmentStatus.POSTED);
 
     adjustment = repository.save(adjustment);
 
-    // ---------------------------------------------------
-    // COMPLETE THE RELATED STOCK COUNT
-    // ---------------------------------------------------
+    Optional<StockCount> stockCount =
+            stockCountRepository.findByStockAdjustmentId(
+                    adjustment.getId());
 
-    Optional<StockCount> stockCountOptional =
-            stockCountRepository.findByStockAdjustmentId(adjustment.getId());
+    stockCount.ifPresent(count -> {
 
-    if (stockCountOptional.isPresent()) {
+        count.setStatus(
+                StockCountStatus.RECONCILED);
 
-        StockCount stockCount = stockCountOptional.get();
+        count.setCompletedAt(
+                LocalDateTime.now());
 
-        stockCount.setStatus(StockCountStatus.RECONCILED);
+        stockCountRepository.save(count);
+    });
 
-        stockCount.setCompletedAt(LocalDateTime.now());
-
-        stockCountRepository.save(stockCount);
-    }
-
-    return StockAdjustmentMapper.toResponse(adjustment);
+    return StockAdjustmentMapper.toResponse(
+            adjustment);
 }
         /*
          * @Override
@@ -352,16 +398,15 @@ public StockAdjustmentResponse post(UUID id) {
                         }
 
                         StockAdjustmentLine line = StockAdjustmentLine.builder()
-                                        .stockAdjustment(adjustment)
-                                        .product(countLine.getProduct())
-                                        .systemQuantity(countLine.getSystemQuantity())
-                                        .countedQuantity(countLine.getCountedQuantity())
-                                        .difference(countLine.getVariance())
-                                        .adjustmentQuantity(countLine.getVariance()) // Fixes the NOT-NULL database
-                                                                                     // constraint error
-                                        .reason(countLine.getReason())
-                                        .build();
-
+                                .stockAdjustment(adjustment)
+                                .product(countLine.getProduct())
+                                .bin(countLine.getBin())
+                                .systemQuantity(countLine.getSystemQuantity())
+                                .countedQuantity(countLine.getCountedQuantity())
+                                .difference(countLine.getVariance())
+                                .adjustmentQuantity(countLine.getVariance())
+                                .reason(countLine.getReason())
+                                .build();
                         linesToSave.add(line);
                 }
 

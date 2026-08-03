@@ -27,6 +27,12 @@ public final class StockAdjustmentLineMapper {
                 .productName(
                         line.getProduct().getName())
 
+                .binId(
+                        line.getBin().getId())
+
+                .binCode(
+                        line.getBin().getCode())
+
                 .systemQuantity(
                         line.getSystemQuantity())
 
@@ -36,7 +42,8 @@ public final class StockAdjustmentLineMapper {
                 .difference(
                         line.getDifference())
 
-                .adjustmentQuantity(line.getAdjustmentQuantity())
+                .adjustmentQuantity(
+                        line.getAdjustmentQuantity())
 
                 .build();
     }

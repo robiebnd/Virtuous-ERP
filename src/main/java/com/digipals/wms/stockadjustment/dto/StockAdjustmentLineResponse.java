@@ -16,6 +16,10 @@ public class StockAdjustmentLineResponse {
 
     private UUID adjustmentId;
 
+    private UUID binId;
+
+    private String binCode;
+
     private UUID productId;
 
     private String sku;

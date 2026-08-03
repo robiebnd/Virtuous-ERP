@@ -1,7 +1,8 @@
 package com.digipals.wms.inventorytransaction.entity;
 
+import com.digipals.wms.bin.entity.Bin;
 import com.digipals.wms.common.entity.BaseEntity;
-import com.digipals.wms.inventory.entity.Inventory;
+import com.digipals.wms.inventorybin.entity.InventoryBin;
 import com.digipals.wms.users.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,12 +20,18 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public class InventoryTransaction extends BaseEntity {
 
+    /**
+     * Inventory record affected by this transaction.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "inventory_id",
+            name = "inventory_bin_id",
             nullable = false)
-    private Inventory inventory;
+    private InventoryBin inventoryBin;
 
+    /**
+     * Type of inventory movement.
+     */
     @Enumerated(EnumType.STRING)
     @Column(
             name = "transaction_type",
@@ -32,12 +39,19 @@ public class InventoryTransaction extends BaseEntity {
             length = 50)
     private TransactionType transactionType;
 
+    /**
+     * Positive = stock in
+     * Negative = stock out
+     */
     @Column(
             nullable = false,
             precision = 18,
             scale = 2)
     private BigDecimal quantity;
 
+    /**
+     * Quantity remaining after the transaction.
+     */
     @Column(
             name = "balance_after",
             nullable = false,
@@ -45,28 +59,75 @@ public class InventoryTransaction extends BaseEntity {
             scale = 2)
     private BigDecimal balanceAfter;
 
+    /**
+     * Source document number.
+     * Example:
+     * BT000001
+     * SA000004
+     * ST000003
+     * GRN000012
+     */
     @Column(
             name = "reference_number",
             nullable = false,
             length = 50)
     private String referenceNumber;
 
+    /**
+     * BIN_TRANSFER
+     * STOCK_TRANSFER
+     * STOCK_ADJUSTMENT
+     * STOCK_COUNT
+     * GOODS_RECEIPT
+     */
     @Column(
             name = "reference_type",
             nullable = false,
             length = 50)
     private String referenceType;
 
+    /**
+     * Optional unit cost.
+     */
+    @Column(
+            name = "unit_cost",
+            precision = 18,
+            scale = 2)
     private BigDecimal unitCost;
 
+    /**
+     * User who performed the transaction.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "performed_by")
     private User performedBy;
 
+    /**
+     * Source Bin.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "from_bin_id")
+    private Bin fromBin;
+
+    /**
+     * Destination Bin.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "to_bin_id")
+    private Bin toBin;
+
+    /**
+     * Optional remarks.
+     */
     @Column(length = 500)
     private String remarks;
 
-    @Column(name = "transaction_date", nullable = false)
-    @Builder.Default  // <--- Tells Lombok's builder to use this default instead of null
-    private LocalDateTime transactionDate = LocalDateTime.now(); 
+    /**
+     * Transaction timestamp.
+     */
+    @Builder.Default
+    @Column(
+            name = "transaction_date",
+            nullable = false)
+    private LocalDateTime transactionDate = LocalDateTime.now();
 }

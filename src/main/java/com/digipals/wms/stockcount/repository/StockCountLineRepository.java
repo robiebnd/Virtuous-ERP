@@ -12,7 +12,8 @@ public interface StockCountLineRepository
     List<StockCountLine> findByStockCountId(
             UUID stockCountId);
 
-    boolean existsByStockCountIdAndProductId(
-            UUID stockCountId,
-            UUID productId);
+    boolean existsByStockCountIdAndProductIdAndBinId(
+        UUID stockCountId,
+        UUID productId,
+        UUID binId);
 }

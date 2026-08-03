@@ -13,6 +13,8 @@ public interface InventoryTransactionService {
 
             UUID warehouseId,
 
+            UUID binId,
+
             UUID productId,
 
             BigDecimal quantity,
@@ -26,6 +28,8 @@ public interface InventoryTransactionService {
     InventoryTransaction issueStock(
 
             UUID warehouseId,
+
+            UUID binId,
 
             UUID productId,
 
@@ -41,6 +45,8 @@ public interface InventoryTransactionService {
 
             UUID warehouseId,
 
+            UUID binId,
+
             UUID productId,
 
             BigDecimal quantity,
@@ -53,8 +59,23 @@ public interface InventoryTransactionService {
 
     List<InventoryTransaction> findAll();
 
-    List<InventoryTransaction> findByInventory(
-            UUID inventoryId);
+    /**
+     * Transaction history for a specific InventoryBin.
+     */
+    List<InventoryTransaction> findByInventoryBin(
+            UUID inventoryBinId);
+
+    /**
+     * Transactions involving a specific bin.
+     */
+    List<InventoryTransaction> findByBin(
+            UUID binId);
+
+    /**
+     * Transactions for a document reference.
+     */
+    List<InventoryTransaction> findByReferenceNumber(
+            String referenceNumber);
 
     InventoryTransaction findById(
             UUID id);

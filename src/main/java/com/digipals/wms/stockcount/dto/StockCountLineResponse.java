@@ -15,10 +15,14 @@ public class StockCountLineResponse {
     private UUID stockCountId;
 
     private UUID productId;
-   
+
     private String sku;
 
     private String productName;
+
+    private UUID binId;
+
+    private String binCode;
 
     private BigDecimal systemQuantity;
 
@@ -27,5 +31,4 @@ public class StockCountLineResponse {
     private BigDecimal variance;
 
     private String reason;
-
 }

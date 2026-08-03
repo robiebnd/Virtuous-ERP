@@ -16,6 +16,9 @@ public class CreateStockAdjustmentLineRequest {
     @NotNull(message = "Product is required")
     private UUID productId;
 
+    @NotNull(message = "BinId is required")
+    private UUID binId;
+
     @NotNull(message = "Counted quantity is required")
     @DecimalMin(value = "0.00")
     private BigDecimal countedQuantity;
