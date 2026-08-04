@@ -1,7 +1,6 @@
 package com.digipals.wms.common.mapper;
 
-
-import com.digipals.wms.inventory.entity.Inventory;
+import com.digipals.wms.inventorybin.entity.InventoryBin;
 import com.digipals.wms.inventorytransaction.dto.InventoryTransactionResponse;
 import com.digipals.wms.inventorytransaction.entity.InventoryTransaction;
 
@@ -17,46 +16,56 @@ public final class InventoryTransactionMapper {
             return null;
         }
 
-        Inventory inventory = transaction.getInventory();
+        InventoryBin inventoryBin = transaction.getInventoryBin();
 
         return InventoryTransactionResponse.builder()
 
                 .id(transaction.getId())
 
-                .inventoryId(
-                        inventory == null
+                .inventoryBinId(
+                        inventoryBin == null
                                 ? null
-                                : inventory.getId())
+                                : inventoryBin.getId())
 
                 .warehouseId(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getWarehouse().getId())
+                                : inventoryBin.getWarehouse().getId())
 
                 .warehouseCode(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getWarehouse().getCode())
+                                : inventoryBin.getWarehouse().getCode())
 
                 .warehouseName(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getWarehouse().getName())
+                                : inventoryBin.getWarehouse().getName())
+
+                .binId(
+                        inventoryBin == null
+                                ? null
+                                : inventoryBin.getBin().getId())
+
+                .binCode(
+                        inventoryBin == null
+                                ? null
+                                : inventoryBin.getBin().getCode())
 
                 .productId(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getProduct().getId())
+                                : inventoryBin.getProduct().getId())
 
                 .sku(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getProduct().getSku())
+                                : inventoryBin.getProduct().getSku())
 
                 .productName(
-                        inventory == null
+                        inventoryBin == null
                                 ? null
-                                : inventory.getProduct().getName())
+                                : inventoryBin.getProduct().getName())
 
                 .transactionType(
                         transaction.getTransactionType())
@@ -82,6 +91,26 @@ public final class InventoryTransactionMapper {
                         transaction.getPerformedBy() == null
                                 ? null
                                 : transaction.getPerformedBy().getUsername())
+
+                .fromBinId(
+                        transaction.getFromBin() == null
+                                ? null
+                                : transaction.getFromBin().getId())
+
+                .fromBinCode(
+                        transaction.getFromBin() == null
+                                ? null
+                                : transaction.getFromBin().getCode())
+
+                .toBinId(
+                        transaction.getToBin() == null
+                                ? null
+                                : transaction.getToBin().getId())
+
+                .toBinCode(
+                        transaction.getToBin() == null
+                                ? null
+                                : transaction.getToBin().getCode())
 
                 .remarks(
                         transaction.getRemarks())

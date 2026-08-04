@@ -50,4 +50,10 @@ public class User extends BaseEntity {
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     private Set<UserRole> userRoles = new HashSet<>();
+
+    public String getFullName() {
+    return (firstName == null ? "" : firstName)
+            + " "
+            + (lastName == null ? "" : lastName);
+}
 }

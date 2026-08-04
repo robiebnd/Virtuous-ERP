@@ -4,7 +4,6 @@ import com.digipals.wms.bin.entity.Bin;
 import com.digipals.wms.common.entity.BaseEntity;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
 import com.digipals.wms.products.Product;
-import com.digipals.wms.putaway.PutAwayLineStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -51,7 +50,4 @@ public class PutAwayLine extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private PutAwayLineStatus status;
-
-
-
 }

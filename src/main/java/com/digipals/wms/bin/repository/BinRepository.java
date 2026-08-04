@@ -19,4 +19,7 @@ public interface BinRepository
     boolean existsByWarehouseIdAndCode(
             UUID warehouseId,
             String code);
+
+    Optional<Bin> findByWarehouseIdAndReceivingBinTrue(UUID warehouseId);
+  
 }

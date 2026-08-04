@@ -64,6 +64,10 @@ public class StockTransfer extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "received_by")
     private User receivedBy;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "created_by")
+private User createdBy;
 
     @PrePersist
     protected void prePersist() {

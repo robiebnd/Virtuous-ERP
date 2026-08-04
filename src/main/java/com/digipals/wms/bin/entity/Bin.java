@@ -38,6 +38,11 @@ public class Bin extends BaseEntity {
         @Column(nullable = false)
         private BinType type;
 
+        @Column(nullable = false)
+        @Builder.Default
+        private Boolean receivingBin = false;
+
+
         @Column(precision = 18, scale = 2)
         @Builder.Default
         private BigDecimal capacity = BigDecimal.ZERO;

@@ -1,6 +1,8 @@
 package com.digipals.wms.goodsreceiving.service;
 
 
+import com.digipals.wms.bin.entity.Bin;
+import com.digipals.wms.bin.repository.BinRepository;
 import com.digipals.wms.common.document.DocumentType;
 import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
@@ -14,9 +16,6 @@ import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
 import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptLineRepository;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptRepository;
-import com.digipals.wms.inventory.repository.InventoryRepository;
-import com.digipals.wms.inventory.service.InventoryService;
-import com.digipals.wms.inventorytransaction.repository.InventoryTransactionRepository;
 import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
@@ -52,6 +51,7 @@ public class GoodsReceiptServiceImpl
 
     private final CurrentUserService currentUserService;
 
+    private final BinRepository binRepository;
 
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
 
@@ -59,6 +59,14 @@ public class GoodsReceiptServiceImpl
 
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
 
+    private Bin getReceivingBin(UUID warehouseId) {
+
+    return binRepository
+            .findByWarehouseIdAndReceivingBinTrue(warehouseId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Receiving Bin not configured."));
+}
 
 
         private GoodsReceipt getGoodsReceipt(UUID id) {
@@ -248,32 +256,32 @@ public GoodsReceiptResponse approve(UUID id) {
                 "Cannot approve a Goods Receipt without any receipt lines.");
     }
 
-    User currentUser =
-            currentUserService.getCurrentUser();
+   User currentUser =
+        currentUserService.getCurrentUser();
 
-    /*
-     * Process every receipt line
-     */
-    for (GoodsReceiptLine receiptLine : receiptLines) {
+Bin receivingBin =
+        getReceivingBin(
+                goodsReceipt.getWarehouse().getId());
 
-        /*
-         * 1. Update Inventory
-         */
-        inventoryService.receiveStock(
+for (GoodsReceiptLine receiptLine : receiptLines) {
 
-                goodsReceipt.getWarehouse(),
+    inventoryService.receiveStock(
 
-                receiptLine.getProduct(),
+            goodsReceipt.getWarehouse(),
 
-                receiptLine.getAcceptedQuantity(),
+            receivingBin,
 
-                goodsReceipt.getGrnNumber(),
+            receiptLine.getProduct(),
 
-                "GOODS_RECEIPT",
+            receiptLine.getAcceptedQuantity(),
 
-                receiptLine.getRemarks(),
+            goodsReceipt.getGrnNumber(),
 
-                currentUser);
+            "GOODS_RECEIPT",
+
+            receiptLine.getRemarks(),
+
+            currentUser);
 
         /*
          * 2. Update Purchase Order Line

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,209 +29,377 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class InventoryTransactionServiceImpl
-        implements InventoryTransactionService {
+                implements InventoryTransactionService {
 
-    private final InventoryTransactionRepository transactionRepository;
-    private final InventoryBinRepository inventoryBinRepository;
-    private final WarehouseRepository warehouseRepository;
-    private final ProductRepository productRepository;
-    private final BinRepository binRepository;
-    private final CurrentUserService currentUserService;
+        private final InventoryTransactionRepository transactionRepository;
 
-    private InventoryBin getInventoryBin(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId) {
+        private final InventoryBinRepository inventoryBinRepository;
 
-        return inventoryBinRepository
-                .findByWarehouseIdAndBinIdAndProductId(
-                        warehouseId,
-                        binId,
-                        productId)
-                .orElseGet(() -> {
+        private final WarehouseRepository warehouseRepository;
 
-                    Warehouse warehouse =
-                            warehouseRepository.findById(warehouseId)
-                                    .orElseThrow(() ->
-                                            new ResourceNotFoundException("Warehouse not found."));
+        private final ProductRepository productRepository;
 
-                    Bin bin =
-                            binRepository.findById(binId)
-                                    .orElseThrow(() ->
-                                            new ResourceNotFoundException("Bin not found."));
+        private final BinRepository binRepository;
 
-                    Product product =
-                            productRepository.findById(productId)
-                                    .orElseThrow(() ->
-                                            new ResourceNotFoundException("Product not found."));
+        private final CurrentUserService currentUserService;
 
-                    return inventoryBinRepository.save(
-                            InventoryBin.builder()
-                                    .warehouse(warehouse)
-                                    .bin(bin)
-                                    .product(product)
-                                    .quantityOnHand(BigDecimal.ZERO)
-                                    .quantityReserved(BigDecimal.ZERO)
-                                    .build());
-                });
-    }
+        private InventoryBin getInventoryBin(
+                        UUID warehouseId,
+                        UUID binId,
+                        UUID productId) {
 
-    @Override
-    public InventoryTransaction receiveStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            String referenceNumber,
-            String referenceType,
-            String remarks) {
+                return inventoryBinRepository
 
-        InventoryBin inventory = getInventoryBin(
-                warehouseId,
-                binId,
-                productId);
+                                .findByWarehouseIdAndBinIdAndProductId(
+                                                warehouseId,
+                                                binId,
+                                                productId)
 
-        inventory.setQuantityOnHand(
-                inventory.getQuantityOnHand().add(quantity));
+                                .orElseGet(() -> {
 
-        inventory = inventoryBinRepository.save(inventory);
+                                        Warehouse warehouse = warehouseRepository.findById(
+                                                        warehouseId)
 
-        User user = currentUserService.getCurrentUser();
+                                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                                        "Warehouse not found."));
 
-        return transactionRepository.save(
-                InventoryTransaction.builder()
-                        .inventoryBin(inventory)
-                        .transactionType(TransactionType.GOODS_RECEIPT)
-                        .quantity(quantity)
-                        .balanceAfter(inventory.getQuantityOnHand())
-                        .referenceNumber(referenceNumber)
-                        .referenceType(referenceType)
-                        .performedBy(user)
-                        .remarks(remarks)
-                        .transactionDate(LocalDateTime.now())
-                        .build());
-    }
+                                        Bin bin = binRepository.findById(
+                                                        binId)
 
-    @Override
-    public InventoryTransaction issueStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            String referenceNumber,
-            String referenceType,
-            String remarks) {
+                                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                                        "Bin not found."));
 
-        InventoryBin inventory = getInventoryBin(
-                warehouseId,
-                binId,
-                productId);
+                                        Product product = productRepository.findById(
+                                                        productId)
 
-        if (inventory.getQuantityOnHand().compareTo(quantity) < 0) {
-            throw new InsufficientStockException("Insufficient stock available.");
+                                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                                        "Product not found."));
+
+                                        return inventoryBinRepository.save(
+
+                                                        InventoryBin.builder()
+
+                                                                        .warehouse(warehouse)
+
+                                                                        .bin(bin)
+
+                                                                        .product(product)
+
+                                                                        .quantityOnHand(BigDecimal.ZERO)
+
+                                                                        .quantityReserved(BigDecimal.ZERO)
+
+                                                                        .build());
+                                });
         }
 
-        inventory.setQuantityOnHand(
-                inventory.getQuantityOnHand().subtract(quantity));
+        private InventoryTransaction createTransaction(
 
-        inventory = inventoryBinRepository.save(inventory);
+                        InventoryBin inventory,
 
-        User user = currentUserService.getCurrentUser();
+                        TransactionType transactionType,
 
-        return transactionRepository.save(
-                InventoryTransaction.builder()
-                        .inventoryBin(inventory)
-                        .transactionType(TransactionType.TRANSFER_OUT)
-                        .quantity(quantity.negate())
-                        .balanceAfter(inventory.getQuantityOnHand())
-                        .referenceNumber(referenceNumber)
-                        .referenceType(referenceType)
-                        .performedBy(user)
-                        .remarks(remarks)
-                        .transactionDate(LocalDateTime.now())
-                        .build());
-    }
+                        BigDecimal quantity,
 
-    @Override
-    public InventoryTransaction adjustStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            TransactionType transactionType,
-            String referenceNumber,
-            String remarks) {
+                        String referenceNumber,
 
-        InventoryBin inventory = getInventoryBin(
-                warehouseId,
-                binId,
-                productId);
+                        String referenceType,
 
-        BigDecimal newBalance =
-                inventory.getQuantityOnHand().add(quantity);
+                        String remarks,
 
-        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new InsufficientStockException(
-                    "Adjustment results in negative stock.");
+                        Bin fromBin,
+
+                        Bin toBin) {
+
+                User user = currentUserService.getCurrentUser();
+
+                InventoryTransaction transaction =
+
+                                InventoryTransaction.builder()
+
+                                                .inventoryBin(inventory)
+
+                                                .transactionType(transactionType)
+
+                                                .quantity(quantity)
+
+                                                .balanceAfter(
+                                                                inventory.getQuantityOnHand())
+
+                                                .referenceNumber(referenceNumber)
+
+                                                .referenceType(referenceType)
+
+                                                .performedBy(user)
+
+                                                .remarks(remarks)
+
+                                                .fromBin(fromBin)
+
+                                                .toBin(toBin)
+
+                                                .transactionDate(
+                                                                LocalDateTime.now())
+
+                                                .build();
+
+                return transactionRepository.save(transaction);
         }
 
-        inventory.setQuantityOnHand(newBalance);
+        private void validateStock(
 
-        inventory = inventoryBinRepository.save(inventory);
+                        InventoryBin inventory,
 
-        User user = currentUserService.getCurrentUser();
+                        BigDecimal quantity) {
 
-        return transactionRepository.save(
-                InventoryTransaction.builder()
-                        .inventoryBin(inventory)
-                        .transactionType(transactionType)
-                        .quantity(quantity)
-                        .balanceAfter(newBalance)
-                        .referenceNumber(referenceNumber)
-                        .referenceType(transactionType.name())
-                        .performedBy(user)
-                        .remarks(remarks)
-                        .transactionDate(LocalDateTime.now())
-                        .build());
-    }
+                if (inventory.getQuantityOnHand()
+                                .compareTo(quantity) < 0) {
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryTransaction> findAll() {
-        return transactionRepository.findAll();
-    }
+                        throw new InsufficientStockException(
+                                        "Insufficient stock available.");
+                }
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryTransaction> findByInventoryBin(
-            UUID inventoryBinId) {
+        private InventoryBin updateInventory(
 
-        return transactionRepository.findByInventoryBinId(inventoryBinId);
-    }
+                        InventoryBin inventory,
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryTransaction> findByBin(
-            UUID binId) {
+                        BigDecimal newBalance) {
 
-        return transactionRepository.findByFromBinId(binId);
-    }
+                inventory.setQuantityOnHand(newBalance);
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<InventoryTransaction> findByReferenceNumber(
-            String referenceNumber) {
+                return inventoryBinRepository.save(inventory);
+        }
 
-        return transactionRepository.findByReferenceNumber(referenceNumber);
-    }
+        @Override
+        public InventoryTransaction receiveStock(
+                        UUID warehouseId,
+                        UUID binId,
+                        UUID productId,
+                        BigDecimal quantity,
+                        String referenceNumber,
+                        String referenceType,
+                        String remarks) {
 
-    @Override
-    @Transactional(readOnly = true)
-    public InventoryTransaction findById(UUID id) {
+                InventoryBin inventory = getInventoryBin(
+                                warehouseId,
+                                binId,
+                                productId);
 
-        return transactionRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Inventory Transaction not found."));
-    }
+                BigDecimal newBalance = inventory.getQuantityOnHand()
+                                .add(quantity);
+
+                inventory = updateInventory(
+                                inventory,
+                                newBalance);
+
+                return createTransaction(
+
+                                inventory,
+
+                                TransactionType.GOODS_RECEIPT,
+
+                                quantity,
+
+                                referenceNumber,
+
+                                referenceType,
+
+                                remarks,
+
+                                null,
+
+                                inventory.getBin());
+        }
+
+        @Override
+        public InventoryTransaction issueStock(
+                        UUID warehouseId,
+                        UUID binId,
+                        UUID productId,
+                        BigDecimal quantity,
+                        String referenceNumber,
+                        String referenceType,
+                        String remarks) {
+
+                InventoryBin inventory = getInventoryBin(
+                                warehouseId,
+                                binId,
+                                productId);
+
+                validateStock(
+                                inventory,
+                                quantity);
+
+                BigDecimal newBalance = inventory.getQuantityOnHand()
+                                .subtract(quantity);
+
+                inventory = updateInventory(
+                                inventory,
+                                newBalance);
+
+                return createTransaction(
+
+                                inventory,
+
+                                TransactionType.TRANSFER_OUT,
+
+                                quantity.negate(),
+
+                                referenceNumber,
+
+                                referenceType,
+
+                                remarks,
+
+                                inventory.getBin(),
+
+                                null);
+        }
+
+        @Override
+        public InventoryTransaction adjustStock(
+                        UUID warehouseId,
+                        UUID binId,
+                        UUID productId,
+                        BigDecimal quantity,
+                        TransactionType transactionType,
+                        String referenceNumber,
+                        String remarks) {
+
+                InventoryBin inventory = getInventoryBin(
+                                warehouseId,
+                                binId,
+                                productId);
+
+                BigDecimal newBalance;
+
+                switch (transactionType) {
+
+                        case ADJUSTMENT_IN,
+                                        TRANSFER_IN,
+                                        GOODS_RECEIPT,
+                                        PURCHASE_RECEIPT,
+                                        CUSTOMER_RETURN,
+                                        RETURN_IN,
+                                        REPLENISHMENT_IN ->
+
+                                newBalance = inventory.getQuantityOnHand()
+                                                .add(quantity);
+
+                        case ADJUSTMENT_OUT,
+                                        TRANSFER_OUT,
+                                        SALE,
+                                        SUPPLIER_RETURN,
+                                        WRITE_OFF,
+                                        PICK,
+                                        RETURN_OUT,
+                                        REPLENISHMENT_OUT -> {
+
+                                validateStock(
+                                                inventory,
+                                                quantity);
+
+                                newBalance = inventory.getQuantityOnHand()
+                                                .subtract(quantity);
+                        }
+
+                        case ADJUSTMENT -> {
+
+                                newBalance = inventory.getQuantityOnHand()
+                                                .add(quantity);
+
+                                if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+
+                                        throw new InsufficientStockException(
+                                                        "Adjustment results in negative stock.");
+                                }
+                        }
+
+                        default ->
+                                throw new IllegalArgumentException(
+                                                "Unsupported transaction type.");
+                }
+
+                inventory = updateInventory(
+                                inventory,
+                                newBalance);
+
+                return createTransaction(
+
+                                inventory,
+
+                                transactionType,
+
+                                quantity,
+
+                                referenceNumber,
+
+                                transactionType.name(),
+
+                                remarks,
+
+                                null,
+
+                                inventory.getBin());
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<InventoryTransaction> findAll() {
+
+                return transactionRepository.findAll();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<InventoryTransaction> findByInventoryBin(
+                        UUID inventoryBinId) {
+
+                return transactionRepository.findByInventoryBinId(
+                                inventoryBinId);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<InventoryTransaction> findByBin(
+                        UUID binId) {
+
+                List<InventoryTransaction> transactions = new ArrayList<>();
+
+                transactions.addAll(
+                                transactionRepository.findByFromBinId(
+                                                binId));
+
+                transactionRepository.findByToBinId(
+                                binId)
+                                .stream()
+                                .filter(t -> !transactions.contains(t))
+                                .forEach(transactions::add);
+
+                return transactions;
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<InventoryTransaction> findByReferenceNumber(
+                        String referenceNumber) {
+
+                return transactionRepository.findByReferenceNumber(
+                                referenceNumber);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public InventoryTransaction findById(
+                        UUID id) {
+
+                return transactionRepository.findById(id)
+
+                                .orElseThrow(() ->
+
+                                new ResourceNotFoundException(
+                                                "Inventory Transaction not found."));
+        }
+
 }
