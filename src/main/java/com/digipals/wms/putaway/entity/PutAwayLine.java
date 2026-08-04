@@ -50,4 +50,7 @@ public class PutAwayLine extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private PutAwayLineStatus status;
+
+    @Column(length = 500)
+    private String remarks;
 }

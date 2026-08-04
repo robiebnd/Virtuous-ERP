@@ -3,39 +3,108 @@ package com.digipals.wms.common.mapper;
 import com.digipals.wms.inventorybin.dto.InventoryBinResponse;
 import com.digipals.wms.inventorybin.entity.InventoryBin;
 
-public class InventoryBinMapper {
+import java.math.BigDecimal;
+
+public final class InventoryBinMapper {
+
+    private InventoryBinMapper() {
+    }
 
     public static InventoryBinResponse toResponse(
-            InventoryBin entity) {
+            InventoryBin inventoryBin) {
 
-        if (entity == null) {
+        if (inventoryBin == null) {
             return null;
         }
 
+        BigDecimal available =
+                inventoryBin.getQuantityOnHand()
+                        .subtract(inventoryBin.getQuantityReserved());
+
         return InventoryBinResponse.builder()
 
-                .id(entity.getId())
+                /*
+                 * Identity
+                 */
+                .id(inventoryBin.getId())
 
-                .warehouseId(entity.getWarehouse().getId())
-                .warehouseCode(entity.getWarehouse().getCode())
-                .warehouseName(entity.getWarehouse().getName())
+                /*
+                 * Warehouse
+                 */
+                .warehouseId(
+                        inventoryBin.getWarehouse() != null
+                                ? inventoryBin.getWarehouse().getId()
+                                : null)
 
-                .binId(entity.getBin().getId())
-                .binCode(entity.getBin().getCode())
-                .binName(entity.getBin().getName())
-                .binType(entity.getBin().getType())
+                .warehouseCode(
+                        inventoryBin.getWarehouse() != null
+                                ? inventoryBin.getWarehouse().getCode()
+                                : null)
 
-                .productId(entity.getProduct().getId())
-                .sku(entity.getProduct().getSku())
-                .productName(entity.getProduct().getName())
+                .warehouseName(
+                        inventoryBin.getWarehouse() != null
+                                ? inventoryBin.getWarehouse().getName()
+                                : null)
 
-                .quantityOnHand(entity.getQuantityOnHand())
-                .quantityReserved(entity.getQuantityReserved())
+                /*
+                 * Bin
+                 */
+                .binId(
+                        inventoryBin.getBin() != null
+                                ? inventoryBin.getBin().getId()
+                                : null)
 
-                .active(entity.getActive())
+                .binCode(
+                        inventoryBin.getBin() != null
+                                ? inventoryBin.getBin().getCode()
+                                : null)
 
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
+                .binName(
+                        inventoryBin.getBin() != null
+                                ? inventoryBin.getBin().getName()
+                                : null)
+
+                /*
+                 * Product
+                 */
+                .productId(
+                        inventoryBin.getProduct() != null
+                                ? inventoryBin.getProduct().getId()
+                                : null)
+
+                .sku(
+                        inventoryBin.getProduct() != null
+                                ? inventoryBin.getProduct().getSku()
+                                : null)
+
+                .productName(
+                        inventoryBin.getProduct() != null
+                                ? inventoryBin.getProduct().getName()
+                                : null)
+
+                /*
+                 * Stock
+                 */
+                .quantityOnHand(
+                        inventoryBin.getQuantityOnHand())
+
+                .quantityReserved(
+                        inventoryBin.getQuantityReserved())
+
+                .quantityAvailable(
+                        available)
+
+                /*
+                 * Audit
+                 */
+                .active(
+                        inventoryBin.getActive())
+
+                .createdAt(
+                        inventoryBin.getCreatedAt())
+
+                .updatedAt(
+                        inventoryBin.getUpdatedAt())
 
                 .build();
     }

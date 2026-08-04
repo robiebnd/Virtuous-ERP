@@ -19,10 +19,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public class PutAway extends BaseEntity {
 
-    @Column(
-            name = "put_away_number",
-            nullable = false,
-            unique = true)
+    @Column(name = "put_away_number", nullable = false, unique = true)
     private String putAwayNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -51,4 +48,11 @@ public class PutAway extends BaseEntity {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_to")
+    private User assignedTo;
+
+    
+
 }

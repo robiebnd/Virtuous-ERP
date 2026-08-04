@@ -1,20 +1,20 @@
 package com.digipals.wms.putaway.dto;
 
-import com.digipals.wms.putaway.entity.PutAwayLineStatus;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PutAwayLineResponse {
 
     private UUID id;
-
-    private UUID putAwayId;
 
     private UUID goodsReceiptLineId;
 
@@ -28,23 +28,11 @@ public class PutAwayLineResponse {
 
     private String fromBinCode;
 
-    private String fromBinName;
-
     private UUID toBinId;
 
     private String toBinCode;
 
-    private String toBinName;
-
     private BigDecimal plannedQuantity;
 
     private BigDecimal completedQuantity;
-
-    private BigDecimal remainingQuantity;
-
-    private PutAwayLineStatus status;
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
 }

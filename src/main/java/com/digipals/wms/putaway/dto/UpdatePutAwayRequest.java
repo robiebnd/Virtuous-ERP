@@ -12,8 +12,6 @@ import java.util.UUID;
 @Builder
 public class UpdatePutAwayRequest {
 
-    @NotNull
-    private UUID warehouseId;
 
     private UUID assignedTo;
 

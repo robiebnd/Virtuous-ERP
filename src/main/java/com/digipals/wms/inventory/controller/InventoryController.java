@@ -1,8 +1,8 @@
 package com.digipals.wms.inventory.controller;
 
-import com.digipals.wms.common.mapper.InventoryMapper;
-import com.digipals.wms.inventory.dto.InventoryResponse;
-import com.digipals.wms.inventory.entity.Inventory;
+import com.digipals.wms.common.mapper.InventoryBinMapper;
+import com.digipals.wms.inventorybin.dto.InventoryBinResponse;
+import com.digipals.wms.inventorybin.entity.InventoryBin;
 import com.digipals.wms.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -20,58 +19,93 @@ public class InventoryController {
     private final InventoryService service;
 
     @PostMapping
-    public InventoryResponse create(
-            @RequestBody Inventory inventory) {
+    public InventoryBinResponse create(
+            @RequestBody InventoryBin inventoryBin) {
 
-        Inventory saved =
-                service.create(inventory);
-
-        return InventoryMapper.toResponse(saved);
+        return InventoryBinMapper.toResponse(
+                service.create(inventoryBin));
     }
 
     @GetMapping
-    public List<InventoryResponse> getAll() {
+    public List<InventoryBinResponse> findAll() {
 
         return service.findAll()
+
                 .stream()
-                .map(InventoryMapper::toResponse)
-                .collect(Collectors.toList());
+
+                .map(InventoryBinMapper::toResponse)
+
+                .toList();
     }
 
     @GetMapping("/{id}")
-    public InventoryResponse getById(
+    public InventoryBinResponse findById(
             @PathVariable UUID id) {
 
-        return InventoryMapper.toResponse(
+        return InventoryBinMapper.toResponse(
                 service.findById(id));
     }
 
     @GetMapping("/warehouse/{warehouseId}")
-    public List<InventoryResponse> getByWarehouse(
+    public List<InventoryBinResponse> findByWarehouse(
             @PathVariable UUID warehouseId) {
 
-        return service.findByWarehouse(warehouseId)
+        return service.findByWarehouse(
+                        warehouseId)
+
                 .stream()
-                .map(InventoryMapper::toResponse)
-                .collect(Collectors.toList());
+
+                .map(InventoryBinMapper::toResponse)
+
+                .toList();
     }
 
     @GetMapping("/product/{productId}")
-    public List<InventoryResponse> getByProduct(
+    public List<InventoryBinResponse> findByProduct(
             @PathVariable UUID productId) {
 
-        return service.findByProduct(productId)
+        return service.findByProduct(
+                        productId)
+
                 .stream()
-                .map(InventoryMapper::toResponse)
-                .collect(Collectors.toList());
+
+                .map(InventoryBinMapper::toResponse)
+
+                .toList();
     }
 
     @PutMapping("/{id}/adjust")
-    public InventoryResponse adjustStock(
+    public InventoryBinResponse adjustStock(
             @PathVariable UUID id,
             @RequestParam BigDecimal quantity) {
 
-        return InventoryMapper.toResponse(
-                service.adjustStock(id, quantity));
+        return InventoryBinMapper.toResponse(
+                service.adjustStock(
+                        id,
+                        quantity));
+    }
+
+    @GetMapping("/warehouse/{warehouseId}/bin/{binId}/product/{productId}")
+    public InventoryBinResponse getInventory(
+            @PathVariable UUID warehouseId,
+            @PathVariable UUID binId,
+            @PathVariable UUID productId) {
+
+        return InventoryBinMapper.toResponse(
+
+                service.getInventory(
+
+                        warehouseId,
+
+                        binId,
+
+                        productId));
+    }
+
+    @GetMapping("/{id}/available")
+    public BigDecimal availableStock(
+            @PathVariable UUID id) {
+
+        return service.availableStock(id);
     }
 }
