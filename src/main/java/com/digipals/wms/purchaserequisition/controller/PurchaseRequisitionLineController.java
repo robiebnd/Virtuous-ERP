@@ -12,76 +12,93 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/purchase-requisition-lines")
+@RequestMapping("/api/purchase-requisitions")
 @RequiredArgsConstructor
 public class PurchaseRequisitionLineController {
 
     private final PurchaseRequisitionLineService service;
 
+
     /**
-     * Create Purchase Requisition Line
+     * Create Purchase Requisition Line.
+     *
+     * POST
+     * /api/purchase-requisitions/{requisitionId}/lines
      */
-    @PostMapping
+    @PostMapping("/{requisitionId}/lines")
     public PurchaseRequisitionLineResponse create(
+            @PathVariable UUID requisitionId,
             @Valid
             @RequestBody
             CreatePurchaseRequisitionLineRequest request) {
 
-        return service.create(request);
+        return service.create(
+                requisitionId,
+                request);
     }
 
-    /**
-     * Get All Purchase Requisition Lines
-     */
-    @GetMapping
-    public List<PurchaseRequisitionLineResponse> findAll() {
 
-        return service.findAll();
+    /**
+     * Get all lines for a Purchase Requisition.
+     *
+     * GET
+     * /api/purchase-requisitions/{requisitionId}/lines
+     */
+    @GetMapping("/{requisitionId}/lines")
+    public List<PurchaseRequisitionLineResponse>
+    findByPurchaseRequisition(
+            @PathVariable UUID requisitionId) {
+
+        return service.findByPurchaseRequisition(
+                requisitionId);
     }
 
+
     /**
-     * Get Purchase Requisition Line By Id
+     * Get Purchase Requisition Line by ID.
+     *
+     * GET
+     * /api/purchase-requisitions/lines/{id}
      */
-    @GetMapping("/{id}")
+    @GetMapping("/lines/{id}")
     public PurchaseRequisitionLineResponse findById(
             @PathVariable UUID id) {
 
-        return service.findById(id);
+        return service.findById(
+                id);
     }
 
-    /**
-     * Get Lines For Purchase Requisition
-     */
-    @GetMapping("/purchase-requisition/{purchaseRequisitionId}")
-    public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
-            @PathVariable UUID purchaseRequisitionId) {
-
-        return service.findByPurchaseRequisition(
-                purchaseRequisitionId);
-    }
 
     /**
-     * Update Purchase Requisition Line
+     * Update Purchase Requisition Line.
+     *
+     * PUT
+     * /api/purchase-requisitions/lines/{id}
      */
-    @PutMapping("/{id}")
+    @PutMapping("/lines/{id}")
     public PurchaseRequisitionLineResponse update(
             @PathVariable UUID id,
             @Valid
             @RequestBody
             UpdatePurchaseRequisitionLineRequest request) {
 
-        return service.update(id, request);
+        return service.update(
+                id,
+                request);
     }
 
 
-
     /**
-     * Delete Purchase Requisition Line
+     * Delete Purchase Requisition Line.
+     *
+     * DELETE
+     * /api/purchase-requisitions/lines/{id}
      */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/lines/{id}")
     public void delete(
             @PathVariable UUID id) {
 
-        service.delete(id);
+        service.delete(
+                id);
     }
 }

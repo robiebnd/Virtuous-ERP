@@ -63,54 +63,82 @@ public class PurchaseRequisitionLineServiceImpl
 
     @Override
     public PurchaseRequisitionLineResponse create(
+            UUID purchaseRequisitionId,
             CreatePurchaseRequisitionLineRequest request) {
 
-        PurchaseRequisition requisition =
-                getPurchaseRequisition(
-                        request.getPurchaseRequisitionId());
+    /*
+     * 1. Get the Purchase Requisition
+     *
+     * The requisition ID now comes from the URL:
+     *
+     * /api/purchase-requisitions/{requisitionId}/lines
+     */
+    PurchaseRequisition requisition =
+            getPurchaseRequisition(
+                    purchaseRequisitionId);
 
-        validator.validateDraft(
-                requisition);
+    /*
+     * 2. Only DRAFT requisitions can
+     *    have new lines added.
+     */
+    validator.validateDraft(
+            requisition);
 
-        Product product =
-                getProduct(
-                        request.getProductId());
+    /*
+     * 3. Get the Product.
+     */
+    Product product =
+            getProduct(
+                    request.getProductId());
 
-        if (repository.existsByPurchaseRequisitionIdAndProductId(
-                requisition.getId(),
-                product.getId())) {
+    /*
+     * 4. Prevent duplicate products
+     *    on the same requisition.
+     */
+    if (repository.existsByPurchaseRequisitionIdAndProductId(
+            requisition.getId(),
+            product.getId())) {
 
-            throw new RuntimeException(
-                    "Product already exists on this Purchase Requisition.");
-        }
-
-        PurchaseRequisitionLine line =
-        PurchaseRequisitionLine.builder()
-
-                .purchaseRequisition(
-                        requisition)
-
-                .product(
-                        product)
-
-                .quantity(
-                        request.getQuantity())
-
-                .estimatedUnitCost(
-                        request.getEstimatedUnitCost())
-
-                .remarks(
-                        request.getRemarks())
-
-                .build();
-
-        line =
-                repository.save(
-                        line);
-
-        return PurchaseRequisitionLineMapper.toResponse(
-                line);
+        throw new RuntimeException(
+                "Product already exists on this Purchase Requisition.");
     }
+
+    /*
+     * 5. Create the requisition line.
+     */
+    PurchaseRequisitionLine line =
+            PurchaseRequisitionLine.builder()
+
+                    .purchaseRequisition(
+                            requisition)
+
+                    .product(
+                            product)
+
+                    .quantity(
+                            request.getQuantity())
+
+                    .estimatedUnitCost(
+                            request.getEstimatedUnitCost())
+
+                    .remarks(
+                            request.getRemarks())
+
+                    .build();
+
+    /*
+     * 6. Save.
+     */
+    line =
+            repository.save(line);
+
+    /*
+     * 7. Return response.
+     */
+    return PurchaseRequisitionLineMapper.toResponse(
+            line);
+}
+
 
     @Override
     public PurchaseRequisitionLineResponse update(

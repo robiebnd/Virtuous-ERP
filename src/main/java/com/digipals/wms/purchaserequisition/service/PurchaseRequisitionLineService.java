@@ -10,7 +10,8 @@ import java.util.UUID;
 public interface PurchaseRequisitionLineService {
 
     PurchaseRequisitionLineResponse create(
-        CreatePurchaseRequisitionLineRequest request);
+            UUID purchaseRequisitionId,
+            CreatePurchaseRequisitionLineRequest request);
 
     PurchaseRequisitionLineResponse update(
             UUID id,
