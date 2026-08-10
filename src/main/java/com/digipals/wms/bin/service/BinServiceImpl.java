@@ -3,6 +3,7 @@ package com.digipals.wms.bin.service;
 import com.digipals.wms.bin.dto.BinResponse;
 import com.digipals.wms.bin.dto.CreateBinRequest;
 import com.digipals.wms.bin.entity.Bin;
+import com.digipals.wms.bin.entity.BinType;
 import com.digipals.wms.bin.repository.BinRepository;
 import com.digipals.wms.common.mapper.BinMapper;
 import com.digipals.wms.warehouse.entity.Warehouse;
@@ -29,19 +30,31 @@ public class BinServiceImpl implements BinService {
         Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Warehouse not found."));
 
+        String code = request.getCode().trim().toUpperCase();
+
         if (repository.existsByWarehouseIdAndCode(
                 warehouse.getId(),
-                request.getCode())) {
+                code)) {
 
             throw new RuntimeException(
                     "Bin code already exists in this warehouse.");
         }
 
+        boolean receivingBin = request.getType() == BinType.RECEIVING;
+
+        if (receivingBin
+                && repository.findByWarehouseIdAndReceivingBinTrue(warehouse.getId()).isPresent()) {
+
+            throw new RuntimeException(
+                    "A Receiving Bin is already configured for this warehouse.");
+        }
+
         Bin bin = Bin.builder()
                 .warehouse(warehouse)
-                .code(request.getCode().trim().toUpperCase())
+                .code(code)
                 .name(request.getName().trim())
                 .type(request.getType())
+                .receivingBin(receivingBin)
                 .capacity(request.getCapacity() == null
                         ? BigDecimal.ZERO
                         : request.getCapacity())
