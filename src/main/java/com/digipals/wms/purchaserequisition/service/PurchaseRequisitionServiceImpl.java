@@ -118,6 +118,9 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         PurchaseRequisition requisition = getRequisition(id);
         validator.validateDraft(requisition);
 
+        Supplier supplier = getSupplier(request.getSupplierId());
+
+        requisition.setSupplier(supplier);
         requisition.setDepartment(request.getDepartment().trim());
         requisition.setRemarks(request.getRemarks());
 
@@ -136,6 +139,10 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         PurchaseRequisition requisition = getRequisition(id);
         validator.validateDraft(requisition);
         validateHasLines(requisition);
+
+        if (requisition.getSupplier() == null) {
+            throw new IllegalStateException("Purchase Requisition supplier is required before submission.");
+        }
 
         requisition.setStatus(PurchaseRequisitionStatus.SUBMITTED);
         requisition.setSubmittedAt(LocalDateTime.now());
