@@ -16,24 +16,17 @@ public class CreateGoodsReceiptLineRequest {
     @NotNull(message = "Purchase Order Line is required")
     private UUID purchaseOrderLineId;
 
-    @NotNull(message = "Product is required")
-    private UUID productId;
-
     @NotNull(message = "Received quantity is required")
-    @DecimalMin(value = "0.01")
+    @DecimalMin(value = "0.00", message = "Received quantity cannot be negative")
     private BigDecimal receivedQuantity;
 
     @NotNull(message = "Accepted quantity is required")
-    @DecimalMin(value = "0.00")
+    @DecimalMin(value = "0.00", message = "Accepted quantity cannot be negative")
     private BigDecimal acceptedQuantity;
 
     @NotNull(message = "Rejected quantity is required")
-    @DecimalMin(value = "0.00")
+    @DecimalMin(value = "0.00", message = "Rejected quantity cannot be negative")
     private BigDecimal rejectedQuantity;
-
-    @NotNull(message = "Unit cost is required")
-    @DecimalMin(value = "0.00")
-    private BigDecimal unitCost;
 
     private String remarks;
 }

@@ -11,9 +11,6 @@ public class CreateGoodsReceiptRequest {
     @NotNull(message = "Purchase Order is required")
     private UUID purchaseOrderId;
 
-    @NotNull(message = "Warehouse is required")
-    private UUID warehouseId;
-
     private String supplierDeliveryNote;
 
     private String remarks;

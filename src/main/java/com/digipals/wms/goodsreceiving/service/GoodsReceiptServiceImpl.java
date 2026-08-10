@@ -1,6 +1,5 @@
 package com.digipals.wms.goodsreceiving.service;
 
-
 import com.digipals.wms.bin.entity.Bin;
 import com.digipals.wms.bin.repository.BinRepository;
 import com.digipals.wms.common.document.DocumentType;
@@ -20,12 +19,10 @@ import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
-import com.digipals.wms.purchaseorders.repository.PurchaseOrderRepository;
 import com.digipals.wms.purchaseorders.repository.PurchaseOrderLineRepository;
+import com.digipals.wms.purchaseorders.repository.PurchaseOrderRepository;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.users.entity.User;
-import com.digipals.wms.warehouse.entity.Warehouse;
-import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,442 +35,305 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class GoodsReceiptServiceImpl
-        implements GoodsReceiptService {
+public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     private final GoodsReceiptRepository repository;
-
     private final PurchaseOrderRepository purchaseOrderRepository;
-
-    private final WarehouseRepository warehouseRepository;
-
     private final DocumentNumberService documentNumberService;
-
     private final CurrentUserService currentUserService;
-
     private final BinRepository binRepository;
-
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
-
     private final InventoryService inventoryService;
-
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
 
-    private Bin getReceivingBin(UUID warehouseId) {
-
-    return binRepository
-            .findByWarehouseIdAndReceivingBinTrue(warehouseId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Receiving Bin not configured."));
-}
-
-
-        private GoodsReceipt getGoodsReceipt(UUID id) {
-
+    private GoodsReceipt getGoodsReceipt(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Goods Receipt not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Goods Receipt not found."));
     }
 
     private PurchaseOrder getPurchaseOrder(UUID id) {
-
         return purchaseOrderRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Purchase Order not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Order not found."));
     }
 
-    private Warehouse getWarehouse(UUID id) {
-
-        return warehouseRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Warehouse not found."));
+    private Bin getReceivingBin(UUID warehouseId) {
+        return binRepository.findByWarehouseIdAndReceivingBinTrue(warehouseId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Receiving Bin not configured for the Purchase Order warehouse."));
     }
 
-@Override
-    public GoodsReceiptResponse create(
-            CreateGoodsReceiptRequest request) {
+    @Override
+    public GoodsReceiptResponse create(CreateGoodsReceiptRequest request) {
 
-        PurchaseOrder purchaseOrder =
-                getPurchaseOrder(
-                        request.getPurchaseOrderId());
+        PurchaseOrder purchaseOrder = getPurchaseOrder(request.getPurchaseOrderId());
 
-        if (purchaseOrder.getStatus()
-                != PurchaseOrderStatus.APPROVED) {
-
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
             throw new InvalidWorkflowException(
                     "Only approved Purchase Orders can be received.");
         }
 
-        Warehouse warehouse =
-                getWarehouse(
-                        request.getWarehouseId());
+        if (purchaseOrder.getWarehouse() == null) {
+            throw new InvalidWorkflowException(
+                    "Purchase Order has no warehouse assigned.");
+        }
 
-        User currentUser =
-                currentUserService.getCurrentUser();
+        List<PurchaseOrderLine> outstandingLines =
+                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId())
+                        .stream()
+                        .filter(line -> line.getOutstandingQuantity() != null
+                                && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
+                        .toList();
 
-        GoodsReceipt goodsReceipt =
-                GoodsReceipt.builder()
+        if (outstandingLines.isEmpty()) {
+            throw new InvalidWorkflowException(
+                    "Purchase Order has no outstanding quantities to receive.");
+        }
 
-                        .grnNumber(
-                                documentNumberService.next(
-                                        DocumentType.GOODS_RECEIPT))
+        User currentUser = currentUserService.getCurrentUser();
 
-                        .purchaseOrder(
-                                purchaseOrder)
+        GoodsReceipt goodsReceipt = GoodsReceipt.builder()
+                .grnNumber(documentNumberService.next(DocumentType.GOODS_RECEIPT))
+                .purchaseOrder(purchaseOrder)
+                .warehouse(purchaseOrder.getWarehouse())
+                .receivedBy(currentUser)
+                .status(ReceiptStatus.DRAFT)
+                .supplierDeliveryNote(request.getSupplierDeliveryNote())
+                .remarks(request.getRemarks())
+                .receivedDate(LocalDateTime.now())
+                .build();
 
-                        .warehouse(
-                                warehouse)
-
-                        .receivedBy(
-                                currentUser)
-
-                        .status(
-                                ReceiptStatus.DRAFT)
-
-                        .supplierDeliveryNote(
-                                request.getSupplierDeliveryNote())
-
-                        .remarks(
-                                request.getRemarks())
-
-                        .receivedDate(
-                                LocalDateTime.now())
-
-                        .build();
-
-        goodsReceipt =
-                repository.save(
-                        goodsReceipt);
-
-        return GoodsReceiptMapper.toResponse(
-                goodsReceipt);
+        return GoodsReceiptMapper.toResponse(repository.save(goodsReceipt));
     }
 
-        @Override
-    public GoodsReceiptResponse update(
-            UUID id,
-            UpdateGoodsReceiptRequest request) {
+    @Override
+    public GoodsReceiptResponse update(UUID id, UpdateGoodsReceiptRequest request) {
 
-        GoodsReceipt goodsReceipt =
-                getGoodsReceipt(id);
+        GoodsReceipt goodsReceipt = getGoodsReceipt(id);
 
-        if (goodsReceipt.getStatus()
-                != ReceiptStatus.DRAFT) {
-
+        if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
             throw new InvalidWorkflowException(
                     "Only draft Goods Receipts can be updated.");
         }
 
-        Warehouse warehouse =
-                getWarehouse(
-                        request.getWarehouseId());
+        goodsReceipt.setSupplierDeliveryNote(request.getSupplierDeliveryNote());
+        goodsReceipt.setRemarks(request.getRemarks());
 
-        goodsReceipt.setWarehouse(
-                warehouse);
-
-        goodsReceipt.setSupplierDeliveryNote(
-                request.getSupplierDeliveryNote());
-
-        goodsReceipt.setRemarks(
-                request.getRemarks());
-
-        goodsReceipt =
-                repository.save(
-                        goodsReceipt);
-
-        return GoodsReceiptMapper.toResponse(
-                goodsReceipt);
+        return GoodsReceiptMapper.toResponse(repository.save(goodsReceipt));
     }
 
- /*   @Override
-public GoodsReceiptResponse approve(
-        UUID id) {
+    @Override
+    public GoodsReceiptResponse approve(UUID id) {
 
-    GoodsReceipt goodsReceipt =
-            getGoodsReceipt(id);
+        GoodsReceipt goodsReceipt = getGoodsReceipt(id);
 
-    if (goodsReceipt.getStatus()
-            != ReceiptStatus.DRAFT) {
-
-        throw new InvalidWorkflowException(
-                "Only draft Goods Receipts can be approved.");
-    }
-
-    goodsReceipt.setStatus(
-            ReceiptStatus.APPROVED);
-
-    goodsReceipt.setApprovedBy(
-            currentUserService.getCurrentUser());
-
-    goodsReceipt.setApprovedAt(
-            LocalDateTime.now());
-
-    goodsReceipt =
-            repository.save(
-                    goodsReceipt);
-
-    return GoodsReceiptMapper.toResponse(
-            goodsReceipt);
-}*/
-@Override
-@Transactional(readOnly = true)
-public List<GoodsReceiptResponse> findAll() {
-
-    return repository.findAll()
-
-            .stream()
-
-            .map(GoodsReceiptMapper::toResponse)
-
-            .toList();
-}
-
-@Override
-public GoodsReceiptResponse approve(UUID id) {
-
-    // Retrieve Goods Receipt
-    GoodsReceipt goodsReceipt = getGoodsReceipt(id);
-
-    // Validate status
-    if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-
-        throw new InvalidWorkflowException(
-                "Only draft Goods Receipts can be approved.");
-    }
-
-    // Retrieve receipt lines
-    List<GoodsReceiptLine> receiptLines =
-            goodsReceiptLineRepository.findByGoodsReceiptId(
-                    goodsReceipt.getId());
-
-    if (receiptLines.isEmpty()) {
-
-        throw new InvalidWorkflowException(
-                "Cannot approve a Goods Receipt without any receipt lines.");
-    }
-
-   User currentUser =
-        currentUserService.getCurrentUser();
-
-Bin receivingBin =
-        getReceivingBin(
-                goodsReceipt.getWarehouse().getId());
-
-for (GoodsReceiptLine receiptLine : receiptLines) {
-
-    inventoryService.receiveStock(
-
-            goodsReceipt.getWarehouse(),
-
-            receivingBin,
-
-            receiptLine.getProduct(),
-
-            receiptLine.getAcceptedQuantity(),
-
-            goodsReceipt.getGrnNumber(),
-
-            "GOODS_RECEIPT",
-
-            receiptLine.getRemarks(),
-
-            currentUser);
-
-        /*
-         * 2. Update Purchase Order Line
-         */
-        PurchaseOrderLine purchaseOrderLine =
-                receiptLine.getPurchaseOrderLine();
-
-        BigDecimal newReceivedQuantity =
-                purchaseOrderLine.getReceivedQuantity()
-                        .add(receiptLine.getAcceptedQuantity());
-
-        purchaseOrderLine.setReceivedQuantity(
-                newReceivedQuantity);
-
-        BigDecimal outstanding =
-                purchaseOrderLine.getQuantity()
-                        .subtract(newReceivedQuantity);
-
-        if (outstanding.compareTo(BigDecimal.ZERO) < 0) {
-            outstanding = BigDecimal.ZERO;
+        if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
+            throw new InvalidWorkflowException(
+                    "Only draft Goods Receipts can be approved.");
         }
 
-        purchaseOrderLine.setOutstandingQuantity(
-                outstanding);
+        List<GoodsReceiptLine> receiptLines =
+                goodsReceiptLineRepository.findByGoodsReceiptId(goodsReceipt.getId());
 
-        purchaseOrderLineRepository.save(
-                purchaseOrderLine);
+        if (receiptLines.isEmpty()) {
+            throw new InvalidWorkflowException(
+                    "Cannot approve a Goods Receipt without any receipt lines.");
+        }
+
+        User currentUser = currentUserService.getCurrentUser();
+        Bin receivingBin = getReceivingBin(goodsReceipt.getWarehouse().getId());
+
+        BigDecimal totalAccepted = BigDecimal.ZERO;
+
+        for (GoodsReceiptLine receiptLine : receiptLines) {
+
+            validateReceiptLine(receiptLine);
+
+            BigDecimal acceptedQuantity = receiptLine.getAcceptedQuantity();
+            totalAccepted = totalAccepted.add(acceptedQuantity);
+
+            if (acceptedQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                inventoryService.receiveStock(
+                        goodsReceipt.getWarehouse(),
+                        receivingBin,
+                        receiptLine.getProduct(),
+                        acceptedQuantity,
+                        goodsReceipt.getGrnNumber(),
+                        "GOODS_RECEIPT",
+                        receiptLine.getRemarks(),
+                        currentUser);
+            }
+
+            PurchaseOrderLine purchaseOrderLine = receiptLine.getPurchaseOrderLine();
+
+            BigDecimal currentReceived = purchaseOrderLine.getReceivedQuantity() == null
+                    ? BigDecimal.ZERO
+                    : purchaseOrderLine.getReceivedQuantity();
+
+            BigDecimal newReceivedQuantity =
+                    currentReceived.add(acceptedQuantity);
+
+            if (newReceivedQuantity.compareTo(purchaseOrderLine.getQuantity()) > 0) {
+                throw new InvalidWorkflowException(
+                        "Accepted quantity would exceed the outstanding Purchase Order quantity for product "
+                                + receiptLine.getProduct().getSku() + ".");
+            }
+
+            purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
+            purchaseOrderLine.setOutstandingQuantity(
+                    purchaseOrderLine.getQuantity().subtract(newReceivedQuantity));
+
+            purchaseOrderLineRepository.save(purchaseOrderLine);
+        }
+
+        if (totalAccepted.compareTo(BigDecimal.ZERO) == 0) {
+            // A receipt containing only rejected quantities is allowed.
+            // The PO remains outstanding so replacement stock can be received later.
+        }
+
+        updatePurchaseOrderReceiptStatus(goodsReceipt.getPurchaseOrder());
+
+        goodsReceipt.setStatus(ReceiptStatus.APPROVED);
+        goodsReceipt.setApprovedBy(currentUser);
+        goodsReceipt.setApprovedAt(LocalDateTime.now());
+
+        return GoodsReceiptMapper.toResponse(repository.save(goodsReceipt));
     }
 
-    /*
-     * 3. Refresh Purchase Order Status
-     */
-    updatePurchaseOrderReceiptStatus(
-            goodsReceipt.getPurchaseOrder());
+    private void validateReceiptLine(GoodsReceiptLine receiptLine) {
 
-    /*
-     * 4. Approve Goods Receipt
-     */
-    goodsReceipt.setStatus(
-            ReceiptStatus.APPROVED);
+        if (receiptLine.getPurchaseOrderLine() == null) {
+            throw new InvalidWorkflowException(
+                    "Goods Receipt Line is not linked to a Purchase Order Line.");
+        }
 
-    goodsReceipt.setApprovedBy(
-            currentUser);
+        BigDecimal received = nullSafe(receiptLine.getReceivedQuantity());
+        BigDecimal accepted = nullSafe(receiptLine.getAcceptedQuantity());
+        BigDecimal rejected = nullSafe(receiptLine.getRejectedQuantity());
+        BigDecimal ordered = nullSafe(receiptLine.getOrderedQuantity());
 
-    goodsReceipt.setApprovedAt(
-            LocalDateTime.now());
+        if (accepted.add(rejected).compareTo(received) != 0) {
+            throw new InvalidWorkflowException(
+                    "Accepted quantity + rejected quantity must equal received quantity.");
+        }
 
-    goodsReceipt = repository.save(
-            goodsReceipt);
+        if (received.compareTo(ordered) > 0) {
+            throw new InvalidWorkflowException(
+                    "Received quantity cannot exceed the outstanding Purchase Order quantity.");
+        }
 
-    /*
-     * 5. Return Response
-     */
-    return GoodsReceiptMapper.toResponse(
-            goodsReceipt);
-}
-
-
-private void updatePurchaseOrderReceiptStatus(
-        PurchaseOrder purchaseOrder) {
-
-    List<PurchaseOrderLine> purchaseOrderLines =
-            purchaseOrderLineRepository.findByPurchaseOrderId(
-                    purchaseOrder.getId());
-
-    boolean fullyReceived =
-            purchaseOrderLines.stream()
-                    .allMatch(line ->
-                            line.getOutstandingQuantity()
-                                    .compareTo(BigDecimal.ZERO) == 0);
-
-    purchaseOrder.setStatus(
-            fullyReceived
-                    ? PurchaseOrderStatus.RECEIVED
-                    : PurchaseOrderStatus.PARTIALLY_RECEIVED);
-
-    purchaseOrderRepository.save(
-            purchaseOrder);
-}
-
-@Override
-@Transactional(readOnly = true)
-public GoodsReceiptResponse findById(
-        UUID id) {
-
-    return GoodsReceiptMapper.toResponse(
-            getGoodsReceipt(id));
-}
-
-@Override
-@Transactional(readOnly = true)
-public List<GoodsReceiptResponse> findByPurchaseOrder(
-        UUID purchaseOrderId) {
-
-    return repository.findByPurchaseOrderId(
-                    purchaseOrderId)
-
-            .stream()
-
-            .map(GoodsReceiptMapper::toResponse)
-
-            .toList();
-}
-
-
-@Override
-public GoodsReceiptResponse loadPurchaseOrderLines(
-        UUID goodsReceiptId) {
-
-    GoodsReceipt goodsReceipt =
-            getGoodsReceipt(goodsReceiptId);
-
-    if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-
-        throw new InvalidWorkflowException(
-                "Only Draft Goods Receipts can load Purchase Order Lines.");
+        if (accepted.compareTo(ordered) > 0) {
+            throw new InvalidWorkflowException(
+                    "Accepted quantity cannot exceed the outstanding Purchase Order quantity.");
+        }
     }
 
-    PurchaseOrder purchaseOrder =
-            goodsReceipt.getPurchaseOrder();
-
-    List<PurchaseOrderLine> poLines =
-            purchaseOrderLineRepository
-                    .findByPurchaseOrderId(
-                            purchaseOrder.getId());
-
-    if (poLines.isEmpty()) {
-
-        throw new ResourceNotFoundException(
-                "Purchase Order contains no lines.");
+    private BigDecimal nullSafe(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
-    /*
-     * Prevent duplicate loading
-     */
-    if (!goodsReceiptLineRepository
-            .findByGoodsReceiptId(goodsReceipt.getId())
-            .isEmpty()) {
+    private void updatePurchaseOrderReceiptStatus(PurchaseOrder purchaseOrder) {
 
-        throw new InvalidWorkflowException(
-                "Goods Receipt Lines have already been loaded.");
+        List<PurchaseOrderLine> purchaseOrderLines =
+                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId());
+
+        boolean fullyReceived = !purchaseOrderLines.isEmpty()
+                && purchaseOrderLines.stream()
+                .allMatch(line -> nullSafe(line.getOutstandingQuantity())
+                        .compareTo(BigDecimal.ZERO) == 0);
+
+        purchaseOrder.setStatus(
+                fullyReceived
+                        ? PurchaseOrderStatus.RECEIVED
+                        : PurchaseOrderStatus.PARTIALLY_RECEIVED);
+
+        purchaseOrderRepository.save(purchaseOrder);
     }
 
-    for (PurchaseOrderLine poLine : poLines) {
-
-        GoodsReceiptLine receiptLine =
-                GoodsReceiptLine.builder()
-
-                        .goodsReceipt(goodsReceipt)
-
-                        .purchaseOrderLine(poLine)
-
-                        .product(poLine.getProduct())
-
-                        .orderedQuantity(
-                                poLine.getQuantity())
-
-                        .receivedQuantity(
-                                poLine.getOutstandingQuantity())
-
-                        .acceptedQuantity(
-                                poLine.getOutstandingQuantity())
-
-                        .rejectedQuantity(BigDecimal.ZERO)
-
-                        .remarks("")
-
-                        .build();
-
-        goodsReceiptLineRepository.save(receiptLine);
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsReceiptResponse> findAll() {
+        return repository.findAll()
+                .stream()
+                .map(GoodsReceiptMapper::toResponse)
+                .toList();
     }
 
-    return GoodsReceiptMapper.toResponse(goodsReceipt);
-}
-@Override
-public void delete(
-        UUID id) {
-
-    GoodsReceipt goodsReceipt =
-            getGoodsReceipt(id);
-
-    if (goodsReceipt.getStatus()
-            != ReceiptStatus.DRAFT) {
-
-        throw new InvalidWorkflowException(
-                "Only draft Goods Receipts can be deleted.");
+    @Override
+    @Transactional(readOnly = true)
+    public GoodsReceiptResponse findById(UUID id) {
+        return GoodsReceiptMapper.toResponse(getGoodsReceipt(id));
     }
 
-    repository.delete(
-            goodsReceipt);
+    @Override
+    @Transactional(readOnly = true)
+    public List<GoodsReceiptResponse> findByPurchaseOrder(UUID purchaseOrderId) {
+        return repository.findByPurchaseOrderId(purchaseOrderId)
+                .stream()
+                .map(GoodsReceiptMapper::toResponse)
+                .toList();
+    }
 
-}
+    @Override
+    public GoodsReceiptResponse loadPurchaseOrderLines(UUID goodsReceiptId) {
 
+        GoodsReceipt goodsReceipt = getGoodsReceipt(goodsReceiptId);
 
+        if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
+            throw new InvalidWorkflowException(
+                    "Only draft Goods Receipts can load Purchase Order Lines.");
+        }
+
+        PurchaseOrder purchaseOrder = goodsReceipt.getPurchaseOrder();
+
+        List<PurchaseOrderLine> poLines =
+                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId())
+                        .stream()
+                        .filter(line -> line.getOutstandingQuantity() != null
+                                && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
+                        .toList();
+
+        if (poLines.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Purchase Order has no outstanding lines to receive.");
+        }
+
+        if (goodsReceiptLineRepository.existsByGoodsReceiptId(goodsReceipt.getId())) {
+            throw new InvalidWorkflowException(
+                    "Goods Receipt Lines have already been loaded.");
+        }
+
+        for (PurchaseOrderLine poLine : poLines) {
+
+            GoodsReceiptLine receiptLine = GoodsReceiptLine.builder()
+                    .goodsReceipt(goodsReceipt)
+                    .purchaseOrderLine(poLine)
+                    .product(poLine.getProduct())
+                    .orderedQuantity(poLine.getOutstandingQuantity())
+                    .receivedQuantity(BigDecimal.ZERO)
+                    .acceptedQuantity(BigDecimal.ZERO)
+                    .rejectedQuantity(BigDecimal.ZERO)
+                    .unitCost(poLine.getUnitPrice())
+                    .remarks(null)
+                    .build();
+
+            goodsReceiptLineRepository.save(receiptLine);
+        }
+
+        return GoodsReceiptMapper.toResponse(goodsReceipt);
+    }
+
+    @Override
+    public void delete(UUID id) {
+
+        GoodsReceipt goodsReceipt = getGoodsReceipt(id);
+
+        if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
+            throw new InvalidWorkflowException(
+                    "Only draft Goods Receipts can be deleted.");
+        }
+
+        repository.delete(goodsReceipt);
+    }
 }
