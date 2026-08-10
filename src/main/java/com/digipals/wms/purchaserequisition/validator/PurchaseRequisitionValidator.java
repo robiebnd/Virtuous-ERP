@@ -7,58 +7,60 @@ import org.springframework.stereotype.Component;
 @Component
 public class PurchaseRequisitionValidator {
 
-    public void validateDraft(
-            PurchaseRequisition requisition) {
+    public void validateDraft(PurchaseRequisition requisition) {
+        requireStatus(
+                requisition,
+                PurchaseRequisitionStatus.DRAFT,
+                "Only Draft Purchase Requisitions can be modified.");
+    }
 
-        if (requisition.getStatus() !=
-                PurchaseRequisitionStatus.DRAFT) {
+    public void validateSubmitted(PurchaseRequisition requisition) {
+        requireStatus(
+                requisition,
+                PurchaseRequisitionStatus.SUBMITTED,
+                "Purchase Requisition must be Submitted.");
+    }
 
+    public void validateApproved(PurchaseRequisition requisition) {
+        requireStatus(
+                requisition,
+                PurchaseRequisitionStatus.APPROVED,
+                "Purchase Requisition must be Approved.");
+    }
+
+    public void validateNotConverted(PurchaseRequisition requisition) {
+        if (requisition.getStatus() == PurchaseRequisitionStatus.CONVERTED_TO_PO) {
             throw new RuntimeException(
-                    "Only Draft Purchase Requisitions can be modified.");
+                    "Purchase Requisition already converted to a Purchase Order.");
         }
     }
 
-    public void validateSubmitted(
-            PurchaseRequisition requisition) {
-
-        if (requisition.getStatus() !=
-                PurchaseRequisitionStatus.SUBMITTED) {
-
-            throw new RuntimeException(
-                    "Purchase Requisition must be Submitted.");
+    public void validateNotCancelled(PurchaseRequisition requisition) {
+        if (requisition.getStatus() == PurchaseRequisitionStatus.CANCELLED) {
+            throw new RuntimeException("Purchase Requisition is Cancelled.");
         }
     }
 
-    public void validateApproved(
-            PurchaseRequisition requisition) {
+    public void validateCanCancel(PurchaseRequisition requisition) {
+        PurchaseRequisitionStatus status = requisition.getStatus();
 
-        if (requisition.getStatus() !=
-                PurchaseRequisitionStatus.APPROVED) {
+        if (status == PurchaseRequisitionStatus.CANCELLED) {
+            throw new RuntimeException("Purchase Requisition is already Cancelled.");
+        }
 
+        if (status == PurchaseRequisitionStatus.CONVERTED_TO_PO) {
             throw new RuntimeException(
-                    "Purchase Requisition must be Approved.");
+                    "Converted Purchase Requisitions cannot be cancelled.");
         }
     }
 
-    public void validateNotConverted(
-            PurchaseRequisition requisition) {
+    private void requireStatus(
+            PurchaseRequisition requisition,
+            PurchaseRequisitionStatus expected,
+            String message) {
 
-        if (requisition.getStatus() ==
-                PurchaseRequisitionStatus.CONVERTED_TO_PO) {
-
-            throw new RuntimeException(
-                    "Purchase Requisition already converted.");
-        }
-    }
-
-    public void validateNotCancelled(
-            PurchaseRequisition requisition) {
-
-        if (requisition.getStatus() ==
-                PurchaseRequisitionStatus.CANCELLED) {
-
-            throw new RuntimeException(
-                    "Purchase Requisition is Cancelled.");
+        if (requisition == null || requisition.getStatus() != expected) {
+            throw new RuntimeException(message);
         }
     }
 }

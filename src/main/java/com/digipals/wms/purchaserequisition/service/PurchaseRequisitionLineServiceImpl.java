@@ -21,44 +21,26 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class PurchaseRequisitionLineServiceImpl
-        implements PurchaseRequisitionLineService {
+public class PurchaseRequisitionLineServiceImpl implements PurchaseRequisitionLineService {
 
     private final PurchaseRequisitionLineRepository repository;
+    private final PurchaseRequisitionRepository purchaseRequisitionRepository;
+    private final ProductRepository productRepository;
+    private final PurchaseRequisitionValidator validator;
 
-    private final PurchaseRequisitionRepository
-            purchaseRequisitionRepository;
-
-    private final ProductRepository
-            productRepository;
-
-    private final PurchaseRequisitionValidator
-            validator;
-        private PurchaseRequisition getPurchaseRequisition(
-            UUID id) {
-
+    private PurchaseRequisition getPurchaseRequisition(UUID id) {
         return purchaseRequisitionRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Purchase Requisition not found."));
+                .orElseThrow(() -> new RuntimeException("Purchase Requisition not found."));
     }
 
-    private PurchaseRequisitionLine getLine(
-            UUID id) {
-
+    private PurchaseRequisitionLine getLine(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Purchase Requisition Line not found."));
+                .orElseThrow(() -> new RuntimeException("Purchase Requisition Line not found."));
     }
 
-    private Product getProduct(
-            UUID id) {
-
+    private Product getProduct(UUID id) {
         return productRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Product not found."));
+                .orElseThrow(() -> new RuntimeException("Product not found."));
     }
 
     @Override
@@ -66,128 +48,56 @@ public class PurchaseRequisitionLineServiceImpl
             UUID purchaseRequisitionId,
             CreatePurchaseRequisitionLineRequest request) {
 
-    /*
-     * 1. Get the Purchase Requisition
-     *
-     * The requisition ID now comes from the URL:
-     *
-     * /api/purchase-requisitions/{requisitionId}/lines
-     */
-    PurchaseRequisition requisition =
-            getPurchaseRequisition(
-                    purchaseRequisitionId);
+        PurchaseRequisition requisition = getPurchaseRequisition(purchaseRequisitionId);
+        validator.validateDraft(requisition);
 
-    /*
-     * 2. Only DRAFT requisitions can
-     *    have new lines added.
-     */
-    validator.validateDraft(
-            requisition);
+        Product product = getProduct(request.getProductId());
 
-    /*
-     * 3. Get the Product.
-     */
-    Product product =
-            getProduct(
-                    request.getProductId());
+        if (repository.existsByPurchaseRequisitionIdAndProductId(
+                requisition.getId(), product.getId())) {
+            throw new RuntimeException(
+                    "Product already exists on this Purchase Requisition.");
+        }
 
-    /*
-     * 4. Prevent duplicate products
-     *    on the same requisition.
-     */
-    if (repository.existsByPurchaseRequisitionIdAndProductId(
-            requisition.getId(),
-            product.getId())) {
+        PurchaseRequisitionLine line = PurchaseRequisitionLine.builder()
+                .purchaseRequisition(requisition)
+                .product(product)
+                .quantity(request.getQuantity())
+                .estimatedUnitCost(request.getEstimatedUnitCost())
+                .remarks(request.getRemarks())
+                .build();
 
-        throw new RuntimeException(
-                "Product already exists on this Purchase Requisition.");
+        return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
-
-    /*
-     * 5. Create the requisition line.
-     */
-    PurchaseRequisitionLine line =
-            PurchaseRequisitionLine.builder()
-
-                    .purchaseRequisition(
-                            requisition)
-
-                    .product(
-                            product)
-
-                    .quantity(
-                            request.getQuantity())
-
-                    .estimatedUnitCost(
-                            request.getEstimatedUnitCost())
-
-                    .remarks(
-                            request.getRemarks())
-
-                    .build();
-
-    /*
-     * 6. Save.
-     */
-    line =
-            repository.save(line);
-
-    /*
-     * 7. Return response.
-     */
-    return PurchaseRequisitionLineMapper.toResponse(
-            line);
-}
-
 
     @Override
     public PurchaseRequisitionLineResponse update(
             UUID id,
             UpdatePurchaseRequisitionLineRequest request) {
 
-        PurchaseRequisitionLine line =
-                getLine(id);
+        PurchaseRequisitionLine line = getLine(id);
+        validator.validateDraft(line.getPurchaseRequisition());
 
-        validator.validateDraft(
-                line.getPurchaseRequisition());
+        line.setQuantity(request.getQuantity());
+        line.setEstimatedUnitCost(request.getEstimatedUnitCost());
+        line.setRemarks(request.getRemarks());
 
-       line.setQuantity(
-        request.getQuantity());
-
-        line.setEstimatedUnitCost(
-        request.getEstimatedUnitCost());
-
-        line.setRemarks(
-        request.getRemarks());
-
-        line =
-                repository.save(
-                        line);
-
-        return PurchaseRequisitionLineMapper.toResponse(
-                line);
+        return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseRequisitionLineResponse> findAll() {
-
         return repository.findAll()
-
                 .stream()
-
                 .map(PurchaseRequisitionLineMapper::toResponse)
-
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PurchaseRequisitionLineResponse findById(
-            UUID id) {
-
-        return PurchaseRequisitionLineMapper.toResponse(
-                getLine(id));
+    public PurchaseRequisitionLineResponse findById(UUID id) {
+        return PurchaseRequisitionLineMapper.toResponse(getLine(id));
     }
 
     @Override
@@ -195,28 +105,18 @@ public class PurchaseRequisitionLineServiceImpl
     public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
             UUID purchaseRequisitionId) {
 
-        return repository
-                .findByPurchaseRequisitionId(
-                        purchaseRequisitionId)
+        getPurchaseRequisition(purchaseRequisitionId);
 
+        return repository.findByPurchaseRequisitionId(purchaseRequisitionId)
                 .stream()
-
                 .map(PurchaseRequisitionLineMapper::toResponse)
-
                 .toList();
     }
 
     @Override
-    public void delete(
-            UUID id) {
-
-        PurchaseRequisitionLine line =
-                getLine(id);
-
-        validator.validateDraft(
-                line.getPurchaseRequisition());
-
-        repository.delete(
-                line);
+    public void delete(UUID id) {
+        PurchaseRequisitionLine line = getLine(id);
+        validator.validateDraft(line.getPurchaseRequisition());
+        repository.delete(line);
     }
 }
