@@ -1,6 +1,7 @@
 package com.digipals.wms.purchaserequisition.entity;
 
 import com.digipals.wms.common.entity.BaseEntity;
+import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.users.entity.User;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import jakarta.persistence.Column;
@@ -35,6 +36,10 @@ public class PurchaseRequisition extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "warehouse_id", nullable = false)
     private Warehouse warehouse;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplier;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by")
