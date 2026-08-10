@@ -22,6 +22,15 @@ public final class PurchaseRequisitionMapper {
                 .warehouseName(requisition.getWarehouse() != null
                         ? requisition.getWarehouse().getName()
                         : null)
+                .supplierId(requisition.getSupplier() != null
+                        ? requisition.getSupplier().getId()
+                        : null)
+                .supplierCode(requisition.getSupplier() != null
+                        ? requisition.getSupplier().getCode()
+                        : null)
+                .supplierName(requisition.getSupplier() != null
+                        ? requisition.getSupplier().getName()
+                        : null)
                 .status(requisition.getStatus())
                 .department(requisition.getDepartment())
                 .remarks(requisition.getRemarks())
