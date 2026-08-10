@@ -19,6 +19,12 @@ public class PurchaseRequisitionResponse {
 
     private String warehouseName;
 
+    private UUID supplierId;
+
+    private String supplierCode;
+
+    private String supplierName;
+
     private PurchaseRequisitionStatus status;
 
     private String department;
