@@ -1,6 +1,5 @@
 package com.digipals.wms.purchaseorders.service;
 
-import com.digipals.wms.purchaseorders.dto.CreatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 
@@ -10,8 +9,7 @@ import java.util.UUID;
 public interface PurchaseOrderService {
 
     PurchaseOrder createFromRequisition(
-            UUID purchaseRequisitionId,
-            CreatePurchaseOrderRequest request);
+            UUID purchaseRequisitionId);
 
     PurchaseOrder update(
             UUID id,
