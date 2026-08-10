@@ -25,7 +25,6 @@ public class GoodsReceiptController {
             @Valid
             @RequestBody
             CreateGoodsReceiptRequest request) {
-
         return service.create(request);
     }
 
@@ -36,7 +35,6 @@ public class GoodsReceiptController {
             @Valid
             @RequestBody
             UpdateGoodsReceiptRequest request) {
-
         return service.update(id, request);
     }
 
@@ -44,14 +42,19 @@ public class GoodsReceiptController {
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_APPROVE')")
     public GoodsReceiptResponse approve(
             @PathVariable UUID id) {
-
         return service.approve(id);
+    }
+
+    @PostMapping("/{id}/load-po-lines")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_UPDATE')")
+    public GoodsReceiptResponse loadPurchaseOrderLines(
+            @PathVariable UUID id) {
+        return service.loadPurchaseOrderLines(id);
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
     public List<GoodsReceiptResponse> findAll() {
-
         return service.findAll();
     }
 
@@ -59,7 +62,6 @@ public class GoodsReceiptController {
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
     public GoodsReceiptResponse findById(
             @PathVariable UUID id) {
-
         return service.findById(id);
     }
 
@@ -67,23 +69,13 @@ public class GoodsReceiptController {
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
     public List<GoodsReceiptResponse> findByPurchaseOrder(
             @PathVariable UUID purchaseOrderId) {
-
-        return service.findByPurchaseOrder(
-                purchaseOrderId);
+        return service.findByPurchaseOrder(purchaseOrderId);
     }
-
-    @PostMapping("/{id}/load-po-lines")
-public GoodsReceiptResponse loadPurchaseOrderLines(
-        @PathVariable UUID id) {
-
-    return service.loadPurchaseOrderLines(id);
-}
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_DELETE')")
     public void delete(
             @PathVariable UUID id) {
-
         service.delete(id);
     }
 }
