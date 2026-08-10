@@ -9,21 +9,17 @@ import java.math.BigDecimal;
 @Data
 public class UpdateGoodsReceiptLineRequest {
 
-    @NotNull
-    @DecimalMin(value = "0.01")
+    @NotNull(message = "Received quantity is required")
+    @DecimalMin(value = "0.00", message = "Received quantity cannot be negative")
     private BigDecimal receivedQuantity;
 
-    @NotNull
-    @DecimalMin(value = "0.00")
+    @NotNull(message = "Accepted quantity is required")
+    @DecimalMin(value = "0.00", message = "Accepted quantity cannot be negative")
     private BigDecimal acceptedQuantity;
 
-    @NotNull
-    @DecimalMin(value = "0.00")
+    @NotNull(message = "Rejected quantity is required")
+    @DecimalMin(value = "0.00", message = "Rejected quantity cannot be negative")
     private BigDecimal rejectedQuantity;
-
-    @NotNull
-    @DecimalMin(value = "0.00")
-    private BigDecimal unitCost;
 
     private String remarks;
 }
