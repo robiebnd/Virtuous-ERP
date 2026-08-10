@@ -12,40 +12,32 @@ import java.util.UUID;
 public class GoodsReceiptResponse {
 
     private UUID id;
-
     private String grnNumber;
-
     private ReceiptStatus status;
 
     private UUID purchaseOrderId;
-
     private String purchaseOrderNumber;
 
+    private UUID supplierId;
+    private String supplierCode;
+    private String supplierName;
+
     private UUID warehouseId;
-
     private String warehouseCode;
-
     private String warehouseName;
 
     private UUID receivedById;
-
     private String receivedBy;
 
     private UUID approvedById;
-
     private String approvedBy;
 
     private String supplierDeliveryNote;
-
     private String remarks;
 
     private Boolean active;
-
     private LocalDateTime receivedDate;
-
     private LocalDateTime approvedAt;
-
     private LocalDateTime createdAt;
-
     private LocalDateTime updatedAt;
 }
