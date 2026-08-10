@@ -1,9 +1,10 @@
 package com.digipals.wms.purchaserequisition.dto;
-import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;   
+
+import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
 import lombok.Builder;
 import lombok.Data;
-import java.time.LocalDateTime;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Builder
@@ -24,7 +25,23 @@ public class PurchaseRequisitionResponse {
 
     private String remarks;
 
+    private String rejectionReason;
+
+    private UUID requestedById;
+
+    private UUID approvedById;
+
+    private UUID rejectedById;
+
+    private UUID cancelledById;
+
+    private LocalDateTime submittedAt;
+
     private LocalDateTime approvedAt;
+
+    private LocalDateTime rejectedAt;
+
+    private LocalDateTime cancelledAt;
 
     private LocalDateTime createdAt;
 }
