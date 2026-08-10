@@ -9,7 +9,8 @@ import java.util.UUID;
 
 public interface PurchaseOrderService {
 
-    PurchaseOrder create(
+    PurchaseOrder createFromRequisition(
+            UUID purchaseRequisitionId,
             CreatePurchaseOrderRequest request);
 
     PurchaseOrder update(
@@ -18,12 +19,9 @@ public interface PurchaseOrderService {
 
     List<PurchaseOrder> findAll();
 
-    PurchaseOrder findById(
-            UUID id);
+    PurchaseOrder findById(UUID id);
 
-    PurchaseOrder approve(
-            UUID id);
+    PurchaseOrder approve(UUID id);
 
-    PurchaseOrder receive(
-            UUID id);
+    PurchaseOrder receive(UUID id);
 }
