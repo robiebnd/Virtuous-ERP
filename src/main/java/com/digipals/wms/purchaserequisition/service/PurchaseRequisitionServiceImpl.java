@@ -161,14 +161,7 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     @Override
     public PurchaseRequisitionResponse cancel(UUID id) {
         PurchaseRequisition requisition = getRequisition(id);
-
-        if (requisition.getStatus() == PurchaseRequisitionStatus.CONVERTED_TO_PO) {
-            throw new RuntimeException("Converted Purchase Requisitions cannot be cancelled.");
-        }
-
-        if (requisition.getStatus() == PurchaseRequisitionStatus.CANCELLED) {
-            throw new RuntimeException("Purchase Requisition is already cancelled.");
-        }
+        validator.validateCanCancel(requisition);
 
         requisition.setStatus(PurchaseRequisitionStatus.CANCELLED);
         requisition.setCancelledBy(currentUserService.getCurrentUser());
