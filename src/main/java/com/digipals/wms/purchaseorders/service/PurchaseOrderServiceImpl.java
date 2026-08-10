@@ -4,7 +4,6 @@ import com.digipals.wms.common.document.DocumentType;
 import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.purchaseorders.dto.CreatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.entity.ProcurementSource;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
@@ -20,7 +19,6 @@ import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionReposi
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.supplier.repository.SupplierRepository;
-import com.digipals.wms.warehouse.entity.Warehouse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,9 +48,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     }
 
     @Override
-    public PurchaseOrder createFromRequisition(
-            UUID purchaseRequisitionId,
-            CreatePurchaseOrderRequest request) {
+    public PurchaseOrder createFromRequisition(UUID purchaseRequisitionId) {
 
         PurchaseRequisition requisition =
                 purchaseRequisitionRepository.findById(purchaseRequisitionId)
@@ -69,6 +65,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     "A Purchase Order already exists for this Purchase Requisition.");
         }
 
+        if (requisition.getSupplier() == null) {
+            throw new InvalidWorkflowException(
+                    "Purchase Requisition has no supplier assigned and cannot create a Purchase Order.");
+        }
+
         List<PurchaseRequisitionLine> requisitionLines =
                 purchaseRequisitionLineRepository
                         .findByPurchaseRequisitionId(requisition.getId());
@@ -78,14 +79,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     "Purchase Requisition has no lines and cannot create a Purchase Order.");
         }
 
-        Supplier supplier =
-                supplierRepository.findById(request.getSupplierId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Supplier not found."));
-
         PurchaseOrder purchaseOrder = PurchaseOrder.builder()
                 .poNumber(documentNumberService.next(DocumentType.PURCHASE_ORDER))
-                .supplier(supplier)
+                .supplier(requisition.getSupplier())
                 .warehouse(requisition.getWarehouse())
                 .purchaseRequisition(requisition)
                 .source(ProcurementSource.REQUISITION)
@@ -171,6 +167,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     "Only draft Purchase Orders can be updated.");
         }
 
+        if (purchaseOrder.getPurchaseRequisition() != null) {
+            throw new InvalidWorkflowException(
+                    "Purchase Orders created from Purchase Requisitions cannot change supplier, warehouse, requisition or procurement source.");
+        }
+
         Supplier supplier =
                 supplierRepository.findById(request.getSupplierId())
                         .orElseThrow(() -> new ResourceNotFoundException(
@@ -178,13 +179,6 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         purchaseOrder.setSupplier(supplier);
         purchaseOrder.setSource(request.getSource());
-
-        if (purchaseOrder.getPurchaseRequisition() == null
-                && request.getPurchaseRequisitionId() != null) {
-
-            throw new InvalidWorkflowException(
-                    "Purchase Requisition can only be assigned during Purchase Order creation.");
-        }
 
         return repository.save(purchaseOrder);
     }
