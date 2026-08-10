@@ -1,7 +1,6 @@
 package com.digipals.wms.purchaseorders.controller;
 
 import com.digipals.wms.common.mapper.PurchaseOrderMapper;
-import com.digipals.wms.purchaseorders.dto.CreatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.dto.PurchaseOrderResponse;
 import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.service.PurchaseOrderService;
@@ -23,11 +22,10 @@ public class PurchaseOrderController {
     @PostMapping("/from-requisition/{requisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
     public PurchaseOrderResponse createFromRequisition(
-            @PathVariable UUID requisitionId,
-            @Valid @RequestBody CreatePurchaseOrderRequest request) {
+            @PathVariable UUID requisitionId) {
 
         return PurchaseOrderMapper.toResponse(
-                service.createFromRequisition(requisitionId, request));
+                service.createFromRequisition(requisitionId));
     }
 
     @GetMapping
