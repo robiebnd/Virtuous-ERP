@@ -12,6 +12,9 @@ public class CreatePurchaseRequisitionRequest {
     @NotNull(message = "Warehouse is required")
     private UUID warehouseId;
 
+    @NotNull(message = "Supplier is required")
+    private UUID supplierId;
+
     @NotBlank(message = "Department is required")
     private String department;
 
