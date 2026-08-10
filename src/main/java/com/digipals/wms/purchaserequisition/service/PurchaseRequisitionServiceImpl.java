@@ -2,6 +2,7 @@ package com.digipals.wms.purchaserequisition.service;
 
 import com.digipals.wms.common.document.DocumentType;
 import com.digipals.wms.common.document.service.DocumentNumberService;
+import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.common.mapper.PurchaseRequisitionMapper;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
@@ -12,6 +13,8 @@ import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionLineRe
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.purchaserequisition.validator.PurchaseRequisitionValidator;
 import com.digipals.wms.security.CurrentUserService;
+import com.digipals.wms.supplier.entity.Supplier;
+import com.digipals.wms.supplier.repository.SupplierRepository;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,18 +33,27 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     private final PurchaseRequisitionRepository repository;
     private final PurchaseRequisitionLineRepository lineRepository;
     private final WarehouseRepository warehouseRepository;
+    private final SupplierRepository supplierRepository;
     private final DocumentNumberService documentNumberService;
     private final PurchaseRequisitionValidator validator;
     private final CurrentUserService currentUserService;
 
     private PurchaseRequisition getRequisition(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase Requisition not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found."));
     }
 
     private Warehouse getWarehouse(UUID id) {
         return warehouseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Warehouse not found."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Warehouse not found."));
+    }
+
+    private Supplier getSupplier(UUID id) {
+        return supplierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Supplier not found."));
     }
 
     private void validateHasLines(PurchaseRequisition requisition) {
@@ -86,10 +98,12 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     @Override
     public PurchaseRequisitionResponse create(CreatePurchaseRequisitionRequest request) {
         Warehouse warehouse = getWarehouse(request.getWarehouseId());
+        Supplier supplier = getSupplier(request.getSupplierId());
 
         PurchaseRequisition requisition = PurchaseRequisition.builder()
                 .requisitionNumber(documentNumberService.next(DocumentType.PURCHASE_REQUISITION))
                 .warehouse(warehouse)
+                .supplier(supplier)
                 .department(request.getDepartment().trim())
                 .remarks(request.getRemarks())
                 .status(PurchaseRequisitionStatus.DRAFT)
