@@ -20,67 +20,49 @@ public class PurchaseOrderController {
 
     private final PurchaseOrderService service;
 
-    @PostMapping
+    @PostMapping("/from-requisition/{requisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
-    public PurchaseOrderResponse create(
-            @Valid
-            @RequestBody
-            CreatePurchaseOrderRequest request) {
+    public PurchaseOrderResponse createFromRequisition(
+            @PathVariable UUID requisitionId,
+            @Valid @RequestBody CreatePurchaseOrderRequest request) {
 
         return PurchaseOrderMapper.toResponse(
-                service.create(request));
+                service.createFromRequisition(requisitionId, request));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public List<PurchaseOrderResponse> getAll() {
-
         return service.findAll()
-
                 .stream()
-
                 .map(PurchaseOrderMapper::toResponse)
-
                 .toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
-    public PurchaseOrderResponse getById(
-            @PathVariable UUID id) {
-
-        return PurchaseOrderMapper.toResponse(
-                service.findById(id));
+    public PurchaseOrderResponse getById(@PathVariable UUID id) {
+        return PurchaseOrderMapper.toResponse(service.findById(id));
     }
 
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_APPROVE')")
-    public PurchaseOrderResponse approve(
-            @PathVariable UUID id) {
-
-        return PurchaseOrderMapper.toResponse(
-                service.approve(id));
+    public PurchaseOrderResponse approve(@PathVariable UUID id) {
+        return PurchaseOrderMapper.toResponse(service.approve(id));
     }
 
     @PutMapping("/{id}/receive")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_RECEIVE')")
-    public PurchaseOrderResponse receive(
-            @PathVariable UUID id) {
-
-        return PurchaseOrderMapper.toResponse(
-                service.receive(id));
+    public PurchaseOrderResponse receive(@PathVariable UUID id) {
+        return PurchaseOrderMapper.toResponse(service.receive(id));
     }
 
     @PutMapping("/{id}")
-@PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
-public PurchaseOrderResponse update(
-        @PathVariable UUID id,
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
+    public PurchaseOrderResponse update(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdatePurchaseOrderRequest request) {
 
-        @Valid
-        @RequestBody
-        UpdatePurchaseOrderRequest request) {
-
-    return PurchaseOrderMapper.toResponse(
-            service.update(id, request));
-}
+        return PurchaseOrderMapper.toResponse(service.update(id, request));
+    }
 }
