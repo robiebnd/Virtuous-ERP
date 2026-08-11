@@ -19,6 +19,8 @@ public class PutAwayMapper {
             return null;
         }
 
+        List<PutAwayLine> lines = putAway.getLines();
+
         return PutAwayResponse.builder()
                 .id(putAway.getId())
                 .putAwayNumber(putAway.getPutAwayNumber())
@@ -90,7 +92,7 @@ public class PutAwayMapper {
                 .active(putAway.getActive())
                 .createdAt(putAway.getCreatedAt())
                 .updatedAt(putAway.getUpdatedAt())
-                .lines(Collections.emptyList())
+                .lines(toLineResponses(lines))
                 .build();
     }
 
@@ -100,12 +102,7 @@ public class PutAwayMapper {
 
         PutAwayResponse response = toResponse(putAway);
 
-        response.setLines(
-                lines == null
-                        ? Collections.emptyList()
-                        : lines.stream()
-                                .map(PutAwayMapper::toLineResponse)
-                                .toList());
+        response.setLines(toLineResponses(lines));
 
         return response;
     }
@@ -166,6 +163,18 @@ public class PutAwayMapper {
                                 ? line.getCompletedQuantity()
                                 : java.math.BigDecimal.ZERO)
                 .build();
+    }
+
+    private static List<PutAwayLineResponse> toLineResponses(
+            List<PutAwayLine> lines) {
+
+        if (lines == null || lines.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return lines.stream()
+                .map(PutAwayMapper::toLineResponse)
+                .toList();
     }
 
     private static String safeUserName(
