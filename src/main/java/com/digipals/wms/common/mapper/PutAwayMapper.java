@@ -10,158 +10,177 @@ import java.util.List;
 
 public class PutAwayMapper {
 
-        private PutAwayMapper() {
+    private PutAwayMapper() {
+    }
+
+    public static PutAwayResponse toResponse(PutAway putAway) {
+
+        if (putAway == null) {
+            return null;
         }
 
-        public static PutAwayResponse toResponse(PutAway putAway) {
+        return PutAwayResponse.builder()
+                .id(putAway.getId())
+                .putAwayNumber(putAway.getPutAwayNumber())
 
-                if (putAway == null) {
-                        return null;
-                }
+                .goodsReceiptId(
+                        putAway.getGoodsReceipt() != null
+                                ? putAway.getGoodsReceipt().getId()
+                                : null)
 
-                return PutAwayResponse.builder()
+                .grnNumber(
+                        putAway.getGoodsReceipt() != null
+                                ? putAway.getGoodsReceipt().getGrnNumber()
+                                : "")
 
-                                .id(putAway.getId())
+                .warehouseId(
+                        putAway.getWarehouse() != null
+                                ? putAway.getWarehouse().getId()
+                                : null)
 
-                                .putAwayNumber(putAway.getPutAwayNumber())
+                .warehouseCode(
+                        putAway.getWarehouse() != null
+                                ? putAway.getWarehouse().getCode()
+                                : "")
 
-                                .goodsReceiptId(
-                                                putAway.getGoodsReceipt() != null
-                                                                ? putAway.getGoodsReceipt().getId()
-                                                                : null)
+                .warehouseName(
+                        putAway.getWarehouse() != null
+                                ? putAway.getWarehouse().getName()
+                                : "")
 
-                                                        .grnNumber(
-                                putAway.getGoodsReceipt() != null
-                                        ? putAway.getGoodsReceipt().getGrnNumber()
-                                        : null)
-                                .warehouseId(
-                                                putAway.getWarehouse() != null
-                                                                ? putAway.getWarehouse().getId()
-                                                                : null)
+                .status(putAway.getStatus())
 
-                                .warehouseName(
-                                                putAway.getWarehouse() != null
-                                                                ? putAway.getWarehouse().getName()
-                                                                : null)
+                .assignedToId(
+                        putAway.getAssignedTo() != null
+                                ? putAway.getAssignedTo().getId()
+                                : null)
 
-                                .warehouseCode(
-                                                putAway.getWarehouse() != null
-                                                                ? putAway.getWarehouse().getCode()
-                                                                : null)
+                .assignedTo(
+                        putAway.getAssignedTo() != null
+                                ? safeUserName(putAway.getAssignedTo())
+                                : "")
 
-                                .status(
-                                                putAway.getStatus())
+                .initiatedById(
+                        putAway.getInitiatedBy() != null
+                                ? putAway.getInitiatedBy().getId()
+                                : null)
 
-                                .assignedToId(
-                                                putAway.getAssignedTo() != null
-                                                                ? putAway.getAssignedTo().getId()
-                                                                : null)
+                .initiatedBy(
+                        putAway.getInitiatedBy() != null
+                                ? safeUserName(putAway.getInitiatedBy())
+                                : "")
 
-                                .assignedTo(
-                                                putAway.getAssignedTo() != null
-                                                                ? putAway.getAssignedTo().getFullName()
-                                                                : null)
+                .completedById(
+                        putAway.getCompletedBy() != null
+                                ? putAway.getCompletedBy().getId()
+                                : null)
 
-                                .initiatedById(
-                                                putAway.getInitiatedBy() != null
-                                                                ? putAway.getInitiatedBy().getId()
-                                                                : null)
+                .completedBy(
+                        putAway.getCompletedBy() != null
+                                ? safeUserName(putAway.getCompletedBy())
+                                : "")
 
-                                .initiatedBy(
-                                                putAway.getInitiatedBy() != null
-                                                                ? putAway.getInitiatedBy().getFullName()
-                                                                : null)
+                .completedAt(putAway.getCompletedAt())
 
-                                .completedById(
-                                                putAway.getCompletedBy() != null
-                                                                ? putAway.getCompletedBy().getId()
-                                                                : null)
+                .remarks(
+                        putAway.getRemarks() != null
+                                ? putAway.getRemarks()
+                                : "")
 
-                                .completedBy(
-                                                putAway.getCompletedBy() != null
-                                                                ? putAway.getCompletedBy().getFullName()
-                                                                : null)
+                .active(putAway.getActive())
+                .createdAt(putAway.getCreatedAt())
+                .updatedAt(putAway.getUpdatedAt())
+                .lines(Collections.emptyList())
+                .build();
+    }
 
-                                .warehouseCode(
-                                                putAway.getWarehouse() != null
-                                                                ? putAway.getWarehouse().getCode()
-                                                                : null)
+    public static PutAwayResponse toResponse(
+            PutAway putAway,
+            List<PutAwayLine> lines) {
 
-                                .active(
-                                                putAway.getActive())
+        PutAwayResponse response = toResponse(putAway);
 
-                                .createdAt(
-                                                putAway.getCreatedAt())
+        response.setLines(
+                lines == null
+                        ? Collections.emptyList()
+                        : lines.stream()
+                                .map(PutAwayMapper::toLineResponse)
+                                .toList());
 
-                                .updatedAt(
-                                                putAway.getUpdatedAt())
+        return response;
+    }
 
-                                .lines(Collections.emptyList())
+    public static PutAwayLineResponse toLineResponse(
+            PutAwayLine line) {
 
-                                .build();
+        if (line == null) {
+            return null;
         }
 
-        public static PutAwayResponse toResponse(
-                        PutAway putAway,
-                        List<PutAwayLine> lines) {
+        return PutAwayLineResponse.builder()
+                .id(line.getId())
 
-                PutAwayResponse response = toResponse(putAway);
+                .goodsReceiptLineId(
+                        line.getGoodsReceiptLine() != null
+                                ? line.getGoodsReceiptLine().getId()
+                                : null)
 
-                response.setLines(
-                                lines.stream()
-                                                .map(PutAwayMapper::toLineResponse)
-                                                .toList());
+                .productId(
+                        line.getProduct() != null
+                                ? line.getProduct().getId()
+                                : null)
 
-                return response;
+                .sku(
+                        line.getProduct() != null
+                                ? line.getProduct().getSku()
+                                : "")
+
+                .productName(
+                        line.getProduct() != null
+                                ? line.getProduct().getName()
+                                : "")
+
+                .fromBinId(
+                        line.getFromBin() != null
+                                ? line.getFromBin().getId()
+                                : null)
+
+                .fromBinCode(
+                        line.getFromBin() != null
+                                ? line.getFromBin().getCode()
+                                : "")
+
+                .toBinId(
+                        line.getToBin() != null
+                                ? line.getToBin().getId()
+                                : null)
+
+                .toBinCode(
+                        line.getToBin() != null
+                                ? line.getToBin().getCode()
+                                : "")
+
+                .plannedQuantity(line.getPlannedQuantity())
+                .completedQuantity(
+                        line.getCompletedQuantity() != null
+                                ? line.getCompletedQuantity()
+                                : java.math.BigDecimal.ZERO)
+                .build();
+    }
+
+    private static String safeUserName(
+            com.digipals.wms.users.entity.User user) {
+
+        if (user.getFullName() != null
+                && !user.getFullName().isBlank()) {
+            return user.getFullName();
         }
 
-        public static PutAwayLineResponse toLineResponse(
-                        PutAwayLine line) {
-
-                if (line == null) {
-                        return null;
-                }
-
-                return PutAwayLineResponse.builder()
-
-                                .id(line.getId())
-
-                                .goodsReceiptLineId(
-                                                line.getGoodsReceiptLine().getId())
-
-                                .productId(
-                                                line.getProduct().getId())
-
-                                .sku(
-                                                line.getProduct() != null
-                                                                ? line.getProduct().getSku()
-                                                                : null)
-
-                                .productName(
-                                                line.getProduct() != null
-                                                                ? line.getProduct().getName()
-                                                                : null)
-
-                                .fromBinId(
-                                                line.getFromBin().getId())
-
-                                .fromBinCode(
-                                                line.getFromBin().getCode())
-
-                                .toBinId(
-                                                line.getToBin() != null
-                                                                ? line.getToBin().getId()
-                                                                : null)
-
-                                .toBinCode(
-                                                line.getToBin() != null
-                                                                ? line.getToBin().getCode()
-                                                                : null)
-
-                                .plannedQuantity(line.getPlannedQuantity())
-
-                                .completedQuantity(line.getCompletedQuantity())
-
-                                .build();
+        if (user.getUsername() != null
+                && !user.getUsername().isBlank()) {
+            return user.getUsername();
         }
+
+        return "";
+    }
 }
