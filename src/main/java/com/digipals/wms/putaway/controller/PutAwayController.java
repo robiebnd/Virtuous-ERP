@@ -1,10 +1,12 @@
 package com.digipals.wms.putaway.controller;
 
+import com.digipals.wms.putaway.dto.AssignPutAwayRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
 import com.digipals.wms.putaway.dto.UpdatePutAwayLineRequest;
 import com.digipals.wms.putaway.dto.UpdatePutAwayRequest;
+import com.digipals.wms.putaway.service.PutAwayAssignmentService;
 import com.digipals.wms.putaway.service.PutAwayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class PutAwayController {
 
     private final PutAwayService service;
+    private final PutAwayAssignmentService assignmentService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -56,6 +59,13 @@ public class PutAwayController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdatePutAwayRequest request) {
         return service.update(id, request);
+    }
+
+    @PutMapping("/{id}/assign")
+    public PutAwayResponse assign(
+            @PathVariable UUID id,
+            @Valid @RequestBody AssignPutAwayRequest request) {
+        return assignmentService.assign(id, request);
     }
 
     @PostMapping("/lines/{lineId}/put-away")
