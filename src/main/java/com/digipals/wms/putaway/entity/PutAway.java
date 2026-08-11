@@ -9,6 +9,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "put_aways")
@@ -53,6 +55,8 @@ public class PutAway extends BaseEntity {
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
 
-    
-
+    @OneToMany(mappedBy = "putAway", fetch = FetchType.LAZY)
+    @OrderBy("createdAt ASC")
+    @Builder.Default
+    private List<PutAwayLine> lines = new ArrayList<>();
 }
