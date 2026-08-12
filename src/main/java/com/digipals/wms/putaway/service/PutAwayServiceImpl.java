@@ -311,6 +311,18 @@ public class PutAwayServiceImpl implements PutAwayService {
     }
 
     @Override
+    public PutAwayResponse cancel(UUID id) {
+        PutAway putAway = getPutAway(id);
+        if (putAway.getStatus() != PutAwayStatus.DRAFT) {
+            throw new InvalidWorkflowException("Only draft Put-Aways can be cancelled.");
+        }
+        putAway.setStatus(PutAwayStatus.CANCELLED);
+        putAway = putAwayRepository.save(putAway);
+        return PutAwayMapper.toResponse(putAway,
+                putAwayLineRepository.findByPutAwayId(putAway.getId()));
+    }
+
+    @Override
     public void delete(UUID id) {
         PutAway putAway = getPutAway(id);
         if (putAway.getStatus() != PutAwayStatus.DRAFT) {
