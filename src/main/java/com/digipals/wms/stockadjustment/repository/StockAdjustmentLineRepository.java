@@ -9,19 +9,16 @@ import java.util.UUID;
 public interface StockAdjustmentLineRepository
         extends JpaRepository<StockAdjustmentLine, UUID> {
 
-    List<StockAdjustmentLine> findByStockAdjustmentId(
-            UUID stockAdjustmentId);
+    List<StockAdjustmentLine> findByStockAdjustmentId(UUID stockAdjustmentId);
 
-    List<StockAdjustmentLine> findByProductId(
-            UUID productId);
+    List<StockAdjustmentLine> findByProductId(UUID productId);
 
-    boolean existsByStockAdjustmentIdAndProductId(
+    boolean existsByStockAdjustmentIdAndProductIdAndBinId(
             UUID adjustmentId,
-            UUID productId);
+            UUID productId,
+            UUID binId);
 
-    void deleteByStockAdjustmentId(
-            UUID adjustmentId);
+    void deleteByStockAdjustmentId(UUID adjustmentId);
 
-    long countByStockAdjustmentId(
-            UUID adjustmentId);
+    long countByStockAdjustmentId(UUID adjustmentId);
 }
