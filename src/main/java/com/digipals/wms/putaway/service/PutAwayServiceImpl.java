@@ -34,6 +34,7 @@ import com.digipals.wms.products.Product;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.users.entity.User;
 import com.digipals.wms.warehouse.entity.Warehouse;
+import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
