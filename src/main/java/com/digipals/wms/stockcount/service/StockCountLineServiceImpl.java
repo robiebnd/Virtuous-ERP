@@ -5,6 +5,7 @@ import com.digipals.wms.inventorybin.entity.InventoryBin;
 import com.digipals.wms.inventorybin.repository.InventoryBinRepository;
 import com.digipals.wms.stockcount.dto.CreateStockCountLineRequest;
 import com.digipals.wms.stockcount.dto.StockCountLineResponse;
+import com.digipals.wms.stockcount.dto.UpdateStockCountLineRequest;
 import com.digipals.wms.stockcount.entity.StockCount;
 import com.digipals.wms.stockcount.entity.StockCountLine;
 import com.digipals.wms.stockcount.entity.StockCountStatus;
@@ -30,7 +31,7 @@ public class StockCountLineServiceImpl implements StockCountLineService {
 
     @Override
     @Transactional
-    public StockCountLineResponse updateCount(UUID lineId, CreateStockCountLineRequest request) {
+    public StockCountLineResponse updateCount(UUID lineId, UpdateStockCountLineRequest request) {
         StockCountLine line = repository.findById(lineId)
                 .orElseThrow(() -> new RuntimeException("Stock Count Line not found"));
 
