@@ -22,7 +22,10 @@ public interface StockAdjustmentService {
 
     StockAdjustmentResponse post(
             UUID id);
-    
+
+    StockAdjustmentResponse postByAdjustmentNumber(
+            String adjustmentNumber);
+
     StockAdjustmentResponse createFromStockCount(
         StockCount stockCount);
 }
