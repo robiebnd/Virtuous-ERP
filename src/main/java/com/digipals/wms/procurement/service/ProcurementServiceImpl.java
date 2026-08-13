@@ -20,7 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,106 +39,87 @@ public class ProcurementServiceImpl implements ProcurementService {
     private final ProcurementValidator validator;
 
     @Override
-    public PurchaseOrderResponse generatePurchaseOrder(
-            GeneratePurchaseOrderRequest request) {
-
-        PurchaseRequisition requisition = requisitionRepository
-                .findById(request.getPurchaseRequisitionId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Purchase Requisition not found."));
-
+    public PurchaseOrderResponse generatePurchaseOrder(GeneratePurchaseOrderRequest request) {
+        PurchaseRequisition requisition = requisitionRepository.findById(request.getPurchaseRequisitionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
         validator.validateApproved(requisition);
         validator.validateNotConverted(requisition);
 
-        Supplier supplier = resolveSupplier(request, requisition);
+        Supplier supplier = request.getSupplierId() != null
+                ? supplierRepository.findById(request.getSupplierId()).orElseThrow(() -> new ResourceNotFoundException("Supplier not found."))
+                : requisition.getSupplier();
+        if (supplier == null) throw new ResourceNotFoundException("No supplier is assigned to the Purchase Requisition.");
 
-        List<PurchaseRequisitionLine> requisitionLines =
-                requisitionLineRepository.findByPurchaseRequisitionId(requisition.getId());
+        List<PurchaseRequisitionLine> lines = requisitionLineRepository.findByPurchaseRequisitionId(requisition.getId());
+        if (lines.isEmpty()) throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
 
-        if (requisitionLines.isEmpty()) {
-            throw new ResourceNotFoundException(
-                    "Purchase Requisition contains no lines.");
-        }
-
-        PurchaseOrder purchaseOrder = PurchaseOrder.builder()
+        PurchaseOrder po = purchaseOrderRepository.save(PurchaseOrder.builder()
                 .poNumber(documentNumberService.next(DocumentType.PURCHASE_ORDER))
-                .supplier(supplier)
-                .warehouse(requisition.getWarehouse())
-                .purchaseRequisition(requisition)
-                .source(ProcurementSource.REQUISITION)
-                .status(PurchaseOrderStatus.DRAFT)
-                .build();
+                .supplier(supplier).warehouse(requisition.getWarehouse()).purchaseRequisition(requisition)
+                .source(ProcurementSource.REQUISITION).status(PurchaseOrderStatus.DRAFT).build());
 
-        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
-
-        for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
-            BigDecimal unitPrice = determineProcurementPrice(
-                    supplier,
-                    requisitionLine);
-
-            PurchaseOrderLine orderLine = PurchaseOrderLine.builder()
-                    .purchaseOrder(purchaseOrder)
-                    .product(requisitionLine.getProduct())
-                    .quantity(requisitionLine.getQuantity())
-                    .unitPrice(unitPrice)
-                    .build();
-
-            purchaseOrderLineRepository.save(orderLine);
+        for (PurchaseRequisitionLine line : lines) {
+            BigDecimal price = purchaseOrderLineRepository.findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
+                    .orElse(line.getProduct().getCostPrice() == null ? BigDecimal.ZERO : line.getProduct().getCostPrice());
+            purchaseOrderLineRepository.save(PurchaseOrderLine.builder().purchaseOrder(po)
+                    .product(line.getProduct()).quantity(line.getQuantity()).unitPrice(price).build());
         }
-
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         requisitionRepository.save(requisition);
-
-        return PurchaseOrderMapper.toResponse(purchaseOrder);
+        return PurchaseOrderMapper.toResponse(po);
     }
 
-    private Supplier resolveSupplier(
-            GeneratePurchaseOrderRequest request,
-            PurchaseRequisition requisition) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> recommendPurchaseOrder(UUID id) {
+        PurchaseRequisition pr = requisitionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
+        validator.validateApproved(pr);
+        validator.validateNotConverted(pr);
+        List<PurchaseRequisitionLine> lines = requisitionLineRepository.findByPurchaseRequisitionId(id);
+        if (lines.isEmpty()) throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
 
-        if (request.getSupplierId() != null) {
-            return supplierRepository.findById(request.getSupplierId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Supplier not found."));
+        List<Supplier> suppliers = supplierRepository.findByActiveTrue();
+        if (suppliers.isEmpty()) throw new ResourceNotFoundException("No active suppliers are available for recommendation.");
+
+        Supplier best = null;
+        BigDecimal bestTotal = null;
+        int bestHistory = -1;
+        List<Map<String,Object>> bestLines = null;
+        for (Supplier supplier : suppliers) {
+            BigDecimal total = BigDecimal.ZERO;
+            int history = 0;
+            List<Map<String,Object>> candidateLines = new java.util.ArrayList<>();
+            for (PurchaseRequisitionLine line : lines) {
+                BigDecimal historical = purchaseOrderLineRepository.findLatestUnitPrice(supplier.getId(), line.getProduct().getId()).orElse(null);
+                boolean usedHistory = historical != null && historical.compareTo(BigDecimal.ZERO) > 0;
+                BigDecimal price = usedHistory ? historical : (line.getProduct().getCostPrice() == null ? BigDecimal.ZERO : line.getProduct().getCostPrice());
+                if (usedHistory) history++;
+                BigDecimal lineTotal = line.getQuantity().multiply(price);
+                total = total.add(lineTotal);
+                Map<String,Object> item = new LinkedHashMap<>();
+                item.put("productId", line.getProduct().getId()); item.put("sku", line.getProduct().getSku());
+                item.put("productName", line.getProduct().getName()); item.put("requestedQuantity", line.getQuantity());
+                item.put("recommendedQuantity", line.getQuantity()); item.put("recommendedUnitPrice", price);
+                item.put("estimatedLineTotal", lineTotal); item.put("historicalPriceUsed", usedHistory);
+                item.put("pricingBasis", usedHistory ? "LATEST_NON_CANCELLED_SUPPLIER_PRICE" : "PRODUCT_COST_PRICE_FALLBACK");
+                candidateLines.add(item);
+            }
+            boolean preferred = pr.getSupplier() != null && pr.getSupplier().getId().equals(supplier.getId());
+            boolean better = best == null || total.compareTo(bestTotal) < 0 || (total.compareTo(bestTotal) == 0 && preferred);
+            if (better) { best = supplier; bestTotal = total; bestHistory = history; bestLines = candidateLines; }
         }
 
-        if (requisition.getSupplier() != null) {
-            return requisition.getSupplier();
-        }
-
-        throw new ResourceNotFoundException(
-                "No supplier was supplied and the Purchase Requisition has no supplier assigned.");
-    }
-
-    /**
-     * Establishes a defensible draft procurement price without silently
-     * inventing a price. Historical supplier/product pricing takes priority;
-     * the product cost price is the fallback when no history exists.
-     */
-    private BigDecimal determineProcurementPrice(
-            Supplier supplier,
-            PurchaseRequisitionLine requisitionLine) {
-
-        BigDecimal historicalPrice = purchaseOrderLineRepository
-                .findLatestUnitPrice(
-                        supplier.getId(),
-                        requisitionLine.getProduct().getId())
-                .orElse(null);
-
-        if (isPositive(historicalPrice)) {
-            return historicalPrice;
-        }
-
-        BigDecimal productCostPrice = requisitionLine.getProduct().getCostPrice();
-
-        if (isPositive(productCostPrice)) {
-            return productCostPrice;
-        }
-
-        return BigDecimal.ZERO;
-    }
-
-    private boolean isPositive(BigDecimal value) {
-        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("purchaseRequisitionId", pr.getId()); result.put("requisitionNumber", pr.getRequisitionNumber());
+        result.put("recommendedSupplierId", best.getId()); result.put("recommendedSupplierCode", best.getCode());
+        result.put("recommendedSupplierName", best.getName()); result.put("estimatedTotal", bestTotal);
+        result.put("historicalPriceCoverage", bestHistory + "/" + lines.size());
+        result.put("confidence", BigDecimal.valueOf(0.55 + (0.40 * bestHistory / (double) lines.size())).setScale(2, java.math.RoundingMode.HALF_UP));
+        result.put("riskLevel", bestHistory == 0 ? "MEDIUM" : "LOW");
+        result.put("summary", bestHistory == lines.size() ? "Recommendation is based on historical supplier pricing for all requisition lines." : "Recommendation uses historical pricing where available and product cost price as fallback.");
+        result.put("lines", bestLines); result.put("createsPurchaseOrder", false); result.put("autoApprovesPurchaseOrder", false);
+        result.put("nextAction", "Review the recommendation, then generate a DRAFT Purchase Order using the recommended supplier.");
+        return result;
     }
 }
