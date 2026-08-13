@@ -10,17 +10,14 @@ import java.util.UUID;
 @Data
 public class CreateStockCountLineRequest {
 
-    @NotNull(message = "Stock Count is required")
     private UUID stockCountId;
 
-    @NotNull(message = "Product is required")
     private UUID productId;
 
-    @NotNull(message = "Bin is required")
     private UUID binId;
 
     @NotNull(message = "Counted quantity is required")
-    @DecimalMin(value = "0.00")
+    @DecimalMin(value = "0.00", message = "Counted quantity cannot be negative")
     private BigDecimal countedQuantity;
 
     private String reason;
