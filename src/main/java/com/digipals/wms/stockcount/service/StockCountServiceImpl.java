@@ -60,7 +60,7 @@ public class StockCountServiceImpl implements StockCountService {
                 .countNumber(documentNumberService.next(DocumentType.STOCK_COUNT))
                 .warehouse(warehouse)
                 .remarks(request.getRemarks())
-                .countDate(request.getCountDate() != null ? request.getCountDate() : LocalDateTime.now())
+                .countDate(LocalDateTime.now())
                 .status(StockCountStatus.DRAFT)
                 .build();
 
@@ -114,8 +114,6 @@ public class StockCountServiceImpl implements StockCountService {
                     .product(inventory.getProduct())
                     .bin(inventory.getBin())
                     .systemQuantity(systemQuantity)
-                    // Null means the physical count has not yet been entered.
-                    // Zero remains a valid physical count when explicitly entered.
                     .countedQuantity(null)
                     .variance(null)
                     .reason(null)
