@@ -11,6 +11,9 @@ public class GeneratePurchaseOrderRequest {
     @NotNull
     private UUID purchaseRequisitionId;
 
-    @NotNull
+    /**
+     * Optional supplier override. When omitted, the supplier assigned to the
+     * approved purchase requisition is used.
+     */
     private UUID supplierId;
 }
