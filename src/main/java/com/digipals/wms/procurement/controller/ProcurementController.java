@@ -7,9 +7,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/procurement")
 @RequiredArgsConstructor
@@ -24,16 +21,5 @@ public class ProcurementController {
             GeneratePurchaseOrderRequest request) {
 
         return service.generatePurchaseOrder(request);
-    }
-
-    /**
-     * Produces an explainable procurement recommendation for an approved PR.
-     * This endpoint does not create or approve a PO.
-     */
-    @GetMapping("/purchase-requisitions/{purchaseRequisitionId}/recommendation")
-    public Map<String, Object> recommendPurchaseOrder(
-            @PathVariable UUID purchaseRequisitionId) {
-
-        return service.recommendPurchaseOrder(purchaseRequisitionId);
     }
 }
