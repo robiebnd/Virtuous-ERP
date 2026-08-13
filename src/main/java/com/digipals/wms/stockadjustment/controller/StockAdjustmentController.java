@@ -52,4 +52,12 @@ public class StockAdjustmentController {
 
         return service.post(id);
     }
+
+    @PutMapping("/number/{adjustmentNumber}/post")
+    @PreAuthorize("hasAuthority('STOCK_ADJUSTMENT_POST')")
+    public StockAdjustmentResponse postByAdjustmentNumber(
+            @PathVariable String adjustmentNumber) {
+
+        return service.postByAdjustmentNumber(adjustmentNumber);
+    }
 }
