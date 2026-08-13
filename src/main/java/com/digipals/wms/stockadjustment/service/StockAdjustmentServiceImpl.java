@@ -206,6 +206,19 @@ public class StockAdjustmentServiceImpl implements StockAdjustmentService {
     }
 
     @Override
+    public StockAdjustmentResponse postByAdjustmentNumber(String adjustmentNumber) {
+        if (adjustmentNumber == null || adjustmentNumber.isBlank()) {
+            throw new RuntimeException("Adjustment number is required.");
+        }
+
+        StockAdjustment adjustment = repository.findByAdjustmentNumber(adjustmentNumber.trim())
+                .orElseThrow(() -> new RuntimeException(
+                        "Stock Adjustment not found for number: " + adjustmentNumber));
+
+        return post(adjustment.getId());
+    }
+
+    @Override
     public StockAdjustmentResponse createFromStockCount(StockCount stockCount) {
         if (stockCount.getStatus() != StockCountStatus.COUNT_COMPLETED) {
             throw new RuntimeException("Only COMPLETED Stock Counts can generate Stock Adjustments.");
