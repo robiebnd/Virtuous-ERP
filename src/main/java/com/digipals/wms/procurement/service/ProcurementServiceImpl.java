@@ -19,123 +19,123 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ProcurementServiceImpl
-        implements ProcurementService {
+public class ProcurementServiceImpl implements ProcurementService {
 
     private final PurchaseRequisitionRepository requisitionRepository;
-
     private final PurchaseRequisitionLineRepository requisitionLineRepository;
-
     private final PurchaseOrderRepository purchaseOrderRepository;
-
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
-
     private final SupplierRepository supplierRepository;
-
-  
-
     private final DocumentNumberService documentNumberService;
-
     private final ProcurementValidator validator;
-    
-@Override
-public PurchaseOrderResponse generatePurchaseOrder(
-        GeneratePurchaseOrderRequest request) {
 
-    PurchaseRequisition requisition =
-            requisitionRepository
-                    .findById(request.getPurchaseRequisitionId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Purchase Requisition not found."));
+    @Override
+    public PurchaseOrderResponse generatePurchaseOrder(
+            GeneratePurchaseOrderRequest request) {
 
-    validator.validateApproved(requisition);
-    validator.validateNotConverted(requisition);
+        PurchaseRequisition requisition = requisitionRepository
+                .findById(request.getPurchaseRequisitionId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found."));
 
-    Supplier supplier =
-            supplierRepository
-                    .findById(request.getSupplierId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Supplier not found."));
+        validator.validateApproved(requisition);
+        validator.validateNotConverted(requisition);
 
-    List<PurchaseRequisitionLine> requisitionLines =
-            requisitionLineRepository.findByPurchaseRequisitionId(
-                    requisition.getId());
+        Supplier supplier = resolveSupplier(request, requisition);
 
-    if (requisitionLines.isEmpty()) {
+        List<PurchaseRequisitionLine> requisitionLines =
+                requisitionLineRepository.findByPurchaseRequisitionId(requisition.getId());
 
-        throw new ResourceNotFoundException(
-                "Purchase Requisition contains no lines.");
-    }
-
-    PurchaseOrder purchaseOrder =
-            PurchaseOrder.builder()
-
-                    .poNumber(
-                            documentNumberService.next(
-                                    DocumentType.PURCHASE_ORDER))
-
-                    .supplier(supplier)
-
-                    .warehouse(
-                            requisition.getWarehouse())
-
-                    .purchaseRequisition(
-                            requisition)
-
-                    .source(
-                            ProcurementSource.REQUISITION)
-
-                    .status(
-                            PurchaseOrderStatus.DRAFT)
-
-                    .build();
-
-    purchaseOrder =
-            purchaseOrderRepository.save(
-                    purchaseOrder);
-
-
-    for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
-
-        PurchaseOrderLine orderLine =
-                PurchaseOrderLine.builder()
-
-                        .purchaseOrder(
-                                purchaseOrder)
-
-                        .product(
-                                requisitionLine.getProduct())
-
-                        .quantity(
-                                requisitionLine.getQuantity())
-
-                        .unitPrice(
-                                BigDecimal.ZERO)
-
-                        .build();
-
-        purchaseOrderLineRepository.save(
-                orderLine);
-            }
-    requisition.setStatus(
-            PurchaseRequisitionStatus.CONVERTED_TO_PO);
-
-    requisitionRepository.save(
-            requisition);
-
-    return PurchaseOrderMapper.toResponse(
-            purchaseOrder);
+        if (requisitionLines.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Purchase Requisition contains no lines.");
         }
 
+        PurchaseOrder purchaseOrder = PurchaseOrder.builder()
+                .poNumber(documentNumberService.next(DocumentType.PURCHASE_ORDER))
+                .supplier(supplier)
+                .warehouse(requisition.getWarehouse())
+                .purchaseRequisition(requisition)
+                .source(ProcurementSource.REQUISITION)
+                .status(PurchaseOrderStatus.DRAFT)
+                .build();
 
+        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
+
+        for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
+            BigDecimal unitPrice = determineProcurementPrice(
+                    supplier,
+                    requisitionLine);
+
+            PurchaseOrderLine orderLine = PurchaseOrderLine.builder()
+                    .purchaseOrder(purchaseOrder)
+                    .product(requisitionLine.getProduct())
+                    .quantity(requisitionLine.getQuantity())
+                    .unitPrice(unitPrice)
+                    .build();
+
+            purchaseOrderLineRepository.save(orderLine);
+        }
+
+        requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
+        requisitionRepository.save(requisition);
+
+        return PurchaseOrderMapper.toResponse(purchaseOrder);
+    }
+
+    private Supplier resolveSupplier(
+            GeneratePurchaseOrderRequest request,
+            PurchaseRequisition requisition) {
+
+        if (request.getSupplierId() != null) {
+            return supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Supplier not found."));
+        }
+
+        if (requisition.getSupplier() != null) {
+            return requisition.getSupplier();
+        }
+
+        throw new ResourceNotFoundException(
+                "No supplier was supplied and the Purchase Requisition has no supplier assigned.");
+    }
+
+    /**
+     * Establishes a defensible draft procurement price without silently
+     * inventing a price. Historical supplier/product pricing takes priority;
+     * the product cost price is the fallback when no history exists.
+     */
+    private BigDecimal determineProcurementPrice(
+            Supplier supplier,
+            PurchaseRequisitionLine requisitionLine) {
+
+        BigDecimal historicalPrice = purchaseOrderLineRepository
+                .findLatestUnitPrice(
+                        supplier.getId(),
+                        requisitionLine.getProduct().getId())
+                .orElse(null);
+
+        if (isPositive(historicalPrice)) {
+            return historicalPrice;
+        }
+
+        BigDecimal productCostPrice = requisitionLine.getProduct().getCostPrice();
+
+        if (isPositive(productCostPrice)) {
+            return productCostPrice;
+        }
+
+        return BigDecimal.ZERO;
+    }
+
+    private boolean isPositive(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
+    }
 }
-        
