@@ -2,6 +2,7 @@ package com.digipals.wms.stockcount.service;
 
 import com.digipals.wms.stockcount.dto.CreateStockCountLineRequest;
 import com.digipals.wms.stockcount.dto.StockCountLineResponse;
+import com.digipals.wms.stockcount.dto.UpdateStockCountLineRequest;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,7 +22,7 @@ public interface StockCountLineService {
 
     StockCountLineResponse updateCount(
             UUID lineId,
-            CreateStockCountLineRequest request);
+            UpdateStockCountLineRequest request);
 
     void delete(
             UUID id);
