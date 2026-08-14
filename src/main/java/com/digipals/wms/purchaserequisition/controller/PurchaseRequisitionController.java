@@ -1,6 +1,5 @@
 package com.digipals.wms.purchaserequisition.controller;
 
-import com.digipals.wms.procurement.service.ProcurementService;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionRequest;
@@ -11,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -20,7 +18,6 @@ import java.util.UUID;
 public class PurchaseRequisitionController {
 
     private final PurchaseRequisitionService service;
-    private final ProcurementService procurementService;
 
     @PostMapping
     public PurchaseRequisitionResponse create(@Valid @RequestBody CreatePurchaseRequisitionRequest request) {
@@ -45,11 +42,6 @@ public class PurchaseRequisitionController {
     @GetMapping("/warehouse/{warehouseId}")
     public List<PurchaseRequisitionResponse> findByWarehouse(@PathVariable UUID warehouseId) {
         return service.findByWarehouse(warehouseId);
-    }
-
-    @GetMapping("/{id}/procurement-recommendation")
-    public Map<String, Object> procurementRecommendation(@PathVariable UUID id) {
-        return procurementService.recommendPurchaseOrder(id);
     }
 
     @PutMapping("/{id}")
