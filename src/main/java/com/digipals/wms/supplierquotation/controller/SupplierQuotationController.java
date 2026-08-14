@@ -1,6 +1,7 @@
 package com.digipals.wms.supplierquotation.controller;
 
 import com.digipals.wms.supplierquotation.dto.SupplierQuotationResponse;
+import com.digipals.wms.supplierquotation.service.QuotationAiService;
 import com.digipals.wms.supplierquotation.service.SupplierQuotationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -16,6 +18,7 @@ import java.util.UUID;
 public class SupplierQuotationController {
 
     private final SupplierQuotationService service;
+    private final QuotationAiService quotationAiService;
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
@@ -32,5 +35,12 @@ public class SupplierQuotationController {
     public List<SupplierQuotationResponse> findByPurchaseRequisition(
             @PathVariable UUID purchaseRequisitionId) {
         return service.findByPurchaseRequisition(purchaseRequisitionId);
+    }
+
+    @PostMapping("/requisition/{purchaseRequisitionId}/recommendation")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
+    public Map<String, Object> recommend(
+            @PathVariable UUID purchaseRequisitionId) {
+        return quotationAiService.recommend(purchaseRequisitionId);
     }
 }
