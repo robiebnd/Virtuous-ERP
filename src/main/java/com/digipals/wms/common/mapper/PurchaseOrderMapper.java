@@ -5,7 +5,10 @@ import com.digipals.wms.purchaseorders.dto.PurchaseOrderResponse;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
+import java.util.List;
 
 public final class PurchaseOrderMapper {
 
@@ -16,6 +19,12 @@ public final class PurchaseOrderMapper {
         if (purchaseOrder == null) {
             return null;
         }
+
+        List<PurchaseOrderLineResponse> lines = purchaseOrder.getLines() == null
+                ? Collections.emptyList()
+                : purchaseOrder.getLines().stream()
+                .map(PurchaseOrderMapper::toLineResponse)
+                .toList();
 
         return PurchaseOrderResponse.builder()
                 .id(purchaseOrder.getId())
@@ -37,14 +46,8 @@ public final class PurchaseOrderMapper {
                 .active(purchaseOrder.getActive())
                 .createdAt(purchaseOrder.getCreatedAt())
                 .updatedAt(purchaseOrder.getUpdatedAt())
-                .lines(purchaseOrderLineRepositoryNotAvailableInMapper(purchaseOrder))
+                .lines(lines)
                 .build();
-    }
-
-    private static java.util.List<PurchaseOrderLineResponse> purchaseOrderLineRepositoryNotAvailableInMapper(PurchaseOrder purchaseOrder) {
-        // The entity relationship is intentionally not exposed as a collection.
-        // The service populates the response lines after persistence.
-        return new java.util.ArrayList<>();
     }
 
     public static PurchaseOrderLineResponse toLineResponse(PurchaseOrderLine line) {
@@ -63,7 +66,7 @@ public final class PurchaseOrderMapper {
                 .build();
     }
 
-    private static java.math.BigDecimal scale(java.math.BigDecimal value) {
+    private static BigDecimal scale(BigDecimal value) {
         return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
     }
 }
