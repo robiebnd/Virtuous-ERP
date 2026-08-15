@@ -26,6 +26,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,8 +77,28 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         String filename = file.getOriginalFilename() == null ? "quotation.pdf" : file.getOriginalFilename();
         if (!filename.toLowerCase().endsWith(".pdf") && !"application/pdf".equalsIgnoreCase(contentType)) throw new InvalidWorkflowException("Quotation file must be a PDF.");
         Supplier supplier = supplierRepository.findById(supplierId).orElseThrow(() -> new ResourceNotFoundException("Supplier not found."));
+        try { return extractLinesFromBytes(supplier, filename, file.getBytes()); }
+        catch (IOException e) { throw new InvalidWorkflowException("Unable to read quotation PDF."); }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> extractLinesFromQuotation(UUID quotationId) {
+        SupplierQuotation quotation = quotationRepository.findById(quotationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier quotation not found."));
+        try {
+            Path path = Paths.get(quotation.getFilePath()).toAbsolutePath().normalize();
+            if (!Files.exists(path)) throw new ResourceNotFoundException("Quotation document not found: " + quotation.getOriginalFileName());
+            return extractLinesFromBytes(quotation.getSupplier(), quotation.getOriginalFileName(), Files.readAllBytes(path));
+        } catch (IOException e) {
+            throw new InvalidWorkflowException("Unable to read quotation PDF.");
+        }
+    }
+
+    private Map<String, Object> extractLinesFromBytes(Supplier supplier, String filename, byte[] bytes) {
+        if (bytes.length > 10 * 1024 * 1024) throw new InvalidWorkflowException("Quotation PDF must not exceed 10 MB.");
         final String text;
-        try (PDDocument document = Loader.loadPDF(file.getBytes())) { text = new PDFTextStripper().getText(document); }
+        try (PDDocument document = Loader.loadPDF(bytes)) { text = new PDFTextStripper().getText(document); }
         catch (IOException e) { throw new InvalidWorkflowException("Unable to read quotation PDF."); }
         if (text == null || text.isBlank()) throw new InvalidWorkflowException("Quotation PDF contains no readable text.");
 
@@ -121,7 +144,7 @@ public class QuotationAiServiceImpl implements QuotationAiService {
     }
 
     private String extractPdfText(SupplierQuotation quotation) {
-        try { java.nio.file.Path path = java.nio.file.Paths.get(quotation.getFilePath()).toAbsolutePath().normalize(); if (!java.nio.file.Files.exists(path)) throw new InvalidWorkflowException("Quotation document is missing: " + quotation.getOriginalFileName()); try (PDDocument document = Loader.loadPDF(path.toFile())) { String text = new PDFTextStripper().getText(document); return text.length() > 12000 ? text.substring(0, 12000) : text; } }
+        try { Path path = Paths.get(quotation.getFilePath()).toAbsolutePath().normalize(); if (!Files.exists(path)) throw new InvalidWorkflowException("Quotation document is missing: " + quotation.getOriginalFileName()); try (PDDocument document = Loader.loadPDF(path.toFile())) { String text = new PDFTextStripper().getText(document); return text.length() > 12000 ? text.substring(0, 12000) : text; } }
         catch (IOException e) { throw new InvalidWorkflowException("Unable to read quotation document: " + quotation.getOriginalFileName()); }
     }
 
