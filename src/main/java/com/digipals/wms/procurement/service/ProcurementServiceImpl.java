@@ -75,20 +75,44 @@ public class ProcurementServiceImpl implements ProcurementService {
                 throw new InvalidWorkflowException(
                         "Cannot generate Purchase Order: no valid price is available for product "
                                 + line.getProduct().getSku() + " (" + line.getProduct().getName()
-                                + "). Add a supplier price or product cost price before generating the PO.");
+                                + "). Add a quoted PR price, supplier price, or product cost price before generating the PO.");
             }
 
             purchaseOrderLineRepository.save(PurchaseOrderLine.builder()
                     .purchaseOrder(po)
                     .product(line.getProduct())
                     .quantity(line.getQuantity())
-                    .unitPrice(price)
+                    .unitPrice(price.setScale(2, RoundingMode.HALF_UP))
                     .build());
         }
 
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         requisitionRepository.save(requisition);
         return PurchaseOrderMapper.toResponse(po);
+    }
+
+    /**
+     * Pricing priority for PO generation:
+     * 1. The approved PR line's quoted/estimated unit cost.
+     * 2. Latest historical supplier price.
+     * 3. Product cost price.
+     *
+     * The approved PR price is authoritative because it is the price reviewed
+     * and approved during the quotation -> PR workflow.
+     */
+    private BigDecimal resolvePrice(Supplier supplier, PurchaseRequisitionLine line) {
+        if (isValidPrice(line.getEstimatedUnitCost())) {
+            return line.getEstimatedUnitCost();
+        }
+
+        return purchaseOrderLineRepository
+                .findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
+                .filter(this::isValidPrice)
+                .orElse(line.getProduct().getCostPrice());
+    }
+
+    private boolean isValidPrice(BigDecimal price) {
+        return price != null && price.compareTo(BigDecimal.ZERO) > 0;
     }
 
     @Override
@@ -210,17 +234,6 @@ public class ProcurementServiceImpl implements ProcurementService {
                 ? "Review the recommendation, then generate a DRAFT Purchase Order using the recommended supplier."
                 : "Obtain missing supplier quotations or product cost prices before generating the Purchase Order.");
         return result;
-    }
-
-    private BigDecimal resolvePrice(Supplier supplier, PurchaseRequisitionLine line) {
-        return purchaseOrderLineRepository
-                .findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
-                .filter(this::isValidPrice)
-                .orElse(line.getProduct().getCostPrice());
-    }
-
-    private boolean isValidPrice(BigDecimal price) {
-        return price != null && price.compareTo(BigDecimal.ZERO) > 0;
     }
 
     private BigDecimal calculateConfidence(int lineCount, int historicalLines, boolean fullyPriced) {
