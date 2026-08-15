@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,18 +57,29 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
 
     private PurchaseRequisitionResponse toResponseWithLines(PurchaseRequisition requisition) {
         PurchaseRequisitionResponse response = PurchaseRequisitionMapper.toResponse(requisition);
+        if (requisition.getStatus() != PurchaseRequisitionStatus.REJECTED) {
+            response.setRejectionReason(null);
+        }
         List<PurchaseRequisitionResponse.LineResponse> lines = lineRepository.findByPurchaseRequisitionId(requisition.getId())
                 .stream()
-                .map(line -> PurchaseRequisitionResponse.LineResponse.builder()
-                        .id(line.getId())
-                        .productId(line.getProduct().getId())
-                        .sku(line.getProduct().getSku())
-                        .productName(line.getProduct().getName())
-                        .quantity(line.getQuantity())
-                        .estimatedUnitCost(line.getEstimatedUnitCost())
-                        .estimatedLineTotal(line.getQuantity().multiply(line.getEstimatedUnitCost() == null ? BigDecimal.ZERO : line.getEstimatedUnitCost()))
-                        .remarks(line.getRemarks())
-                        .build())
+                .map(line -> {
+                    BigDecimal unitCost = line.getEstimatedUnitCost() == null
+                            ? BigDecimal.ZERO.setScale(2)
+                            : line.getEstimatedUnitCost().setScale(2, java.math.RoundingMode.HALF_UP);
+                    BigDecimal lineTotal = line.getQuantity()
+                            .multiply(unitCost)
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    return PurchaseRequisitionResponse.LineResponse.builder()
+                            .id(line.getId())
+                            .productId(line.getProduct().getId())
+                            .sku(line.getProduct().getSku())
+                            .productName(line.getProduct().getName())
+                            .quantity(line.getQuantity())
+                            .estimatedUnitCost(unitCost)
+                            .estimatedLineTotal(lineTotal)
+                            .remarks(line.getRemarks())
+                            .build();
+                })
                 .toList();
         response.setLines(lines);
         return response;
