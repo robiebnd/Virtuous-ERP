@@ -1,6 +1,7 @@
 package com.digipals.wms.purchaserequisition.dto;
 
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
 import lombok.Data;
 
@@ -26,12 +27,22 @@ public class PurchaseRequisitionResponse {
     private String rejectionReason;
     private UUID requestedById;
     private UUID approvedById;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID rejectedById;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UUID cancelledById;
+
     private LocalDateTime submittedAt;
     private LocalDateTime approvedAt;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private LocalDateTime rejectedAt;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private LocalDateTime cancelledAt;
+
     private LocalDateTime createdAt;
     private List<LineResponse> lines;
 
