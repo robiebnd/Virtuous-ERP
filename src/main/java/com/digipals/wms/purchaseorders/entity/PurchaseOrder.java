@@ -9,9 +9,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-
-
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "purchase_orders")
@@ -62,23 +62,21 @@ public class PurchaseOrder extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "closed_by")
     private User closedBy;
-    
+
+    @OneToMany(mappedBy = "purchaseOrder", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<PurchaseOrderLine> lines = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {
-
         if (status == null) {
             status = PurchaseOrderStatus.DRAFT;
         }
-
         if (orderDate == null) {
             orderDate = LocalDateTime.now();
         }
-
         if (source == null) {
-        source = ProcurementSource.DIRECT;
+            source = ProcurementSource.DIRECT;
         }
-
-   
     }
 }
