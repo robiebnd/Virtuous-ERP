@@ -56,14 +56,33 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     private Supplier getSupplier(UUID id) { return supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found.")); }
     private void validateHasLines(PurchaseRequisition requisition) { if (lineRepository.countByPurchaseRequisitionId(requisition.getId()) == 0) throw new RuntimeException("Purchase Requisition contains no lines."); }
 
+    private PurchaseRequisitionResponse toResponseWithLines(PurchaseRequisition requisition) {
+        PurchaseRequisitionResponse response = PurchaseRequisitionMapper.toResponse(requisition);
+        List<PurchaseRequisitionResponse.LineResponse> lines = lineRepository.findByPurchaseRequisitionId(requisition.getId())
+                .stream()
+                .map(line -> PurchaseRequisitionResponse.LineResponse.builder()
+                        .id(line.getId())
+                        .productId(line.getProduct().getId())
+                        .sku(line.getProduct().getSku())
+                        .productName(line.getProduct().getName())
+                        .quantity(line.getQuantity())
+                        .estimatedUnitCost(line.getEstimatedUnitCost())
+                        .estimatedLineTotal(line.getQuantity().multiply(line.getEstimatedUnitCost() == null ? BigDecimal.ZERO : line.getEstimatedUnitCost()))
+                        .remarks(line.getRemarks())
+                        .build())
+                .toList();
+        response.setLines(lines);
+        return response;
+    }
+
     @Override @Transactional(readOnly = true)
-    public List<PurchaseRequisitionResponse> findAll() { return repository.findAll().stream().map(PurchaseRequisitionMapper::toResponse).toList(); }
+    public List<PurchaseRequisitionResponse> findAll() { return repository.findAll().stream().map(this::toResponseWithLines).toList(); }
     @Override @Transactional(readOnly = true)
-    public PurchaseRequisitionResponse findById(UUID id) { return PurchaseRequisitionMapper.toResponse(getRequisition(id)); }
+    public PurchaseRequisitionResponse findById(UUID id) { return toResponseWithLines(getRequisition(id)); }
     @Override @Transactional(readOnly = true)
-    public List<PurchaseRequisitionResponse> findByStatus(PurchaseRequisitionStatus status) { return repository.findByStatus(status).stream().map(PurchaseRequisitionMapper::toResponse).toList(); }
+    public List<PurchaseRequisitionResponse> findByStatus(PurchaseRequisitionStatus status) { return repository.findByStatus(status).stream().map(this::toResponseWithLines).toList(); }
     @Override @Transactional(readOnly = true)
-    public List<PurchaseRequisitionResponse> findByWarehouse(UUID warehouseId) { return repository.findByWarehouseId(warehouseId).stream().map(PurchaseRequisitionMapper::toResponse).toList(); }
+    public List<PurchaseRequisitionResponse> findByWarehouse(UUID warehouseId) { return repository.findByWarehouseId(warehouseId).stream().map(this::toResponseWithLines).toList(); }
 
     @Override
     public PurchaseRequisitionResponse create(CreatePurchaseRequisitionRequest request) {
@@ -77,13 +96,13 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     public PurchaseRequisitionResponse update(UUID id, UpdatePurchaseRequisitionRequest request) {
         PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition);
         requisition.setSupplier(getSupplier(request.getSupplierId())); requisition.setDepartment(request.getDepartment().trim()); requisition.setRemarks(request.getRemarks());
-        return PurchaseRequisitionMapper.toResponse(repository.save(requisition));
+        return toResponseWithLines(repository.save(requisition));
     }
     @Override public void delete(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition); repository.delete(requisition); }
-    @Override public PurchaseRequisitionResponse submit(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition); validateHasLines(requisition); if (requisition.getSupplier() == null) throw new IllegalStateException("Purchase Requisition supplier is required before submission."); requisition.setStatus(PurchaseRequisitionStatus.SUBMITTED); requisition.setSubmittedAt(LocalDateTime.now()); return PurchaseRequisitionMapper.toResponse(repository.save(requisition)); }
-    @Override public PurchaseRequisitionResponse approve(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); requisition.setStatus(PurchaseRequisitionStatus.APPROVED); requisition.setApprovedBy(currentUserService.getCurrentUser()); requisition.setApprovedAt(LocalDateTime.now()); return PurchaseRequisitionMapper.toResponse(repository.save(requisition)); }
-    @Override public PurchaseRequisitionResponse reject(UUID id, String remarks) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); if (remarks == null || remarks.isBlank()) throw new IllegalArgumentException("Rejection reason is required."); requisition.setStatus(PurchaseRequisitionStatus.REJECTED); requisition.setRejectedBy(currentUserService.getCurrentUser()); requisition.setRejectedAt(LocalDateTime.now()); requisition.setRejectionReason(remarks.trim()); return PurchaseRequisitionMapper.toResponse(repository.save(requisition)); }
-    @Override public PurchaseRequisitionResponse cancel(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateCanCancel(requisition); requisition.setStatus(PurchaseRequisitionStatus.CANCELLED); requisition.setCancelledBy(currentUserService.getCurrentUser()); requisition.setCancelledAt(LocalDateTime.now()); return PurchaseRequisitionMapper.toResponse(repository.save(requisition)); }
+    @Override public PurchaseRequisitionResponse submit(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition); validateHasLines(requisition); if (requisition.getSupplier() == null) throw new IllegalStateException("Purchase Requisition supplier is required before submission."); requisition.setStatus(PurchaseRequisitionStatus.SUBMITTED); requisition.setSubmittedAt(LocalDateTime.now()); return toResponseWithLines(repository.save(requisition)); }
+    @Override public PurchaseRequisitionResponse approve(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); requisition.setStatus(PurchaseRequisitionStatus.APPROVED); requisition.setApprovedBy(currentUserService.getCurrentUser()); requisition.setApprovedAt(LocalDateTime.now()); return toResponseWithLines(repository.save(requisition)); }
+    @Override public PurchaseRequisitionResponse reject(UUID id, String remarks) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); if (remarks == null || remarks.isBlank()) throw new IllegalArgumentException("Rejection reason is required."); requisition.setStatus(PurchaseRequisitionStatus.REJECTED); requisition.setRejectedBy(currentUserService.getCurrentUser()); requisition.setRejectedAt(LocalDateTime.now()); requisition.setRejectionReason(remarks.trim()); return toResponseWithLines(repository.save(requisition)); }
+    @Override public PurchaseRequisitionResponse cancel(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateCanCancel(requisition); requisition.setStatus(PurchaseRequisitionStatus.CANCELLED); requisition.setCancelledBy(currentUserService.getCurrentUser()); requisition.setCancelledAt(LocalDateTime.now()); return toResponseWithLines(repository.save(requisition)); }
 
     @Override
     public PurchaseRequisitionResponse importQuotation(UUID requisitionId, UUID quotationId) {
@@ -98,36 +117,21 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         Object rawLines = extraction.get("lines");
         if (!(rawLines instanceof List<?> extractedLines) || extractedLines.isEmpty()) throw new InvalidWorkflowException("No quotation lines were extracted.");
 
-        // Validate every extracted line before changing the PR. This prevents a partial import.
         List<QuotationLineData> lines = new ArrayList<>();
-        List<Map<String, Object>> missingProducts = new ArrayList<>();
-
         for (Object rawLine : extractedLines) {
             if (!(rawLine instanceof Map<?, ?> line)) throw new InvalidWorkflowException("Invalid extracted quotation line.");
-
             String sku = text(line.get("sku"));
             String description = text(line.get("description"));
             BigDecimal quantity = decimal(line.get("quantity"));
             BigDecimal unitPrice = decimal(line.get("unitPrice"));
-
             if (sku == null || sku.isBlank()) throw new InvalidWorkflowException("A quotation line is missing SKU.");
             if (description == null || description.isBlank()) throw new InvalidWorkflowException("A quotation line is missing product description for SKU " + sku + ".");
             if (quantity == null || quantity.signum() <= 0) throw new InvalidWorkflowException("Quotation line quantity must be greater than zero for SKU " + sku + ".");
             if (unitPrice == null || unitPrice.signum() < 0) throw new InvalidWorkflowException("Quotation line unit price cannot be negative for SKU " + sku + ".");
-
             Product product = productRepository.findBySku(sku).orElse(null);
-            if (product == null) {
-                Map<String, Object> missing = new LinkedHashMap<>();
-                missing.put("sku", sku);
-                missing.put("description", description);
-                missingProducts.add(missing);
-            }
             lines.add(new QuotationLineData(sku, description, quantity, unitPrice, product));
         }
 
-        // All missing products are created automatically from explicit quotation data.
-        // The quoted unit price becomes the initial cost and selling-price baseline. Category/UOM
-        // are left unset because the quotation extraction does not reliably provide those master-data values.
         for (QuotationLineData line : lines) {
             if (line.product() == null) {
                 Product product = Product.builder()
@@ -151,7 +155,7 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
                     .build());
         }
 
-        return PurchaseRequisitionMapper.toResponse(requisition);
+        return toResponseWithLines(requisition);
     }
 
     private String text(Object value) { return value == null ? null : value.toString().trim(); }
@@ -163,15 +167,7 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         private final BigDecimal quantity;
         private final BigDecimal unitPrice;
         private Product product;
-
-        private QuotationLineData(String sku, String description, BigDecimal quantity, BigDecimal unitPrice, Product product) {
-            this.sku = sku;
-            this.description = description;
-            this.quantity = quantity;
-            this.unitPrice = unitPrice;
-            this.product = product;
-        }
-
+        private QuotationLineData(String sku, String description, BigDecimal quantity, BigDecimal unitPrice, Product product) { this.sku = sku; this.description = description; this.quantity = quantity; this.unitPrice = unitPrice; this.product = product; }
         private String sku() { return sku; }
         private String description() { return description; }
         private BigDecimal quantity() { return quantity; }
