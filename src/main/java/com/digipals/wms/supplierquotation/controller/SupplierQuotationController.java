@@ -30,6 +30,14 @@ public class SupplierQuotationController {
         return service.upload(purchaseRequisitionId, supplierId, quotationNumber, file);
     }
 
+    @PostMapping(value = "/ai/extract-lines", consumes = "multipart/form-data")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
+    public Map<String, Object> extractLines(
+            @RequestParam UUID supplierId,
+            @RequestPart MultipartFile file) {
+        return quotationAiService.extractLines(supplierId, file);
+    }
+
     @GetMapping("/requisition/{purchaseRequisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public List<SupplierQuotationResponse> findByPurchaseRequisition(
