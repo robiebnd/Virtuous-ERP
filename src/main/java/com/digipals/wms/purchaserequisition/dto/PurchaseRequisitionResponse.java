@@ -24,7 +24,10 @@ public class PurchaseRequisitionResponse {
     private PurchaseRequisitionStatus status;
     private String department;
     private String remarks;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String rejectionReason;
+
     private UUID requestedById;
     private UUID approvedById;
 
