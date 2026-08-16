@@ -118,17 +118,19 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         if (currency == null) currency = firstGroup(normalized, "(?i)\\b(USD|ZWL|ZAR|EUR|GBP)\\b");
 
         List<Map<String, Object>> lines = new ArrayList<>();
-        Pattern linePattern = Pattern.compile("(?m)^\\s*(\\d+)\\s+(PRD[A-Z0-9\\-]+)\\s+(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s+(?:([A-Z]{3})\\s+)?(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s*$");
+        Pattern linePattern = Pattern.compile("(?m)^\\s*(?:\\d+\\s+)?(PRD[A-Z0-9\\-]+)\\s+(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)(?:\\s+([A-Z]{3}))?\\s+(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s*$");
         Matcher matcher = linePattern.matcher(normalized);
-        while (matcher.find()) {
-            Map<String, Object> line = new LinkedHashMap<>();
-            line.put("description", matcher.group(3).trim());
-            line.put("sku", matcher.group(2).trim());
-            line.put("quantity", decimal(matcher.group(4)));
-            line.put("unitPrice", decimal(matcher.group(5)));
-            line.put("currency", matcher.group(6) == null ? currency : matcher.group(6).toUpperCase());
-            lines.add(line);
+        while (matcher.find()) addMockLine(lines, matcher.group(1), matcher.group(2), matcher.group(3), matcher.group(4), matcher.group(5), currency);
+
+        // PDF table extraction can place each cell on its own line. In that case,
+        // use a whitespace-normalized fallback that anchors on the SKU and numeric columns.
+        if (lines.isEmpty()) {
+            String flat = normalized.replaceAll("\\s+", " ").trim();
+            Pattern flatPattern = Pattern.compile("(?i)(PRD[A-Z0-9\\-]+)\\s+(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s+(?:([A-Z]{3})\\s+)?(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)");
+            Matcher flatMatcher = flatPattern.matcher(flat);
+            while (flatMatcher.find()) addMockLine(lines, flatMatcher.group(1), flatMatcher.group(2), flatMatcher.group(3), flatMatcher.group(4), flatMatcher.group(5), currency);
         }
+
         if (lines.isEmpty()) throw new InvalidWorkflowException("Mock extraction could not identify quotation lines in the supplied PDF. Expected rows containing SKU, description, quantity and unit price.");
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -140,6 +142,16 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         response.put("sourceFileName", filename);
         response.put("extractionMode", "MOCK");
         return response;
+    }
+
+    private void addMockLine(List<Map<String, Object>> lines, String sku, String description, String quantity, String unitPrice, String lineCurrency, String defaultCurrency) {
+        Map<String, Object> line = new LinkedHashMap<>();
+        line.put("description", description.trim());
+        line.put("sku", sku.trim());
+        line.put("quantity", decimal(quantity));
+        line.put("unitPrice", decimal(unitPrice));
+        line.put("currency", lineCurrency == null ? defaultCurrency : lineCurrency.toUpperCase());
+        lines.add(line);
     }
 
     private String firstGroup(String text, String regex) {
