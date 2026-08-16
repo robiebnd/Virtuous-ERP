@@ -19,6 +19,7 @@ public class PurchaseOrderResponse {
     private String poNumber;
     private PurchaseOrderStatus status;
     private ProcurementSource source;
+    private String currency;
     private UUID supplierId;
     private String supplierCode;
     private String supplierName;
