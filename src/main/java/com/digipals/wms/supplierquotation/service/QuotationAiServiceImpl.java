@@ -34,6 +34,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -109,17 +111,44 @@ public class QuotationAiServiceImpl implements QuotationAiService {
     }
 
     private Map<String, Object> buildMockExtractionResponse(Supplier supplier, String filename, String text) {
+        String normalized = text.replace('\u00A0', ' ').replace('\r', '\n');
+        String quotationNumber = firstGroup(normalized, "(?i)quotation\\s*(?:no\\.?|number)\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-_/]+)");
+        String quotationDate = firstGroup(normalized, "(?i)quotation\\s*date\\s*[:\\-]?\\s*(\\d{1,2}\\s+[A-Za-z]+\\s+\\d{4})");
+        String currency = firstGroup(normalized, "(?i)currency\\s*[:\\-]?\\s*([A-Z]{3})");
+        if (currency == null) currency = firstGroup(normalized, "(?i)\\b(USD|ZWL|ZAR|EUR|GBP)\\b");
+
         List<Map<String, Object>> lines = new ArrayList<>();
-        String[][] expected = {{"PRD001", "Broiler Feed", "100", "25.50", "USD"}, {"PRD002", "Layer Feed", "50", "28.00", "USD"}, {"PRD003", "Starter Feed", "75", "24.00", "USD"}};
-        for (String[] parts : expected) {
-            if (text.contains(parts[0]) && text.toLowerCase().contains(parts[1].toLowerCase())) {
-                Map<String, Object> line = new LinkedHashMap<>();
-                line.put("description", parts[1]); line.put("sku", parts[0]); line.put("quantity", new java.math.BigDecimal(parts[2])); line.put("unitPrice", new java.math.BigDecimal(parts[3])); line.put("currency", parts[4]); lines.add(line);
-            }
+        Pattern linePattern = Pattern.compile("(?m)^\\s*(\\d+)\\s+(PRD[A-Z0-9\\-]+)\\s+(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s+(?:([A-Z]{3})\\s+)?(\\d+(?:,\\d{3})*(?:\\.\\d{2})?)\\s*$");
+        Matcher matcher = linePattern.matcher(normalized);
+        while (matcher.find()) {
+            Map<String, Object> line = new LinkedHashMap<>();
+            line.put("description", matcher.group(3).trim());
+            line.put("sku", matcher.group(2).trim());
+            line.put("quantity", decimal(matcher.group(4)));
+            line.put("unitPrice", decimal(matcher.group(5)));
+            line.put("currency", matcher.group(6) == null ? currency : matcher.group(6).toUpperCase());
+            lines.add(line);
         }
-        if (lines.isEmpty()) throw new InvalidWorkflowException("Mock extraction could not identify quotation lines in the supplied PDF.");
+        if (lines.isEmpty()) throw new InvalidWorkflowException("Mock extraction could not identify quotation lines in the supplied PDF. Expected rows containing SKU, description, quantity and unit price.");
+
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("supplierId", supplier.getId()); response.put("supplierName", supplier.getName()); response.put("quotationNumber", text.contains("QUO-SC-2026-001") ? "QUO-SC-2026-001" : null); response.put("quotationDate", text.contains("15 August 2026") ? "15 August 2026" : null); response.put("lines", lines); response.put("sourceFileName", filename); response.put("extractionMode", "MOCK"); return response;
+        response.put("supplierId", supplier.getId());
+        response.put("supplierName", supplier.getName());
+        response.put("quotationNumber", quotationNumber);
+        response.put("quotationDate", quotationDate);
+        response.put("lines", lines);
+        response.put("sourceFileName", filename);
+        response.put("extractionMode", "MOCK");
+        return response;
+    }
+
+    private String firstGroup(String text, String regex) {
+        Matcher matcher = Pattern.compile(regex).matcher(text);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private java.math.BigDecimal decimal(String value) {
+        return new java.math.BigDecimal(value.replace(",", ""));
     }
 
     private Map<String, Object> parseExtractionResponse(Supplier supplier, String filename, String json) throws IOException {
