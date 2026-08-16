@@ -40,6 +40,11 @@ public class PurchaseRequisitionController {
         return service.findById(id);
     }
 
+    @GetMapping("/number/{requisitionNumber}")
+    public PurchaseRequisitionResponse findByNumber(@PathVariable String requisitionNumber) {
+        return service.findByRequisitionNumber(requisitionNumber);
+    }
+
     @GetMapping("/number/{requisitionNumber}/pdf")
     public ResponseEntity<byte[]> pdfByNumber(@PathVariable String requisitionNumber) {
         return pdfResponse(pdfService.generateByNumber(requisitionNumber), requisitionNumber + ".pdf");
