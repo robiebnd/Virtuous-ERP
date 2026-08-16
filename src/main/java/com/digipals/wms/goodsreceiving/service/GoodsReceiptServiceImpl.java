@@ -48,14 +48,42 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     private GoodsReceipt getGoodsReceipt(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Goods Receipt not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found."));
+    }
+
+    private GoodsReceipt getGoodsReceiptByNumber(String grnNumber) {
+        return repository.findByGrnNumber(grnNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber));
+    }
+
+    private PurchaseOrder resolvePurchaseOrder(CreateGoodsReceiptRequest request) {
+        PurchaseOrder byId = null;
+        PurchaseOrder byNumber = null;
+
+        if (request.getPurchaseOrderId() != null) {
+            byId = getPurchaseOrder(request.getPurchaseOrderId());
+        }
+
+        if (request.getPurchaseOrderNumber() != null && !request.getPurchaseOrderNumber().isBlank()) {
+            byNumber = purchaseOrderRepository.findByPoNumber(request.getPurchaseOrderNumber().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Purchase Order not found: " + request.getPurchaseOrderNumber()));
+        }
+
+        if (byId == null && byNumber == null) {
+            throw new InvalidWorkflowException("Purchase Order ID or Purchase Order number is required.");
+        }
+
+        if (byId != null && byNumber != null && !byId.getId().equals(byNumber.getId())) {
+            throw new InvalidWorkflowException("Purchase Order ID and Purchase Order number refer to different Purchase Orders.");
+        }
+
+        return byId != null ? byId : byNumber;
     }
 
     private PurchaseOrder getPurchaseOrder(UUID id) {
         return purchaseOrderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Purchase Order not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found."));
     }
 
     private Bin getReceivingBin(UUID warehouseId) {
@@ -66,29 +94,27 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     @Override
     public GoodsReceiptResponse create(CreateGoodsReceiptRequest request) {
+        PurchaseOrder purchaseOrder = resolvePurchaseOrder(request);
 
-        PurchaseOrder purchaseOrder = getPurchaseOrder(request.getPurchaseOrderId());
-
-        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED
+                && purchaseOrder.getStatus() != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
             throw new InvalidWorkflowException(
-                    "Only approved Purchase Orders can be received.");
+                    "Only approved or partially received Purchase Orders can be received.");
         }
 
         if (purchaseOrder.getWarehouse() == null) {
-            throw new InvalidWorkflowException(
-                    "Purchase Order has no warehouse assigned.");
+            throw new InvalidWorkflowException("Purchase Order has no warehouse assigned.");
         }
 
-        List<PurchaseOrderLine> outstandingLines =
-                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId())
-                        .stream()
-                        .filter(line -> line.getOutstandingQuantity() != null
-                                && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
-                        .toList();
+        List<PurchaseOrderLine> outstandingLines = purchaseOrderLineRepository
+                .findByPurchaseOrderId(purchaseOrder.getId())
+                .stream()
+                .filter(line -> line.getOutstandingQuantity() != null
+                        && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
 
         if (outstandingLines.isEmpty()) {
-            throw new InvalidWorkflowException(
-                    "Purchase Order has no outstanding quantities to receive.");
+            throw new InvalidWorkflowException("Purchase Order has no outstanding quantities to receive.");
         }
 
         User currentUser = currentUserService.getCurrentUser();
@@ -109,12 +135,10 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     @Override
     public GoodsReceiptResponse update(UUID id, UpdateGoodsReceiptRequest request) {
-
         GoodsReceipt goodsReceipt = getGoodsReceipt(id);
 
         if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Goods Receipts can be updated.");
+            throw new InvalidWorkflowException("Only draft Goods Receipts can be updated.");
         }
 
         goodsReceipt.setSupplierDeliveryNote(request.getSupplierDeliveryNote());
@@ -125,33 +149,35 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     @Override
     public GoodsReceiptResponse approve(UUID id) {
-
         GoodsReceipt goodsReceipt = getGoodsReceipt(id);
 
         if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Goods Receipts can be approved.");
+            throw new InvalidWorkflowException("Only draft Goods Receipts can be approved.");
         }
 
-        List<GoodsReceiptLine> receiptLines =
-                goodsReceiptLineRepository.findByGoodsReceiptId(goodsReceipt.getId());
+        List<GoodsReceiptLine> receiptLines = goodsReceiptLineRepository
+                .findByGoodsReceiptId(goodsReceipt.getId());
 
         if (receiptLines.isEmpty()) {
-            throw new InvalidWorkflowException(
-                    "Cannot approve a Goods Receipt without any receipt lines.");
+            throw new InvalidWorkflowException("Cannot approve a Goods Receipt without any receipt lines.");
         }
 
         User currentUser = currentUserService.getCurrentUser();
         Bin receivingBin = getReceivingBin(goodsReceipt.getWarehouse().getId());
 
-        BigDecimal totalAccepted = BigDecimal.ZERO;
-
         for (GoodsReceiptLine receiptLine : receiptLines) {
-
             validateReceiptLine(receiptLine);
 
-            BigDecimal acceptedQuantity = receiptLine.getAcceptedQuantity();
-            totalAccepted = totalAccepted.add(acceptedQuantity);
+            BigDecimal acceptedQuantity = nullSafe(receiptLine.getAcceptedQuantity());
+            PurchaseOrderLine purchaseOrderLine = receiptLine.getPurchaseOrderLine();
+            BigDecimal currentReceived = nullSafe(purchaseOrderLine.getReceivedQuantity());
+            BigDecimal newReceivedQuantity = currentReceived.add(acceptedQuantity);
+
+            if (newReceivedQuantity.compareTo(purchaseOrderLine.getQuantity()) > 0) {
+                throw new InvalidWorkflowException(
+                        "Accepted quantity would exceed the outstanding Purchase Order quantity for product "
+                                + receiptLine.getProduct().getSku() + ".");
+            }
 
             if (acceptedQuantity.compareTo(BigDecimal.ZERO) > 0) {
                 inventoryService.receiveStock(
@@ -165,31 +191,10 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                         currentUser);
             }
 
-            PurchaseOrderLine purchaseOrderLine = receiptLine.getPurchaseOrderLine();
-
-            BigDecimal currentReceived = purchaseOrderLine.getReceivedQuantity() == null
-                    ? BigDecimal.ZERO
-                    : purchaseOrderLine.getReceivedQuantity();
-
-            BigDecimal newReceivedQuantity =
-                    currentReceived.add(acceptedQuantity);
-
-            if (newReceivedQuantity.compareTo(purchaseOrderLine.getQuantity()) > 0) {
-                throw new InvalidWorkflowException(
-                        "Accepted quantity would exceed the outstanding Purchase Order quantity for product "
-                                + receiptLine.getProduct().getSku() + ".");
-            }
-
             purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
             purchaseOrderLine.setOutstandingQuantity(
                     purchaseOrderLine.getQuantity().subtract(newReceivedQuantity));
-
             purchaseOrderLineRepository.save(purchaseOrderLine);
-        }
-
-        if (totalAccepted.compareTo(BigDecimal.ZERO) == 0) {
-            // A receipt containing only rejected quantities is allowed.
-            // The PO remains outstanding so replacement stock can be received later.
         }
 
         updatePurchaseOrderReceiptStatus(goodsReceipt.getPurchaseOrder());
@@ -202,10 +207,8 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     }
 
     private void validateReceiptLine(GoodsReceiptLine receiptLine) {
-
         if (receiptLine.getPurchaseOrderLine() == null) {
-            throw new InvalidWorkflowException(
-                    "Goods Receipt Line is not linked to a Purchase Order Line.");
+            throw new InvalidWorkflowException("Goods Receipt Line is not linked to a Purchase Order Line.");
         }
 
         BigDecimal received = nullSafe(receiptLine.getReceivedQuantity());
@@ -223,9 +226,9 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     "Received quantity cannot exceed the outstanding Purchase Order quantity.");
         }
 
-        if (accepted.compareTo(ordered) > 0) {
+        if (accepted.compareTo(received) > 0) {
             throw new InvalidWorkflowException(
-                    "Accepted quantity cannot exceed the outstanding Purchase Order quantity.");
+                    "Accepted quantity cannot exceed received quantity.");
         }
     }
 
@@ -234,9 +237,8 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     }
 
     private void updatePurchaseOrderReceiptStatus(PurchaseOrder purchaseOrder) {
-
-        List<PurchaseOrderLine> purchaseOrderLines =
-                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId());
+        List<PurchaseOrderLine> purchaseOrderLines = purchaseOrderLineRepository
+                .findByPurchaseOrderId(purchaseOrder.getId());
 
         boolean fullyReceived = !purchaseOrderLines.isEmpty()
                 && purchaseOrderLines.stream()
@@ -254,8 +256,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     @Override
     @Transactional(readOnly = true)
     public List<GoodsReceiptResponse> findAll() {
-        return repository.findAll()
-                .stream()
+        return repository.findAll().stream()
                 .map(GoodsReceiptMapper::toResponse)
                 .toList();
     }
@@ -268,45 +269,44 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     @Override
     @Transactional(readOnly = true)
+    public GoodsReceiptResponse findByNumber(String grnNumber) {
+        return GoodsReceiptMapper.toResponse(getGoodsReceiptByNumber(grnNumber));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<GoodsReceiptResponse> findByPurchaseOrder(UUID purchaseOrderId) {
-        return repository.findByPurchaseOrderId(purchaseOrderId)
-                .stream()
+        return repository.findByPurchaseOrderId(purchaseOrderId).stream()
                 .map(GoodsReceiptMapper::toResponse)
                 .toList();
     }
 
     @Override
     public GoodsReceiptResponse loadPurchaseOrderLines(UUID goodsReceiptId) {
-
         GoodsReceipt goodsReceipt = getGoodsReceipt(goodsReceiptId);
 
         if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Goods Receipts can load Purchase Order Lines.");
+            throw new InvalidWorkflowException("Only draft Goods Receipts can load Purchase Order Lines.");
         }
 
         PurchaseOrder purchaseOrder = goodsReceipt.getPurchaseOrder();
-
-        List<PurchaseOrderLine> poLines =
-                purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId())
-                        .stream()
-                        .filter(line -> line.getOutstandingQuantity() != null
-                                && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
-                        .toList();
+        List<PurchaseOrderLine> poLines = purchaseOrderLineRepository
+                .findByPurchaseOrderId(purchaseOrder.getId())
+                .stream()
+                .filter(line -> line.getOutstandingQuantity() != null
+                        && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
 
         if (poLines.isEmpty()) {
-            throw new ResourceNotFoundException(
-                    "Purchase Order has no outstanding lines to receive.");
+            throw new ResourceNotFoundException("Purchase Order has no outstanding lines to receive.");
         }
 
         if (goodsReceiptLineRepository.existsByGoodsReceiptId(goodsReceipt.getId())) {
-            throw new InvalidWorkflowException(
-                    "Goods Receipt Lines have already been loaded.");
+            throw new InvalidWorkflowException("Goods Receipt Lines have already been loaded.");
         }
 
         for (PurchaseOrderLine poLine : poLines) {
-
-            GoodsReceiptLine receiptLine = GoodsReceiptLine.builder()
+            goodsReceiptLineRepository.save(GoodsReceiptLine.builder()
                     .goodsReceipt(goodsReceipt)
                     .purchaseOrderLine(poLine)
                     .product(poLine.getProduct())
@@ -316,9 +316,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     .rejectedQuantity(BigDecimal.ZERO)
                     .unitCost(poLine.getUnitPrice())
                     .remarks(null)
-                    .build();
-
-            goodsReceiptLineRepository.save(receiptLine);
+                    .build());
         }
 
         return GoodsReceiptMapper.toResponse(goodsReceipt);
@@ -326,12 +324,10 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
     @Override
     public void delete(UUID id) {
-
         GoodsReceipt goodsReceipt = getGoodsReceipt(id);
 
         if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Goods Receipts can be deleted.");
+            throw new InvalidWorkflowException("Only draft Goods Receipts can be deleted.");
         }
 
         repository.delete(goodsReceipt);
