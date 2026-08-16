@@ -95,14 +95,9 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         Supplier supplier = getSupplier(request.getSupplierId());
         PurchaseRequisition requisition = PurchaseRequisition.builder()
                 .requisitionNumber(documentNumberService.next(DocumentType.PURCHASE_REQUISITION))
-                .warehouse(warehouse)
-                .supplier(supplier)
-                .department(request.getDepartment().trim())
-                .currency(normalizeCurrency(request.getCurrency()))
-                .remarks(request.getRemarks())
-                .status(PurchaseRequisitionStatus.DRAFT)
-                .requestedBy(currentUserService.getCurrentUser())
-                .build();
+                .warehouse(warehouse).supplier(supplier).department(request.getDepartment().trim())
+                .currency(normalizeCurrency(request.getCurrency())).remarks(request.getRemarks())
+                .status(PurchaseRequisitionStatus.DRAFT).requestedBy(currentUserService.getCurrentUser()).build();
         return toResponseWithLines(repository.save(requisition));
     }
 
@@ -135,7 +130,11 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         if (!(rawLines instanceof List<?> extractedLines) || extractedLines.isEmpty()) throw new InvalidWorkflowException("No quotation lines were extracted.");
 
         List<QuotationLineData> lines = new ArrayList<>();
+        List<String> missingProducts = new ArrayList<>();
+        List<String> productConflicts = new ArrayList<>();
         String quotationCurrency = null;
+
+        // Validate every quotation line before changing the PR or Product Master.
         for (Object rawLine : extractedLines) {
             if (!(rawLine instanceof Map<?, ?> line)) throw new InvalidWorkflowException("Invalid extracted quotation line.");
             String sku = text(line.get("sku"));
@@ -149,19 +148,28 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
             if (unitPrice == null || unitPrice.signum() < 0) throw new InvalidWorkflowException("Quotation line unit price cannot be negative for SKU " + sku + ".");
             if (quotationCurrency == null) quotationCurrency = lineCurrency;
             if (!quotationCurrency.equals(lineCurrency)) throw new InvalidWorkflowException("Quotation contains multiple currencies. All quotation lines must use the same currency.");
+
             Product product = productRepository.findBySku(sku).orElse(null);
+            if (product == null) {
+                missingProducts.add(sku + " - " + description);
+            } else if (!sameProductDescription(product.getName(), description)) {
+                productConflicts.add(sku + " - quotation: '" + description + "', Product Master: '" + product.getName() + "'");
+            }
             lines.add(new QuotationLineData(sku, description, quantity, unitPrice, lineCurrency, product));
         }
+
+        if (!missingProducts.isEmpty() || !productConflicts.isEmpty()) {
+            StringBuilder message = new StringBuilder("PRODUCT_MASTER_VALIDATION_FAILED. ");
+            if (!missingProducts.isEmpty()) message.append("Missing products: [").append(String.join(", ", missingProducts)).append("]. ");
+            if (!productConflicts.isEmpty()) message.append("SKU/description conflicts: [").append(String.join(", ", productConflicts)).append("]. ");
+            message.append("No quotation lines were imported.");
+            throw new InvalidWorkflowException(message.toString());
+        }
+
         if (quotationCurrency == null) throw new InvalidWorkflowException("Quotation currency could not be determined.");
         if (requisition.getCurrency() != null && !normalizeCurrency(requisition.getCurrency()).equals(quotationCurrency)) throw new InvalidWorkflowException("Quotation currency " + quotationCurrency + " does not match Purchase Requisition currency " + requisition.getCurrency() + ".");
         requisition.setCurrency(quotationCurrency);
 
-        for (QuotationLineData line : lines) {
-            if (line.product() == null) {
-                Product product = Product.builder().sku(line.sku()).name(line.description()).description("Automatically created from supplier quotation " + quotation.getQuotationNumber()).costPrice(line.unitPrice()).sellingPrice(line.unitPrice()).active(true).build();
-                line.setProduct(productRepository.save(product));
-            }
-        }
         for (QuotationLineData line : lines) {
             lineRepository.save(PurchaseRequisitionLine.builder().purchaseRequisition(requisition).product(line.product()).quantity(line.quantity()).estimatedUnitCost(line.unitPrice()).remarks("Currency: " + line.currency()).build());
         }
@@ -169,12 +177,26 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         return toResponseWithLines(requisition);
     }
 
+    private boolean sameProductDescription(String productName, String quotationDescription) {
+        return normalizeDescription(productName).equals(normalizeDescription(quotationDescription));
+    }
+
+    private String normalizeDescription(String value) {
+        if (value == null) return "";
+        return value.toLowerCase().replaceAll("[^a-z0-9]+", " ").trim().replaceAll("\\s+", " ");
+    }
+
     @Override
     public PurchaseRequisitionResponse importQuotationByNumber(UUID requisitionId, String quotationNumber) {
         if (quotationNumber == null || quotationNumber.isBlank()) throw new IllegalArgumentException("Quotation number is required.");
+        PurchaseRequisition requisition = getRequisition(requisitionId);
         List<SupplierQuotation> matches = quotationRepository.findByQuotationNumber(quotationNumber.trim());
-        if (matches.isEmpty()) throw new ResourceNotFoundException("Supplier quotation not found: " + quotationNumber);
-        if (matches.size() > 1) throw new InvalidWorkflowException("Multiple supplier quotations found with quotation number: " + quotationNumber + ". Use the quotation UUID instead.");
+        matches = matches.stream()
+                .filter(q -> q.getPurchaseRequisition() != null && requisitionId.equals(q.getPurchaseRequisition().getId()))
+                .filter(q -> q.getSupplier() != null && requisition.getSupplier() != null && q.getSupplier().getId().equals(requisition.getSupplier().getId()))
+                .toList();
+        if (matches.isEmpty()) throw new ResourceNotFoundException("Supplier quotation not found for Purchase Requisition " + requisition.getRequisitionNumber() + ": " + quotationNumber);
+        if (matches.size() > 1) throw new InvalidWorkflowException("Multiple supplier quotations found with quotation number " + quotationNumber + " for this Purchase Requisition and supplier. Use the quotation UUID instead.");
         return importQuotation(requisitionId, matches.get(0).getId());
     }
 
@@ -182,8 +204,8 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     private BigDecimal decimal(Object value) { if (value == null) return null; if (value instanceof BigDecimal decimal) return decimal; if (value instanceof Number number) return new BigDecimal(number.toString()); try { return new BigDecimal(value.toString()); } catch (NumberFormatException e) { return null; } }
 
     private static final class QuotationLineData {
-        private final String sku; private final String description; private final BigDecimal quantity; private final BigDecimal unitPrice; private final String currency; private Product product;
+        private final String sku; private final String description; private final BigDecimal quantity; private final BigDecimal unitPrice; private final String currency; private final Product product;
         private QuotationLineData(String sku, String description, BigDecimal quantity, BigDecimal unitPrice, String currency, Product product) { this.sku = sku; this.description = description; this.quantity = quantity; this.unitPrice = unitPrice; this.currency = currency; this.product = product; }
-        private String sku() { return sku; } private String description() { return description; } private BigDecimal quantity() { return quantity; } private BigDecimal unitPrice() { return unitPrice; } private String currency() { return currency; } private Product product() { return product; } private void setProduct(Product product) { this.product = product; }
+        private String sku() { return sku; } private BigDecimal quantity() { return quantity; } private BigDecimal unitPrice() { return unitPrice; } private String currency() { return currency; } private Product product() { return product; }
     }
 }
