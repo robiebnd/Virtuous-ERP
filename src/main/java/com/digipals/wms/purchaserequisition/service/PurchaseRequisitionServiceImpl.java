@@ -79,6 +79,21 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
 
     @Override
     @Transactional(readOnly = true)
+    public PurchaseRequisitionResponse findByRequisitionNumber(String requisitionNumber) {
+        if (requisitionNumber == null || requisitionNumber.isBlank()) {
+            throw new IllegalArgumentException("Requisition number is required.");
+        }
+
+        PurchaseRequisition requisition = repository
+                .findByRequisitionNumber(requisitionNumber.trim())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found: " + requisitionNumber));
+
+        return PurchaseRequisitionMapper.toResponse(requisition);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PurchaseRequisitionResponse> findByStatus(PurchaseRequisitionStatus status) {
         return repository.findByStatus(status)
                 .stream()
