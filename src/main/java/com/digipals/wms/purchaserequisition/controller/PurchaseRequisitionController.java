@@ -1,5 +1,6 @@
 package com.digipals.wms.purchaserequisition.controller;
 
+import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionRequest;
@@ -42,7 +43,17 @@ public class PurchaseRequisitionController {
 
     @GetMapping("/number/{requisitionNumber}")
     public PurchaseRequisitionResponse findByNumber(@PathVariable String requisitionNumber) {
-        return service.findByRequisitionNumber(requisitionNumber);
+        if (requisitionNumber == null || requisitionNumber.isBlank()) {
+            throw new IllegalArgumentException("Purchase Requisition number is required.");
+        }
+
+        String normalizedNumber = requisitionNumber.trim();
+
+        return service.findAll().stream()
+                .filter(requisition -> normalizedNumber.equalsIgnoreCase(requisition.getRequisitionNumber()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found: " + normalizedNumber));
     }
 
     @GetMapping("/number/{requisitionNumber}/pdf")
