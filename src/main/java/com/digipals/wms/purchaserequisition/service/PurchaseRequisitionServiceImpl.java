@@ -53,34 +53,22 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
     private PurchaseRequisition getRequisition(UUID id) { return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found.")); }
     private Warehouse getWarehouse(UUID id) { return warehouseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Warehouse not found.")); }
     private Supplier getSupplier(UUID id) { return supplierRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Supplier not found.")); }
-    private void validateHasLines(PurchaseRequisition requisition) { if (lineRepository.countByPurchaseRequisitionId(requisition.getId()) == 0) throw new RuntimeException("Purchase Requisition contains no lines."); }
+
+    private void validateHasLines(PurchaseRequisition requisition) {
+        if (lineRepository.countByPurchaseRequisitionId(requisition.getId()) == 0) throw new RuntimeException("Purchase Requisition contains no lines.");
+    }
 
     private PurchaseRequisitionResponse toResponseWithLines(PurchaseRequisition requisition) {
         PurchaseRequisitionResponse response = PurchaseRequisitionMapper.toResponse(requisition);
-        if (requisition.getStatus() != PurchaseRequisitionStatus.REJECTED) {
-            response.setRejectionReason(null);
-        }
+        if (requisition.getStatus() != PurchaseRequisitionStatus.REJECTED) response.setRejectionReason(null);
         List<PurchaseRequisitionResponse.LineResponse> lines = lineRepository.findByPurchaseRequisitionId(requisition.getId())
-                .stream()
-                .map(line -> {
-                    BigDecimal unitCost = line.getEstimatedUnitCost() == null
-                            ? BigDecimal.ZERO.setScale(2)
-                            : line.getEstimatedUnitCost().setScale(2, java.math.RoundingMode.HALF_UP);
-                    BigDecimal lineTotal = line.getQuantity()
-                            .multiply(unitCost)
-                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                .stream().map(line -> {
+                    BigDecimal unitCost = line.getEstimatedUnitCost() == null ? BigDecimal.ZERO.setScale(2) : line.getEstimatedUnitCost().setScale(2, java.math.RoundingMode.HALF_UP);
+                    BigDecimal lineTotal = line.getQuantity().multiply(unitCost).setScale(2, java.math.RoundingMode.HALF_UP);
                     return PurchaseRequisitionResponse.LineResponse.builder()
-                            .id(line.getId())
-                            .productId(line.getProduct().getId())
-                            .sku(line.getProduct().getSku())
-                            .productName(line.getProduct().getName())
-                            .quantity(line.getQuantity())
-                            .estimatedUnitCost(unitCost)
-                            .estimatedLineTotal(lineTotal)
-                            .remarks(line.getRemarks())
-                            .build();
-                })
-                .toList();
+                            .id(line.getId()).productId(line.getProduct().getId()).sku(line.getProduct().getSku()).productName(line.getProduct().getName())
+                            .quantity(line.getQuantity()).estimatedUnitCost(unitCost).estimatedLineTotal(lineTotal).remarks(line.getRemarks()).build();
+                }).toList();
         response.setLines(lines);
         return response;
     }
@@ -130,10 +118,7 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         List<QuotationLineData> lines = new ArrayList<>();
         for (Object rawLine : extractedLines) {
             if (!(rawLine instanceof Map<?, ?> line)) throw new InvalidWorkflowException("Invalid extracted quotation line.");
-            String sku = text(line.get("sku"));
-            String description = text(line.get("description"));
-            BigDecimal quantity = decimal(line.get("quantity"));
-            BigDecimal unitPrice = decimal(line.get("unitPrice"));
+            String sku = text(line.get("sku")); String description = text(line.get("description")); BigDecimal quantity = decimal(line.get("quantity")); BigDecimal unitPrice = decimal(line.get("unitPrice"));
             if (sku == null || sku.isBlank()) throw new InvalidWorkflowException("A quotation line is missing SKU.");
             if (description == null || description.isBlank()) throw new InvalidWorkflowException("A quotation line is missing product description for SKU " + sku + ".");
             if (quantity == null || quantity.signum() <= 0) throw new InvalidWorkflowException("Quotation line quantity must be greater than zero for SKU " + sku + ".");
@@ -144,45 +129,31 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
 
         for (QuotationLineData line : lines) {
             if (line.product() == null) {
-                Product product = Product.builder()
-                        .sku(line.sku())
-                        .name(line.description())
-                        .description("Automatically created from supplier quotation " + quotation.getQuotationNumber())
-                        .costPrice(line.unitPrice())
-                        .sellingPrice(line.unitPrice())
-                        .active(true)
-                        .build();
+                Product product = Product.builder().sku(line.sku()).name(line.description()).description("Automatically created from supplier quotation " + quotation.getQuotationNumber()).costPrice(line.unitPrice()).sellingPrice(line.unitPrice()).active(true).build();
                 line.setProduct(productRepository.save(product));
             }
         }
-
         for (QuotationLineData line : lines) {
-            lineRepository.save(PurchaseRequisitionLine.builder()
-                    .purchaseRequisition(requisition)
-                    .product(line.product())
-                    .quantity(line.quantity())
-                    .estimatedUnitCost(line.unitPrice())
-                    .build());
+            lineRepository.save(PurchaseRequisitionLine.builder().purchaseRequisition(requisition).product(line.product()).quantity(line.quantity()).estimatedUnitCost(line.unitPrice()).build());
         }
-
         return toResponseWithLines(requisition);
+    }
+
+    @Override
+    public PurchaseRequisitionResponse importQuotationByNumber(UUID requisitionId, String quotationNumber) {
+        if (quotationNumber == null || quotationNumber.isBlank()) throw new IllegalArgumentException("Quotation number is required.");
+        List<SupplierQuotation> matches = quotationRepository.findByQuotationNumber(quotationNumber.trim());
+        if (matches.isEmpty()) throw new ResourceNotFoundException("Supplier quotation not found: " + quotationNumber);
+        if (matches.size() > 1) throw new InvalidWorkflowException("Multiple supplier quotations found with quotation number: " + quotationNumber + ". Use the quotation UUID instead.");
+        return importQuotation(requisitionId, matches.get(0).getId());
     }
 
     private String text(Object value) { return value == null ? null : value.toString().trim(); }
     private BigDecimal decimal(Object value) { if (value == null) return null; if (value instanceof BigDecimal decimal) return decimal; if (value instanceof Number number) return new BigDecimal(number.toString()); try { return new BigDecimal(value.toString()); } catch (NumberFormatException e) { return null; } }
 
     private static final class QuotationLineData {
-        private final String sku;
-        private final String description;
-        private final BigDecimal quantity;
-        private final BigDecimal unitPrice;
-        private Product product;
+        private final String sku; private final String description; private final BigDecimal quantity; private final BigDecimal unitPrice; private Product product;
         private QuotationLineData(String sku, String description, BigDecimal quantity, BigDecimal unitPrice, Product product) { this.sku = sku; this.description = description; this.quantity = quantity; this.unitPrice = unitPrice; this.product = product; }
-        private String sku() { return sku; }
-        private String description() { return description; }
-        private BigDecimal quantity() { return quantity; }
-        private BigDecimal unitPrice() { return unitPrice; }
-        private Product product() { return product; }
-        private void setProduct(Product product) { this.product = product; }
+        private String sku() { return sku; } private String description() { return description; } private BigDecimal quantity() { return quantity; } private BigDecimal unitPrice() { return unitPrice; } private Product product() { return product; } private void setProduct(Product product) { this.product = product; }
     }
 }
