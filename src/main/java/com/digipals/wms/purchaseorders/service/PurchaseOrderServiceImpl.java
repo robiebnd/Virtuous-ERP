@@ -98,11 +98,17 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     .unitPrice(unitPrice)
                     .receivedQuantity(BigDecimal.ZERO)
                     .build();
-            purchaseOrderLineRepository.save(purchaseOrderLine);
+
+            purchaseOrderLine = purchaseOrderLineRepository.save(purchaseOrderLine);
+
+            // Keep the in-memory aggregate in sync so the response mapper
+            // includes the newly created lines immediately after PO creation.
+            purchaseOrder.getLines().add(purchaseOrderLine);
         }
 
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         purchaseRequisitionRepository.save(requisition);
+
         return purchaseOrder;
     }
 
