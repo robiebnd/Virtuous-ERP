@@ -71,6 +71,18 @@ public class SupplierQuotationServiceImpl implements SupplierQuotationService {
             throw new InvalidWorkflowException("Supplier quotation number is required.");
         }
 
+        String normalizedQuotationNumber = quotationNumber.trim();
+
+        if (repository.existsByPurchaseRequisitionIdAndSupplierIdAndQuotationNumber(
+                purchaseRequisitionId,
+                supplierId,
+                normalizedQuotationNumber)) {
+            throw new InvalidWorkflowException(
+                    "Supplier quotation " + normalizedQuotationNumber
+                            + " already exists for this Purchase Requisition and supplier. "
+                            + "Use a different quotation number or review the existing quotation.");
+        }
+
         String originalName = StringUtils.cleanPath(file.getOriginalFilename() == null
                 ? "quotation"
                 : file.getOriginalFilename());
@@ -91,7 +103,7 @@ public class SupplierQuotationServiceImpl implements SupplierQuotationService {
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
             SupplierQuotation quotation = repository.save(SupplierQuotation.builder()
-                    .quotationNumber(quotationNumber.trim())
+                    .quotationNumber(normalizedQuotationNumber)
                     .supplier(supplier)
                     .purchaseRequisition(requisition)
                     .quotationDate(quotationDate)
