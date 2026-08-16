@@ -45,4 +45,9 @@ public class PurchaseRequisitionController {
     public PurchaseRequisitionResponse importQuotation(@PathVariable UUID requisitionId, @PathVariable UUID quotationId) {
         return service.importQuotation(requisitionId, quotationId);
     }
+
+    @PostMapping("/{requisitionId}/import-quotation/number/{quotationNumber}")
+    public PurchaseRequisitionResponse importQuotationByNumber(@PathVariable UUID requisitionId, @PathVariable String quotationNumber) {
+        return service.importQuotationByNumber(requisitionId, quotationNumber);
+    }
 }
