@@ -9,6 +9,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "goods_receipts")
@@ -19,22 +21,15 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public class GoodsReceipt extends BaseEntity {
 
-    @Column(
-            name = "grn_number",
-            nullable = false,
-            unique = true)
+    @Column(name = "grn_number", nullable = false, unique = true)
     private String grnNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "purchase_order_id",
-            nullable = false)
+    @JoinColumn(name = "purchase_order_id", nullable = false)
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "warehouse_id",
-            nullable = false)
+    @JoinColumn(name = "warehouse_id", nullable = false)
     private Warehouse warehouse;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -60,4 +55,8 @@ public class GoodsReceipt extends BaseEntity {
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
+
+    @OneToMany(mappedBy = "goodsReceipt", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<GoodsReceiptLine> lines = new ArrayList<>();
 }
