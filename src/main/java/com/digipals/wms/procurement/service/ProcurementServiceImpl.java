@@ -76,6 +76,7 @@ public class ProcurementServiceImpl implements ProcurementService {
                 .purchaseRequisition(requisition)
                 .source(ProcurementSource.REQUISITION)
                 .status(PurchaseOrderStatus.DRAFT)
+                .currency(normalizeCurrency(requisition.getCurrency()))
                 .createdBy(requisition.getRequestedBy())
                 .build());
 
@@ -99,6 +100,10 @@ public class ProcurementServiceImpl implements ProcurementService {
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         requisitionRepository.save(requisition);
         return PurchaseOrderMapper.toResponse(po);
+    }
+
+    private String normalizeCurrency(String currency) {
+        return currency == null || currency.isBlank() ? null : currency.trim().toUpperCase();
     }
 
     private BigDecimal resolvePrice(Supplier supplier, PurchaseRequisitionLine line) {
