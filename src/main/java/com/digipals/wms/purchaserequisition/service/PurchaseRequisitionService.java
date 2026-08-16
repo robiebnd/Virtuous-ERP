@@ -20,4 +20,5 @@ public interface PurchaseRequisitionService {
     PurchaseRequisitionResponse cancel(UUID id);
     void delete(UUID id);
     PurchaseRequisitionResponse importQuotation(UUID requisitionId, UUID quotationId);
+    PurchaseRequisitionResponse importQuotationByNumber(UUID requisitionId, String quotationNumber);
 }
