@@ -4,9 +4,14 @@ import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionRequest
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionRequest;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
+import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionPdfService;
 import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,30 +21,79 @@ import java.util.UUID;
 @RequestMapping("/api/purchase-requisitions")
 @RequiredArgsConstructor
 public class PurchaseRequisitionController {
+
     private final PurchaseRequisitionService service;
+    private final PurchaseRequisitionPdfService pdfService;
 
     @PostMapping
-    public PurchaseRequisitionResponse create(@Valid @RequestBody CreatePurchaseRequisitionRequest request) { return service.create(request); }
+    public PurchaseRequisitionResponse create(@Valid @RequestBody CreatePurchaseRequisitionRequest request) {
+        return service.create(request);
+    }
+
     @GetMapping
-    public List<PurchaseRequisitionResponse> findAll() { return service.findAll(); }
+    public List<PurchaseRequisitionResponse> findAll() {
+        return service.findAll();
+    }
+
     @GetMapping("/{id}")
-    public PurchaseRequisitionResponse findById(@PathVariable UUID id) { return service.findById(id); }
+    public PurchaseRequisitionResponse findById(@PathVariable UUID id) {
+        return service.findById(id);
+    }
+
+    @GetMapping("/number/{requisitionNumber}")
+    public PurchaseRequisitionResponse findByNumber(@PathVariable String requisitionNumber) {
+        return service.findByNumber(requisitionNumber);
+    }
+
+    @GetMapping("/number/{requisitionNumber}/pdf")
+    public ResponseEntity<byte[]> pdfByNumber(@PathVariable String requisitionNumber) {
+        return pdfResponse(pdfService.generateByNumber(requisitionNumber), requisitionNumber + ".pdf");
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
+        return pdfResponse(pdfService.generateById(id), "purchase-requisition.pdf");
+    }
+
     @GetMapping("/status/{status}")
-    public List<PurchaseRequisitionResponse> findByStatus(@PathVariable PurchaseRequisitionStatus status) { return service.findByStatus(status); }
+    public List<PurchaseRequisitionResponse> findByStatus(@PathVariable PurchaseRequisitionStatus status) {
+        return service.findByStatus(status);
+    }
+
     @GetMapping("/warehouse/{warehouseId}")
-    public List<PurchaseRequisitionResponse> findByWarehouse(@PathVariable UUID warehouseId) { return service.findByWarehouse(warehouseId); }
+    public List<PurchaseRequisitionResponse> findByWarehouse(@PathVariable UUID warehouseId) {
+        return service.findByWarehouse(warehouseId);
+    }
+
     @PutMapping("/{id}")
-    public PurchaseRequisitionResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePurchaseRequisitionRequest request) { return service.update(id, request); }
+    public PurchaseRequisitionResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePurchaseRequisitionRequest request) {
+        return service.update(id, request);
+    }
+
     @PostMapping("/{id}/submit")
-    public PurchaseRequisitionResponse submit(@PathVariable UUID id) { return service.submit(id); }
+    public PurchaseRequisitionResponse submit(@PathVariable UUID id) {
+        return service.submit(id);
+    }
+
     @PutMapping("/{id}/approve")
-    public PurchaseRequisitionResponse approve(@PathVariable UUID id) { return service.approve(id); }
+    public PurchaseRequisitionResponse approve(@PathVariable UUID id) {
+        return service.approve(id);
+    }
+
     @PutMapping("/{id}/reject")
-    public PurchaseRequisitionResponse reject(@PathVariable UUID id, @RequestParam String remarks) { return service.reject(id, remarks); }
+    public PurchaseRequisitionResponse reject(@PathVariable UUID id, @RequestParam String remarks) {
+        return service.reject(id, remarks);
+    }
+
     @PostMapping("/{id}/cancel")
-    public PurchaseRequisitionResponse cancel(@PathVariable UUID id) { return service.cancel(id); }
+    public PurchaseRequisitionResponse cancel(@PathVariable UUID id) {
+        return service.cancel(id);
+    }
+
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.delete(id); }
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 
     @PostMapping("/{requisitionId}/import-quotation/{quotationId}")
     public PurchaseRequisitionResponse importQuotation(@PathVariable UUID requisitionId, @PathVariable UUID quotationId) {
@@ -49,5 +103,13 @@ public class PurchaseRequisitionController {
     @PostMapping("/{requisitionId}/import-quotation/number/{quotationNumber}")
     public PurchaseRequisitionResponse importQuotationByNumber(@PathVariable UUID requisitionId, @PathVariable String quotationNumber) {
         return service.importQuotationByNumber(requisitionId, quotationNumber);
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
+        headers.setContentLength(bytes.length);
+        return ResponseEntity.ok().headers(headers).body(bytes);
     }
 }
