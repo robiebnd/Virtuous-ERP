@@ -33,6 +33,7 @@ public final class PurchaseRequisitionMapper {
                         : null)
                 .status(requisition.getStatus())
                 .department(requisition.getDepartment())
+                .currency(requisition.getCurrency())
                 .remarks(requisition.getRemarks())
                 .rejectionReason(requisition.getRejectionReason())
                 .requestedById(requisition.getRequestedBy() != null
