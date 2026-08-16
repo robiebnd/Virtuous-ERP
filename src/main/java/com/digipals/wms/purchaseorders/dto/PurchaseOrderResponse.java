@@ -31,6 +31,7 @@ public class PurchaseOrderResponse {
     private String createdBy;
     private UUID approvedById;
     private String approvedBy;
+    private LocalDateTime approvedAt;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
