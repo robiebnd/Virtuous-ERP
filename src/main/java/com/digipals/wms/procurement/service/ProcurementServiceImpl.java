@@ -43,8 +43,17 @@ public class ProcurementServiceImpl implements ProcurementService {
 
     @Override
     public PurchaseOrderResponse generatePurchaseOrder(GeneratePurchaseOrderRequest request) {
-        PurchaseRequisition requisition = requisitionRepository.findById(request.getPurchaseRequisitionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
+        PurchaseRequisition requisition;
+
+        if (request.getPurchaseRequisitionNumber() != null && !request.getPurchaseRequisitionNumber().isBlank()) {
+            requisition = requisitionRepository.findByRequisitionNumber(request.getPurchaseRequisitionNumber().trim())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Purchase Requisition not found: " + request.getPurchaseRequisitionNumber()));
+        } else {
+            requisition = requisitionRepository.findById(request.getPurchaseRequisitionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
+        }
+
         validator.validateApproved(requisition);
         validator.validateNotConverted(requisition);
 
@@ -67,6 +76,7 @@ public class ProcurementServiceImpl implements ProcurementService {
                 .purchaseRequisition(requisition)
                 .source(ProcurementSource.REQUISITION)
                 .status(PurchaseOrderStatus.DRAFT)
+                .createdBy(requisition.getRequestedBy())
                 .build());
 
         for (PurchaseRequisitionLine line : lines) {
@@ -91,15 +101,6 @@ public class ProcurementServiceImpl implements ProcurementService {
         return PurchaseOrderMapper.toResponse(po);
     }
 
-    /**
-     * Pricing priority for PO generation:
-     * 1. The approved PR line's quoted/estimated unit cost.
-     * 2. Latest historical supplier price.
-     * 3. Product cost price.
-     *
-     * The approved PR price is authoritative because it is the price reviewed
-     * and approved during the quotation -> PR workflow.
-     */
     private BigDecimal resolvePrice(Supplier supplier, PurchaseRequisitionLine line) {
         if (isValidPrice(line.getEstimatedUnitCost())) {
             return line.getEstimatedUnitCost();
