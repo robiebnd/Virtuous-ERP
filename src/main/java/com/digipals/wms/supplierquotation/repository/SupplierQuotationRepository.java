@@ -11,4 +11,9 @@ public interface SupplierQuotationRepository extends JpaRepository<SupplierQuota
     List<SupplierQuotation> findByPurchaseRequisitionIdOrderByCreatedAtDesc(UUID purchaseRequisitionId);
 
     List<SupplierQuotation> findByQuotationNumber(String quotationNumber);
+
+    boolean existsByPurchaseRequisitionIdAndSupplierIdAndQuotationNumber(
+            UUID purchaseRequisitionId,
+            UUID supplierId,
+            String quotationNumber);
 }
