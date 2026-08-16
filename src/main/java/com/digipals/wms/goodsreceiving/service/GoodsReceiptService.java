@@ -9,26 +9,21 @@ import java.util.UUID;
 
 public interface GoodsReceiptService {
 
-    GoodsReceiptResponse create(
-            CreateGoodsReceiptRequest request);
+    GoodsReceiptResponse create(CreateGoodsReceiptRequest request);
 
-    GoodsReceiptResponse update(
-            UUID id,
-            UpdateGoodsReceiptRequest request);
+    GoodsReceiptResponse update(UUID id, UpdateGoodsReceiptRequest request);
 
-    GoodsReceiptResponse approve(
-            UUID id);
+    GoodsReceiptResponse approve(UUID id);
 
-    GoodsReceiptResponse findById(
-            UUID id);
+    GoodsReceiptResponse findById(UUID id);
+
+    GoodsReceiptResponse findByNumber(String grnNumber);
 
     GoodsReceiptResponse loadPurchaseOrderLines(UUID goodsReceiptId);
 
     List<GoodsReceiptResponse> findAll();
 
-    List<GoodsReceiptResponse> findByPurchaseOrder(
-            UUID purchaseOrderId);
+    List<GoodsReceiptResponse> findByPurchaseOrder(UUID purchaseOrderId);
 
-    void delete(
-            UUID id);
+    void delete(UUID id);
 }
