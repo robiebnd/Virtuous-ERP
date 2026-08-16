@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface SupplierQuotationRepository extends JpaRepository<SupplierQuotation, UUID> {
 
     List<SupplierQuotation> findByPurchaseRequisitionIdOrderByCreatedAtDesc(UUID purchaseRequisitionId);
+
+    List<SupplierQuotation> findByQuotationNumber(String quotationNumber);
 }
