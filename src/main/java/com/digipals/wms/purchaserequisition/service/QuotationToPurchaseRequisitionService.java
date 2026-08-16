@@ -68,6 +68,7 @@ public class QuotationToPurchaseRequisitionService {
             throw new IllegalStateException("No quotation lines were extracted.");
         }
 
+        String detectedCurrency = null;
         int added = 0;
         for (Object raw : lines) {
             if (!(raw instanceof Map<?, ?> line)) continue;
@@ -75,6 +76,20 @@ public class QuotationToPurchaseRequisitionService {
             if (sku == null || sku.isBlank()) {
                 throw new IllegalStateException("A quotation line has no SKU. Review the quotation before importing it.");
             }
+
+            String lineCurrency = text(line.get("currency"));
+            if (lineCurrency != null && !lineCurrency.isBlank()) {
+                lineCurrency = lineCurrency.trim().toUpperCase();
+                if (lineCurrency.length() != 3) {
+                    throw new IllegalStateException("Invalid currency on quotation SKU: " + sku + ". Currency must be a 3-letter ISO code.");
+                }
+                if (detectedCurrency == null) {
+                    detectedCurrency = lineCurrency;
+                } else if (!detectedCurrency.equals(lineCurrency)) {
+                    throw new IllegalStateException("Quotation contains multiple currencies. A Purchase Requisition must use one currency.");
+                }
+            }
+
             Product product = productRepository.findBySku(sku)
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found for quotation SKU: " + sku));
             java.math.BigDecimal quantity = decimal(line.get("quantity"));
@@ -93,6 +108,10 @@ public class QuotationToPurchaseRequisitionService {
         }
 
         if (added == 0) throw new IllegalStateException("No valid quotation lines could be imported.");
+        if (detectedCurrency != null) {
+            requisition.setCurrency(detectedCurrency);
+            requisitionRepository.save(requisition);
+        }
         return PurchaseRequisitionMapper.toResponse(requisition);
     }
 
