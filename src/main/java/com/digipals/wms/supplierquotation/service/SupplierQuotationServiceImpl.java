@@ -10,6 +10,9 @@ import com.digipals.wms.supplierquotation.dto.SupplierQuotationResponse;
 import com.digipals.wms.supplierquotation.entity.SupplierQuotation;
 import com.digipals.wms.supplierquotation.repository.SupplierQuotationRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,14 +24,25 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SupplierQuotationServiceImpl implements SupplierQuotationService {
+
+    private static final Pattern QUOTATION_DATE_PATTERN = Pattern.compile(
+            "(?i)quotation\\s*date\\s*[:\\-]?\\s*(\\d{1,2}\\s+[A-Za-z]+\\s+\\d{4})"
+    );
+    private static final DateTimeFormatter QUOTATION_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH);
 
     private final SupplierQuotationRepository repository;
     private final PurchaseRequisitionRepository purchaseRequisitionRepository;
@@ -70,18 +84,22 @@ public class SupplierQuotationServiceImpl implements SupplierQuotationService {
                 throw new InvalidWorkflowException("Invalid quotation file name.");
             }
 
+            byte[] pdfBytes = file.getBytes();
+            LocalDate quotationDate = extractQuotationDate(pdfBytes);
+
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
             SupplierQuotation quotation = repository.save(SupplierQuotation.builder()
                     .quotationNumber(quotationNumber.trim())
                     .supplier(supplier)
                     .purchaseRequisition(requisition)
+                    .quotationDate(quotationDate)
                     .originalFileName(originalName)
                     .storedFileName(storedName)
                     .filePath(target.toString())
                     .contentType(file.getContentType())
                     .fileSize(file.getSize())
-                    .status(com.digipals.wms.supplierquotation.entity.SupplierQuotationStatus.UPLOADED)
+                    .status(SupplierQuotationStatus.UPLOADED)
                     .build());
 
             return toResponse(quotation);
@@ -97,6 +115,25 @@ public class SupplierQuotationServiceImpl implements SupplierQuotationService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    private LocalDate extractQuotationDate(byte[] pdfBytes) {
+        try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+            String text = new PDFTextStripper().getText(document);
+            Matcher matcher = QUOTATION_DATE_PATTERN.matcher(text == null ? "" : text);
+            if (!matcher.find()) {
+                return null;
+            }
+
+            String rawDate = matcher.group(1).trim();
+            try {
+                return LocalDate.parse(rawDate, QUOTATION_DATE_FORMATTER);
+            } catch (DateTimeParseException ignored) {
+                return null;
+            }
+        } catch (IOException e) {
+            throw new InvalidWorkflowException("Unable to read quotation PDF to determine quotation date.");
+        }
     }
 
     private SupplierQuotationResponse toResponse(SupplierQuotation quotation) {
