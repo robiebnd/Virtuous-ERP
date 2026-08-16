@@ -31,6 +31,7 @@ public final class PurchaseOrderMapper {
                 .poNumber(purchaseOrder.getPoNumber())
                 .status(purchaseOrder.getStatus())
                 .source(purchaseOrder.getSource())
+                .currency(purchaseOrder.getCurrency())
                 .supplierId(purchaseOrder.getSupplier() == null ? null : purchaseOrder.getSupplier().getId())
                 .supplierCode(purchaseOrder.getSupplier() == null ? null : purchaseOrder.getSupplier().getCode())
                 .supplierName(purchaseOrder.getSupplier() == null ? null : purchaseOrder.getSupplier().getName())
