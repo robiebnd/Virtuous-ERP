@@ -1,0 +1,54 @@
+package com.digipals.wms.purchaseorders.service;
+
+import com.digipals.wms.common.exception.InvalidWorkflowException;
+import com.digipals.wms.common.exception.ResourceNotFoundException;
+import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
+import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
+import com.digipals.wms.purchaseorders.repository.PurchaseOrderRepository;
+import com.digipals.wms.security.CurrentUserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class PurchaseOrderNumberService {
+    private final PurchaseOrderRepository repository;
+    private final CurrentUserService currentUserService;
+
+    @Transactional(readOnly = true)
+    public PurchaseOrder findByNumber(String poNumber) {
+        return getByNumber(poNumber);
+    }
+
+    public PurchaseOrder approveByNumber(String poNumber) {
+        PurchaseOrder purchaseOrder = getByNumber(poNumber);
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.DRAFT) {
+            throw new InvalidWorkflowException("Only draft Purchase Orders can be approved.");
+        }
+        purchaseOrder.setStatus(PurchaseOrderStatus.APPROVED);
+        purchaseOrder.setApprovedBy(currentUserService.getCurrentUser());
+        purchaseOrder.setApprovedAt(LocalDateTime.now());
+        return repository.save(purchaseOrder);
+    }
+
+    public PurchaseOrder receiveByNumber(String poNumber) {
+        PurchaseOrder purchaseOrder = getByNumber(poNumber);
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
+            throw new InvalidWorkflowException("Only approved Purchase Orders can be received.");
+        }
+        purchaseOrder.setStatus(PurchaseOrderStatus.RECEIVED);
+        return repository.save(purchaseOrder);
+    }
+
+    private PurchaseOrder getByNumber(String poNumber) {
+        if (poNumber == null || poNumber.isBlank()) {
+            throw new IllegalArgumentException("PO number is required.");
+        }
+        return repository.findByPoNumber(poNumber.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found: " + poNumber));
+    }
+}
