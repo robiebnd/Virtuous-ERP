@@ -8,6 +8,7 @@ import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.supplier.repository.SupplierRepository;
 import com.digipals.wms.supplierquotation.dto.SupplierQuotationResponse;
 import com.digipals.wms.supplierquotation.entity.SupplierQuotation;
+import com.digipals.wms.supplierquotation.entity.SupplierQuotationStatus;
 import com.digipals.wms.supplierquotation.repository.SupplierQuotationRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
