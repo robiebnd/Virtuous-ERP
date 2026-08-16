@@ -106,7 +106,7 @@ public class PurchaseOrderPdfService {
             }
 
             y -= 4;
-            drawTotalBox(stream, y, grandTotal);
+            drawTotalBox(stream, y, grandTotal, po.getCurrency());
             y -= 62;
             y = drawAudit(stream, po, y) - 18;
             drawTerms(stream, y);
@@ -138,7 +138,7 @@ public class PurchaseOrderPdfService {
     }
 
     private float drawPartyInformation(PDPageContentStream s, PurchaseOrder po, float y) throws IOException {
-        float boxHeight = 92;
+        float boxHeight = 105;
         float half = (CONTENT_WIDTH - 10) / 2;
         box(s, MARGIN, y - boxHeight, half, boxHeight);
         box(s, MARGIN + half + 10, y - boxHeight, half, boxHeight);
@@ -146,6 +146,7 @@ public class PurchaseOrderPdfService {
         drawText(s, "SUPPLIER", MARGIN + 10, y - 17, 8, BOLD);
         drawText(s, safe(po.getSupplier() == null ? null : po.getSupplier().getName()), MARGIN + 10, y - 34, 10, BOLD);
         drawText(s, "Code: " + safe(po.getSupplier() == null ? null : po.getSupplier().getCode()), MARGIN + 10, y - 49, 8, REGULAR);
+        drawText(s, "Currency: " + safe(po.getCurrency()), MARGIN + 10, y - 64, 8, REGULAR);
 
         float rx = MARGIN + half + 20;
         drawText(s, "PURCHASE ORDER DETAILS", rx, y - 17, 8, BOLD);
@@ -166,11 +167,14 @@ public class PurchaseOrderPdfService {
         return y - 28;
     }
 
-    private void drawTotalBox(PDPageContentStream s, float y, BigDecimal total) throws IOException {
-        float x = PAGE_WIDTH - MARGIN - 190;
-        box(s, x, y - 42, 190, 42);
+    private void drawTotalBox(PDPageContentStream s, float y, BigDecimal total, String currency) throws IOException {
+        float x = PAGE_WIDTH - MARGIN - 220;
+        box(s, x, y - 42, 220, 42);
         drawText(s, "GRAND TOTAL", x + 10, y - 16, 9, BOLD);
-        drawRight(s, money(total), x + 180, y - 16, 11, BOLD);
+        String formatted = currency == null || currency.isBlank()
+                ? money(total)
+                : currency.trim().toUpperCase() + " " + money(total);
+        drawRight(s, formatted, x + 210, y - 16, 11, BOLD);
     }
 
     private float drawAudit(PDPageContentStream s, PurchaseOrder po, float y) throws IOException {
