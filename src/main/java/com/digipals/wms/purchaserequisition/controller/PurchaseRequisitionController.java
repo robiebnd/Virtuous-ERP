@@ -41,6 +41,16 @@ public class PurchaseRequisitionController {
     }
 
     /**
+     * Get Purchase Requisition By Requisition Number
+     */
+    @GetMapping("/number/{requisitionNumber}")
+    public PurchaseRequisitionResponse findByRequisitionNumber(
+            @PathVariable String requisitionNumber) {
+
+        return service.findByRequisitionNumber(requisitionNumber);
+    }
+
+    /**
      * Get Purchase Requisition By Id
      */
     @GetMapping("/{id}")
