@@ -43,40 +43,28 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     private PurchaseOrder getPurchaseOrder(UUID id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Purchase Order not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found."));
     }
 
     @Override
     public PurchaseOrder createFromRequisition(UUID purchaseRequisitionId) {
-
-        PurchaseRequisition requisition =
-                purchaseRequisitionRepository.findById(purchaseRequisitionId)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Purchase Requisition not found."));
+        PurchaseRequisition requisition = purchaseRequisitionRepository.findById(purchaseRequisitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
 
         if (requisition.getStatus() != PurchaseRequisitionStatus.APPROVED) {
-            throw new InvalidWorkflowException(
-                    "Only approved Purchase Requisitions can create Purchase Orders.");
+            throw new InvalidWorkflowException("Only approved Purchase Requisitions can create Purchase Orders.");
         }
-
         if (repository.existsByPurchaseRequisitionId(requisition.getId())) {
-            throw new InvalidWorkflowException(
-                    "A Purchase Order already exists for this Purchase Requisition.");
+            throw new InvalidWorkflowException("A Purchase Order already exists for this Purchase Requisition.");
         }
-
         if (requisition.getSupplier() == null) {
-            throw new InvalidWorkflowException(
-                    "Purchase Requisition has no supplier assigned and cannot create a Purchase Order.");
+            throw new InvalidWorkflowException("Purchase Requisition has no supplier assigned and cannot create a Purchase Order.");
         }
 
-        List<PurchaseRequisitionLine> requisitionLines =
-                purchaseRequisitionLineRepository
-                        .findByPurchaseRequisitionId(requisition.getId());
-
+        List<PurchaseRequisitionLine> requisitionLines = purchaseRequisitionLineRepository
+                .findByPurchaseRequisitionId(requisition.getId());
         if (requisitionLines.isEmpty()) {
-            throw new InvalidWorkflowException(
-                    "Purchase Requisition has no lines and cannot create a Purchase Order.");
+            throw new InvalidWorkflowException("Purchase Requisition has no lines and cannot create a Purchase Order.");
         }
 
         PurchaseOrder purchaseOrder = PurchaseOrder.builder()
@@ -86,14 +74,13 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .purchaseRequisition(requisition)
                 .source(ProcurementSource.REQUISITION)
                 .status(PurchaseOrderStatus.DRAFT)
-                .createdBy(currentUserService.getCurrentUser())
+                .createdBy(requisition.getRequestedBy())
                 .orderDate(LocalDateTime.now())
                 .build();
 
         purchaseOrder = repository.save(purchaseOrder);
 
         for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
-
             BigDecimal unitPrice = requisitionLine.getEstimatedUnitCost() != null
                     ? requisitionLine.getEstimatedUnitCost()
                     : BigDecimal.ZERO;
@@ -105,13 +92,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     .unitPrice(unitPrice)
                     .receivedQuantity(BigDecimal.ZERO)
                     .build();
-
             purchaseOrderLineRepository.save(purchaseOrderLine);
         }
 
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         purchaseRequisitionRepository.save(requisition);
-
         return purchaseOrder;
     }
 
@@ -130,56 +115,40 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     @Override
     public PurchaseOrder approve(UUID id) {
         PurchaseOrder purchaseOrder = getPurchaseOrder(id);
-
         if (purchaseOrder.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Purchase Orders can be approved.");
+            throw new InvalidWorkflowException("Only draft Purchase Orders can be approved.");
         }
 
         purchaseOrder.setStatus(PurchaseOrderStatus.APPROVED);
         purchaseOrder.setApprovedBy(currentUserService.getCurrentUser());
-
+        purchaseOrder.setApprovedAt(LocalDateTime.now());
         return repository.save(purchaseOrder);
     }
 
     @Override
     public PurchaseOrder receive(UUID id) {
         PurchaseOrder purchaseOrder = getPurchaseOrder(id);
-
         if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
-            throw new InvalidWorkflowException(
-                    "Only approved Purchase Orders can be received.");
+            throw new InvalidWorkflowException("Only approved Purchase Orders can be received.");
         }
-
         purchaseOrder.setStatus(PurchaseOrderStatus.RECEIVED);
         return repository.save(purchaseOrder);
     }
 
     @Override
-    public PurchaseOrder update(
-            UUID id,
-            UpdatePurchaseOrderRequest request) {
-
+    public PurchaseOrder update(UUID id, UpdatePurchaseOrderRequest request) {
         PurchaseOrder purchaseOrder = getPurchaseOrder(id);
-
         if (purchaseOrder.getStatus() != PurchaseOrderStatus.DRAFT) {
-            throw new InvalidWorkflowException(
-                    "Only draft Purchase Orders can be updated.");
+            throw new InvalidWorkflowException("Only draft Purchase Orders can be updated.");
         }
-
         if (purchaseOrder.getPurchaseRequisition() != null) {
-            throw new InvalidWorkflowException(
-                    "Purchase Orders created from Purchase Requisitions cannot change supplier, warehouse, requisition or procurement source.");
+            throw new InvalidWorkflowException("Purchase Orders created from Purchase Requisitions cannot change supplier, warehouse, requisition or procurement source.");
         }
 
-        Supplier supplier =
-                supplierRepository.findById(request.getSupplierId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Supplier not found."));
-
+        Supplier supplier = supplierRepository.findById(request.getSupplierId())
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found."));
         purchaseOrder.setSupplier(supplier);
         purchaseOrder.setSource(request.getSource());
-
         return repository.save(purchaseOrder);
     }
 }
