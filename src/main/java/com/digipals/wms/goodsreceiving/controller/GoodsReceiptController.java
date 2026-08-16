@@ -21,34 +21,32 @@ public class GoodsReceiptController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_CREATE')")
-    public GoodsReceiptResponse create(
-            @Valid
-            @RequestBody
-            CreateGoodsReceiptRequest request) {
+    public GoodsReceiptResponse create(@Valid @RequestBody CreateGoodsReceiptRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_UPDATE')")
-    public GoodsReceiptResponse update(
-            @PathVariable UUID id,
-            @Valid
-            @RequestBody
-            UpdateGoodsReceiptRequest request) {
+    public GoodsReceiptResponse update(@PathVariable UUID id,
+                                       @Valid @RequestBody UpdateGoodsReceiptRequest request) {
         return service.update(id, request);
     }
 
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_APPROVE')")
-    public GoodsReceiptResponse approve(
-            @PathVariable UUID id) {
+    public GoodsReceiptResponse approve(@PathVariable UUID id) {
         return service.approve(id);
+    }
+
+    @PutMapping("/number/{grnNumber}/approve")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_APPROVE')")
+    public GoodsReceiptResponse approveByNumber(@PathVariable String grnNumber) {
+        return service.approve(service.findByNumber(grnNumber).getId());
     }
 
     @PostMapping("/{id}/load-po-lines")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_UPDATE')")
-    public GoodsReceiptResponse loadPurchaseOrderLines(
-            @PathVariable UUID id) {
+    public GoodsReceiptResponse loadPurchaseOrderLines(@PathVariable UUID id) {
         return service.loadPurchaseOrderLines(id);
     }
 
@@ -60,22 +58,25 @@ public class GoodsReceiptController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
-    public GoodsReceiptResponse findById(
-            @PathVariable UUID id) {
+    public GoodsReceiptResponse findById(@PathVariable UUID id) {
         return service.findById(id);
+    }
+
+    @GetMapping("/number/{grnNumber}")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
+    public GoodsReceiptResponse findByNumber(@PathVariable String grnNumber) {
+        return service.findByNumber(grnNumber);
     }
 
     @GetMapping("/purchase-order/{purchaseOrderId}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_VIEW')")
-    public List<GoodsReceiptResponse> findByPurchaseOrder(
-            @PathVariable UUID purchaseOrderId) {
+    public List<GoodsReceiptResponse> findByPurchaseOrder(@PathVariable UUID purchaseOrderId) {
         return service.findByPurchaseOrder(purchaseOrderId);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_DELETE')")
-    public void delete(
-            @PathVariable UUID id) {
+    public void delete(@PathVariable UUID id) {
         service.delete(id);
     }
 }
