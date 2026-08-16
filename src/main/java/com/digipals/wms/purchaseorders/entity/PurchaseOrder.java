@@ -44,6 +44,9 @@ public class PurchaseOrder extends BaseEntity {
     @JoinColumn(name = "purchase_requisition_id")
     private PurchaseRequisition purchaseRequisition;
 
+    @Column(name = "currency", length = 3)
+    private String currency;
+
     @Column(name = "order_date", nullable = false)
     private LocalDateTime orderDate;
 
@@ -80,6 +83,9 @@ public class PurchaseOrder extends BaseEntity {
         }
         if (source == null) {
             source = ProcurementSource.DIRECT;
+        }
+        if (currency != null) {
+            currency = currency.trim().toUpperCase();
         }
     }
 }
