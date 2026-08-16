@@ -13,7 +13,6 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.apache.pdfbox.pdmodel.graphics.state.RenderingMode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +41,7 @@ public class PurchaseOrderPdfService {
     private final PurchaseOrderRepository repository;
 
     @Transactional(readOnly = true)
-    public byte[] generateById(java.util.UUID id) {
+    public byte[] generateById(UUID id) {
         PurchaseOrder po = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found."));
         return generate(po);
@@ -68,10 +68,8 @@ public class PurchaseOrderPdfService {
             PDPageContentStream stream = new PDPageContentStream(document, page);
             float y = PAGE_HEIGHT - MARGIN;
 
-            y = drawHeader(stream, po, y);
-            y -= 14;
-            y = drawPartyInformation(stream, po, y);
-            y -= 18;
+            y = drawHeader(stream, po, y) - 14;
+            y = drawPartyInformation(stream, po, y) - 18;
             y = drawLinesHeader(stream, y);
 
             BigDecimal grandTotal = BigDecimal.ZERO;
@@ -79,14 +77,12 @@ public class PurchaseOrderPdfService {
             List<PurchaseOrderLine> lines = po.getLines();
             for (PurchaseOrderLine line : lines) {
                 if (y < 92) {
-                    drawFooter(stream, page);
+                    drawFooter(stream);
                     stream.close();
                     page = new PDPage(PDRectangle.A4);
                     document.addPage(page);
                     stream = new PDPageContentStream(document, page);
-                    y = PAGE_HEIGHT - MARGIN;
-                    y = drawContinuationHeader(stream, po, y);
-                    y -= 14;
+                    y = drawContinuationHeader(stream, po, PAGE_HEIGHT - MARGIN) - 14;
                     y = drawLinesHeader(stream, y);
                 }
 
@@ -112,10 +108,9 @@ public class PurchaseOrderPdfService {
             y -= 4;
             drawTotalBox(stream, y, grandTotal);
             y -= 62;
-            y = drawAudit(stream, po, y);
-            y -= 18;
+            y = drawAudit(stream, po, y) - 18;
             drawTerms(stream, y);
-            drawFooter(stream, page);
+            drawFooter(stream);
             stream.close();
 
             document.save(output);
@@ -175,7 +170,7 @@ public class PurchaseOrderPdfService {
         float x = PAGE_WIDTH - MARGIN - 190;
         box(s, x, y - 42, 190, 42);
         drawText(s, "GRAND TOTAL", x + 10, y - 16, 9, BOLD);
-        drawRight(s, "USD " + money(total), x + 180, y - 16, 11, BOLD);
+        drawRight(s, money(total), x + 180, y - 16, 11, BOLD);
     }
 
     private float drawAudit(PDPageContentStream s, PurchaseOrder po, float y) throws IOException {
@@ -195,10 +190,9 @@ public class PurchaseOrderPdfService {
         drawText(s, "Please quote the PO number on all supplier correspondence, invoices and delivery documentation.", MARGIN, y - 26, 7, ITALIC);
     }
 
-    private void drawFooter(PDPageContentStream s, PDPage page) throws IOException {
+    private void drawFooter(PDPageContentStream s) throws IOException {
         line(s, MARGIN, 35, PAGE_WIDTH - MARGIN, 35, 0.5f);
         drawText(s, "Virtuous ERP • System Generated Document", MARGIN, 23, 7, REGULAR);
-        drawRight(s, "Page " + (page == null ? "" : ""), PAGE_WIDTH - MARGIN, 23, 7, REGULAR);
     }
 
     private void drawText(PDPageContentStream s, String text, float x, float y, float size, PDType1Font font) throws IOException {
