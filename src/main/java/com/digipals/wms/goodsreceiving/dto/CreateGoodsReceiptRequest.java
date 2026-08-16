@@ -1,6 +1,5 @@
 package com.digipals.wms.goodsreceiving.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.UUID;
@@ -8,8 +7,11 @@ import java.util.UUID;
 @Data
 public class CreateGoodsReceiptRequest {
 
-    @NotNull(message = "Purchase Order is required")
+    /** Internal identifier retained for integrations/backwards compatibility. */
     private UUID purchaseOrderId;
+
+    /** Human-facing Purchase Order number preferred by the frontend. */
+    private String purchaseOrderNumber;
 
     private String supplierDeliveryNote;
 
