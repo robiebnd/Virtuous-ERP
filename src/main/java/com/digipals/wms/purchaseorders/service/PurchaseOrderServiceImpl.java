@@ -74,6 +74,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 .purchaseRequisition(requisition)
                 .source(ProcurementSource.REQUISITION)
                 .status(PurchaseOrderStatus.DRAFT)
+                .currency(normalizeCurrency(requisition.getCurrency()))
                 .createdBy(requisition.getRequestedBy())
                 .orderDate(LocalDateTime.now())
                 .build();
@@ -98,6 +99,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         purchaseRequisitionRepository.save(requisition);
         return purchaseOrder;
+    }
+
+    private String normalizeCurrency(String currency) {
+        return currency == null || currency.isBlank() ? null : currency.trim().toUpperCase();
     }
 
     @Override
