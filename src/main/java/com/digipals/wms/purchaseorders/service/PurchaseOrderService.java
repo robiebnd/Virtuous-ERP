@@ -8,18 +8,13 @@ import java.util.UUID;
 
 public interface PurchaseOrderService {
 
-    PurchaseOrder createFromRequisition(
-            UUID purchaseRequisitionId);
-
-    PurchaseOrder update(
-            UUID id,
-            UpdatePurchaseOrderRequest request);
-
+    PurchaseOrder createFromRequisition(UUID purchaseRequisitionId);
+    PurchaseOrder update(UUID id, UpdatePurchaseOrderRequest request);
     List<PurchaseOrder> findAll();
-
     PurchaseOrder findById(UUID id);
-
+    PurchaseOrder findByNumber(String poNumber);
     PurchaseOrder approve(UUID id);
-
+    PurchaseOrder approveByNumber(String poNumber);
     PurchaseOrder receive(UUID id);
+    PurchaseOrder receiveByNumber(String poNumber);
 }
