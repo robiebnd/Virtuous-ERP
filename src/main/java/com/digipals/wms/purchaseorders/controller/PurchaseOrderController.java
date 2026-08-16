@@ -3,6 +3,7 @@ package com.digipals.wms.purchaseorders.controller;
 import com.digipals.wms.common.mapper.PurchaseOrderMapper;
 import com.digipals.wms.purchaseorders.dto.PurchaseOrderResponse;
 import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
+import com.digipals.wms.purchaseorders.service.PurchaseOrderNumberService;
 import com.digipals.wms.purchaseorders.service.PurchaseOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,23 +19,18 @@ import java.util.UUID;
 public class PurchaseOrderController {
 
     private final PurchaseOrderService service;
+    private final PurchaseOrderNumberService numberService;
 
     @PostMapping("/from-requisition/{requisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
-    public PurchaseOrderResponse createFromRequisition(
-            @PathVariable UUID requisitionId) {
-
-        return PurchaseOrderMapper.toResponse(
-                service.createFromRequisition(requisitionId));
+    public PurchaseOrderResponse createFromRequisition(@PathVariable UUID requisitionId) {
+        return PurchaseOrderMapper.toResponse(service.createFromRequisition(requisitionId));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public List<PurchaseOrderResponse> getAll() {
-        return service.findAll()
-                .stream()
-                .map(PurchaseOrderMapper::toResponse)
-                .toList();
+        return service.findAll().stream().map(PurchaseOrderMapper::toResponse).toList();
     }
 
     @GetMapping("/{id}")
@@ -43,10 +39,22 @@ public class PurchaseOrderController {
         return PurchaseOrderMapper.toResponse(service.findById(id));
     }
 
+    @GetMapping("/number/{poNumber}")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
+    public PurchaseOrderResponse getByNumber(@PathVariable String poNumber) {
+        return PurchaseOrderMapper.toResponse(numberService.findByNumber(poNumber));
+    }
+
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_APPROVE')")
     public PurchaseOrderResponse approve(@PathVariable UUID id) {
         return PurchaseOrderMapper.toResponse(service.approve(id));
+    }
+
+    @PutMapping("/number/{poNumber}/approve")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_APPROVE')")
+    public PurchaseOrderResponse approveByNumber(@PathVariable String poNumber) {
+        return PurchaseOrderMapper.toResponse(numberService.approveByNumber(poNumber));
     }
 
     @PutMapping("/{id}/receive")
@@ -55,12 +63,15 @@ public class PurchaseOrderController {
         return PurchaseOrderMapper.toResponse(service.receive(id));
     }
 
+    @PutMapping("/number/{poNumber}/receive")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_RECEIVE')")
+    public PurchaseOrderResponse receiveByNumber(@PathVariable String poNumber) {
+        return PurchaseOrderMapper.toResponse(numberService.receiveByNumber(poNumber));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
-    public PurchaseOrderResponse update(
-            @PathVariable UUID id,
-            @Valid @RequestBody UpdatePurchaseOrderRequest request) {
-
+    public PurchaseOrderResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePurchaseOrderRequest request) {
         return PurchaseOrderMapper.toResponse(service.update(id, request));
     }
 }
