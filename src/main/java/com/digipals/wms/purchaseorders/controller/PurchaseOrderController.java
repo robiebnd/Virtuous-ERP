@@ -4,9 +4,14 @@ import com.digipals.wms.common.mapper.PurchaseOrderMapper;
 import com.digipals.wms.purchaseorders.dto.PurchaseOrderResponse;
 import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.service.PurchaseOrderNumberService;
+import com.digipals.wms.purchaseorders.service.PurchaseOrderPdfService;
 import com.digipals.wms.purchaseorders.service.PurchaseOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +25,7 @@ public class PurchaseOrderController {
 
     private final PurchaseOrderService service;
     private final PurchaseOrderNumberService numberService;
+    private final PurchaseOrderPdfService pdfService;
 
     @PostMapping("/from-requisition/{requisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
@@ -43,6 +49,20 @@ public class PurchaseOrderController {
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public PurchaseOrderResponse getByNumber(@PathVariable String poNumber) {
         return PurchaseOrderMapper.toResponse(numberService.findByNumber(poNumber));
+    }
+
+    @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
+    public ResponseEntity<byte[]> getPdfById(@PathVariable UUID id) {
+        byte[] pdf = pdfService.generateById(id);
+        return pdfResponse(pdf, "purchase-order-" + id + ".pdf");
+    }
+
+    @GetMapping("/number/{poNumber}/pdf")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
+    public ResponseEntity<byte[]> getPdfByNumber(@PathVariable String poNumber) {
+        byte[] pdf = pdfService.generateByNumber(poNumber);
+        return pdfResponse(pdf, "purchase-order-" + poNumber + ".pdf");
     }
 
     @PutMapping("/{id}/approve")
@@ -73,5 +93,13 @@ public class PurchaseOrderController {
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
     public PurchaseOrderResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePurchaseOrderRequest request) {
         return PurchaseOrderMapper.toResponse(service.update(id, request));
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
+        headers.setContentLength(pdf.length);
+        return ResponseEntity.ok().headers(headers).body(pdf);
     }
 }
