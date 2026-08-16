@@ -55,6 +55,9 @@ public class PurchaseOrder extends BaseEntity {
     @JoinColumn(name = "approved_by")
     private User approvedBy;
 
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cancelled_by")
     private User cancelledBy;
