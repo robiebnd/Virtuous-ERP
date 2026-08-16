@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @Builder
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class PurchaseRequisitionResponse {
 
     private UUID id;
@@ -23,6 +24,7 @@ public class PurchaseRequisitionResponse {
     private String supplierName;
     private PurchaseRequisitionStatus status;
     private String department;
+    private String currency;
     private String remarks;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
