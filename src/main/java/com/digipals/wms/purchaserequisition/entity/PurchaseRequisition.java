@@ -60,6 +60,9 @@ public class PurchaseRequisition extends BaseEntity {
     @Column(name = "department", nullable = false, length = 150)
     private String department;
 
+    @Column(name = "currency", length = 3)
+    private String currency;
+
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
 
@@ -86,6 +89,9 @@ public class PurchaseRequisition extends BaseEntity {
     protected void prePersist() {
         if (status == null) {
             status = PurchaseRequisitionStatus.DRAFT;
+        }
+        if (currency != null) {
+            currency = currency.trim().toUpperCase();
         }
     }
 }
