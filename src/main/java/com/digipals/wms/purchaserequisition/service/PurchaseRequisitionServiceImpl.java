@@ -111,6 +111,15 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         return toResponseWithLines(repository.save(requisition));
     }
     @Override public void delete(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition); repository.delete(requisition); }
+
+    @Override
+    public void clearLines(UUID id) {
+        PurchaseRequisition requisition = getRequisition(id);
+        validator.validateDraft(requisition);
+        lineRepository.deleteByPurchaseRequisitionId(id);
+        lineRepository.flush();
+    }
+
     @Override public PurchaseRequisitionResponse submit(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateDraft(requisition); validateHasLines(requisition); if (requisition.getSupplier() == null) throw new IllegalStateException("Purchase Requisition supplier is required before submission."); if (requisition.getCurrency() == null || requisition.getCurrency().isBlank()) throw new InvalidWorkflowException("Purchase Requisition currency is required before submission."); requisition.setStatus(PurchaseRequisitionStatus.SUBMITTED); requisition.setSubmittedAt(LocalDateTime.now()); return toResponseWithLines(repository.save(requisition)); }
     @Override public PurchaseRequisitionResponse approve(UUID id) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); requisition.setStatus(PurchaseRequisitionStatus.APPROVED); requisition.setApprovedBy(currentUserService.getCurrentUser()); requisition.setApprovedAt(LocalDateTime.now()); return toResponseWithLines(repository.save(requisition)); }
     @Override public PurchaseRequisitionResponse reject(UUID id, String remarks) { PurchaseRequisition requisition = getRequisition(id); validator.validateSubmitted(requisition); if (remarks == null || remarks.isBlank()) throw new IllegalArgumentException("Rejection reason is required."); requisition.setStatus(PurchaseRequisitionStatus.REJECTED); requisition.setRejectedBy(currentUserService.getCurrentUser()); requisition.setRejectedAt(LocalDateTime.now()); requisition.setRejectionReason(remarks.trim()); return toResponseWithLines(repository.save(requisition)); }
@@ -134,7 +143,6 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         List<String> productConflicts = new ArrayList<>();
         String quotationCurrency = null;
 
-        // Validate every quotation line before changing the PR or Product Master.
         for (Object rawLine : extractedLines) {
             if (!(rawLine instanceof Map<?, ?> line)) throw new InvalidWorkflowException("Invalid extracted quotation line.");
             String sku = text(line.get("sku"));
@@ -150,11 +158,8 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
             if (!quotationCurrency.equals(lineCurrency)) throw new InvalidWorkflowException("Quotation contains multiple currencies. All quotation lines must use the same currency.");
 
             Product product = productRepository.findBySku(sku).orElse(null);
-            if (product == null) {
-                missingProducts.add(sku + " - " + description);
-            } else if (!sameProductDescription(product.getName(), description)) {
-                productConflicts.add(sku + " - quotation: '" + description + "', Product Master: '" + product.getName() + "'");
-            }
+            if (product == null) missingProducts.add(sku + " - " + description);
+            else if (!sameProductDescription(product.getName(), description)) productConflicts.add(sku + " - quotation: '" + description + "', Product Master: '" + product.getName() + "'");
             lines.add(new QuotationLineData(sku, description, quantity, unitPrice, lineCurrency, product));
         }
 
@@ -170,28 +175,19 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
         if (requisition.getCurrency() != null && !normalizeCurrency(requisition.getCurrency()).equals(quotationCurrency)) throw new InvalidWorkflowException("Quotation currency " + quotationCurrency + " does not match Purchase Requisition currency " + requisition.getCurrency() + ".");
         requisition.setCurrency(quotationCurrency);
 
-        for (QuotationLineData line : lines) {
-            lineRepository.save(PurchaseRequisitionLine.builder().purchaseRequisition(requisition).product(line.product()).quantity(line.quantity()).estimatedUnitCost(line.unitPrice()).remarks("Currency: " + line.currency()).build());
-        }
+        for (QuotationLineData line : lines) lineRepository.save(PurchaseRequisitionLine.builder().purchaseRequisition(requisition).product(line.product()).quantity(line.quantity()).estimatedUnitCost(line.unitPrice()).remarks("Currency: " + line.currency()).build());
         repository.save(requisition);
         return toResponseWithLines(requisition);
     }
 
-    private boolean sameProductDescription(String productName, String quotationDescription) {
-        return normalizeDescription(productName).equals(normalizeDescription(quotationDescription));
-    }
-
-    private String normalizeDescription(String value) {
-        if (value == null) return "";
-        return value.toLowerCase().replaceAll("[^a-z0-9]+", " ").trim().replaceAll("\\s+", " ");
-    }
+    private boolean sameProductDescription(String productName, String quotationDescription) { return normalizeDescription(productName).equals(normalizeDescription(quotationDescription)); }
+    private String normalizeDescription(String value) { if (value == null) return ""; return value.toLowerCase().replaceAll("[^a-z0-9]+", " ").trim().replaceAll("\\s+", " "); }
 
     @Override
     public PurchaseRequisitionResponse importQuotationByNumber(UUID requisitionId, String quotationNumber) {
         if (quotationNumber == null || quotationNumber.isBlank()) throw new IllegalArgumentException("Quotation number is required.");
         PurchaseRequisition requisition = getRequisition(requisitionId);
-        List<SupplierQuotation> matches = quotationRepository.findByQuotationNumber(quotationNumber.trim());
-        matches = matches.stream()
+        List<SupplierQuotation> matches = quotationRepository.findByQuotationNumber(quotationNumber.trim()).stream()
                 .filter(q -> q.getPurchaseRequisition() != null && requisitionId.equals(q.getPurchaseRequisition().getId()))
                 .filter(q -> q.getSupplier() != null && requisition.getSupplier() != null && q.getSupplier().getId().equals(requisition.getSupplier().getId()))
                 .toList();
