@@ -43,6 +43,7 @@ public final class PurchaseOrderMapper {
                 .createdBy(purchaseOrder.getCreatedBy() == null ? null : purchaseOrder.getCreatedBy().getUsername())
                 .approvedById(purchaseOrder.getApprovedBy() == null ? null : purchaseOrder.getApprovedBy().getId())
                 .approvedBy(purchaseOrder.getApprovedBy() == null ? null : purchaseOrder.getApprovedBy().getUsername())
+                .approvedAt(purchaseOrder.getApprovedAt())
                 .active(purchaseOrder.getActive())
                 .createdAt(purchaseOrder.getCreatedAt())
                 .updatedAt(purchaseOrder.getUpdatedAt())
