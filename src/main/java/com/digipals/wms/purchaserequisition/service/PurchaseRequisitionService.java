@@ -18,6 +18,9 @@ public interface PurchaseRequisitionService {
     PurchaseRequisitionResponse findById(
             UUID id);
 
+    PurchaseRequisitionResponse findByRequisitionNumber(
+            String requisitionNumber);
+
     List<PurchaseRequisitionResponse> findAll();
 
     List<PurchaseRequisitionResponse> findByStatus(
