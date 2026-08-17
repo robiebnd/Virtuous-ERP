@@ -306,7 +306,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         }
 
         for (PurchaseOrderLine poLine : poLines) {
-            goodsReceiptLineRepository.save(GoodsReceiptLine.builder()
+            GoodsReceiptLine receiptLine = GoodsReceiptLine.builder()
                     .goodsReceipt(goodsReceipt)
                     .purchaseOrderLine(poLine)
                     .product(poLine.getProduct())
@@ -316,7 +316,13 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     .rejectedQuantity(BigDecimal.ZERO)
                     .unitCost(poLine.getUnitPrice())
                     .remarks(null)
-                    .build());
+                    .build();
+
+            goodsReceiptLineRepository.save(receiptLine);
+
+            // Keep the parent entity in sync with the persisted child so that
+            // the response mapper immediately returns the newly created lines.
+            goodsReceipt.getLines().add(receiptLine);
         }
 
         return GoodsReceiptMapper.toResponse(goodsReceipt);
