@@ -40,13 +40,14 @@ public class PurchaseOrderNumberService {
         return repository.save(purchaseOrder);
     }
 
+    /**
+     * Direct PO receiving is no longer part of the procurement workflow.
+     * Receiving must happen through a Goods Receipt so stock movements,
+     * accepted/rejected quantities and PO receipt status remain consistent.
+     */
     public PurchaseOrder receiveByNumber(String poNumber) {
-        PurchaseOrder purchaseOrder = getByNumber(poNumber);
-        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
-            throw new InvalidWorkflowException("Only approved Purchase Orders can be received.");
-        }
-        purchaseOrder.setStatus(PurchaseOrderStatus.RECEIVED);
-        return repository.save(purchaseOrder);
+        throw new InvalidWorkflowException(
+                "Direct Purchase Order receiving is disabled. Create and approve a Goods Receipt for the Purchase Order instead.");
     }
 
     public PurchaseOrder updateByNumber(String poNumber, UpdatePurchaseOrderRequest request) {
