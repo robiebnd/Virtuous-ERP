@@ -77,17 +77,11 @@ public class PurchaseOrderController {
         return PurchaseOrderMapper.toResponse(numberService.approveByNumber(poNumber));
     }
 
-    @PutMapping("/{id}/receive")
-    @PreAuthorize("hasAuthority('PURCHASE_ORDER_RECEIVE')")
-    public PurchaseOrderResponse receive(@PathVariable UUID id) {
-        return PurchaseOrderMapper.toResponse(service.receive(id));
-    }
-
-    @PutMapping("/number/{poNumber}/receive")
-    @PreAuthorize("hasAuthority('PURCHASE_ORDER_RECEIVE')")
-    public PurchaseOrderResponse receiveByNumber(@PathVariable String poNumber) {
-        return PurchaseOrderMapper.toResponse(numberService.receiveByNumber(poNumber));
-    }
+    /*
+     * PO receiving is intentionally handled by Goods Receipt.
+     * There is no direct /receive endpoint here so inventory cannot be
+     * changed without a GRN transaction.
+     */
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
