@@ -2,6 +2,7 @@ package com.digipals.wms.goodsreceiving.repository;
 
 import com.digipals.wms.goodsreceiving.entity.GoodsReceipt;
 import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,6 +13,14 @@ public interface GoodsReceiptRepository
         extends JpaRepository<GoodsReceipt, UUID> {
 
     Optional<GoodsReceipt> findByGrnNumber(
+            String grnNumber);
+
+    @EntityGraph(attributePaths = "lines")
+    Optional<GoodsReceipt> findWithLinesById(
+            UUID id);
+
+    @EntityGraph(attributePaths = "lines")
+    Optional<GoodsReceipt> findWithLinesByGrnNumber(
             String grnNumber);
 
     boolean existsByGrnNumber(
