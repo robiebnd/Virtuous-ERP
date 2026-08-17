@@ -33,6 +33,12 @@ public class PurchaseOrderController {
         return PurchaseOrderMapper.toResponse(service.createFromRequisition(requisitionId));
     }
 
+    @PostMapping("/from-requisition/number/{requisitionNumber}")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
+    public PurchaseOrderResponse createFromRequisitionByNumber(@PathVariable String requisitionNumber) {
+        return PurchaseOrderMapper.toResponse(numberService.createFromRequisitionByNumber(requisitionNumber));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public List<PurchaseOrderResponse> getAll() {
