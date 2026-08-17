@@ -51,8 +51,18 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                 .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found."));
     }
 
+    private GoodsReceipt getGoodsReceiptWithLines(UUID id) {
+        return repository.findWithLinesById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found."));
+    }
+
     private GoodsReceipt getGoodsReceiptByNumber(String grnNumber) {
         return repository.findByGrnNumber(grnNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber));
+    }
+
+    private GoodsReceipt getGoodsReceiptByNumberWithLines(String grnNumber) {
+        return repository.findWithLinesByGrnNumber(grnNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber));
     }
 
@@ -264,13 +274,13 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     @Override
     @Transactional(readOnly = true)
     public GoodsReceiptResponse findById(UUID id) {
-        return GoodsReceiptMapper.toResponse(getGoodsReceipt(id));
+        return GoodsReceiptMapper.toResponse(getGoodsReceiptWithLines(id));
     }
 
     @Override
     @Transactional(readOnly = true)
     public GoodsReceiptResponse findByNumber(String grnNumber) {
-        return GoodsReceiptMapper.toResponse(getGoodsReceiptByNumber(grnNumber));
+        return GoodsReceiptMapper.toResponse(getGoodsReceiptByNumberWithLines(grnNumber));
     }
 
     @Override
@@ -319,13 +329,12 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     .build();
 
             goodsReceiptLineRepository.save(receiptLine);
-
-            // Keep the parent entity in sync with the persisted child so that
-            // the response mapper immediately returns the newly created lines.
-            goodsReceipt.getLines().add(receiptLine);
         }
 
-        return GoodsReceiptMapper.toResponse(goodsReceipt);
+        // Re-query with an EntityGraph so the response is guaranteed to contain
+        // the newly persisted lines, even though GoodsReceipt.lines is LAZY.
+        GoodsReceipt reloadedGoodsReceipt = getGoodsReceiptWithLines(goodsReceipt.getId());
+        return GoodsReceiptMapper.toResponse(reloadedGoodsReceipt);
     }
 
     @Override
