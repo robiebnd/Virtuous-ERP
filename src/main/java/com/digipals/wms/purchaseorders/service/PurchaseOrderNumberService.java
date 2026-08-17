@@ -6,6 +6,8 @@ import com.digipals.wms.purchaseorders.dto.UpdatePurchaseOrderRequest;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
 import com.digipals.wms.purchaseorders.repository.PurchaseOrderRepository;
+import com.digipals.wms.purchaserequisition.entity.PurchaseRequisition;
+import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.supplier.repository.SupplierRepository;
@@ -22,11 +24,24 @@ public class PurchaseOrderNumberService {
     private final PurchaseOrderRepository repository;
     private final CurrentUserService currentUserService;
     private final SupplierRepository supplierRepository;
+    private final PurchaseRequisitionRepository purchaseRequisitionRepository;
     private final PurchaseOrderService service;
 
     @Transactional(readOnly = true)
     public PurchaseOrder findByNumber(String poNumber) {
         return getByNumber(poNumber);
+    }
+
+    public PurchaseOrder createFromRequisitionByNumber(String requisitionNumber) {
+        if (requisitionNumber == null || requisitionNumber.isBlank()) {
+            throw new IllegalArgumentException("Purchase Requisition number is required.");
+        }
+
+        PurchaseRequisition requisition = purchaseRequisitionRepository.findByRequisitionNumber(requisitionNumber.trim())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found: " + requisitionNumber));
+
+        return service.createFromRequisition(requisition.getId());
     }
 
     public PurchaseOrder approveByNumber(String poNumber) {
@@ -38,16 +53,6 @@ public class PurchaseOrderNumberService {
         purchaseOrder.setApprovedBy(currentUserService.getCurrentUser());
         purchaseOrder.setApprovedAt(LocalDateTime.now());
         return repository.save(purchaseOrder);
-    }
-
-    /**
-     * Direct PO receiving is no longer part of the procurement workflow.
-     * Receiving must happen through a Goods Receipt so stock movements,
-     * accepted/rejected quantities and PO receipt status remain consistent.
-     */
-    public PurchaseOrder receiveByNumber(String poNumber) {
-        throw new InvalidWorkflowException(
-                "Direct Purchase Order receiving is disabled. Create and approve a Goods Receipt for the Purchase Order instead.");
     }
 
     public PurchaseOrder updateByNumber(String poNumber, UpdatePurchaseOrderRequest request) {
