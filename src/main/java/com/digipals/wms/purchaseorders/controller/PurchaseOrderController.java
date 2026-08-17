@@ -95,6 +95,14 @@ public class PurchaseOrderController {
         return PurchaseOrderMapper.toResponse(service.update(id, request));
     }
 
+    @PutMapping("/number/{poNumber}")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_UPDATE')")
+    public PurchaseOrderResponse updateByNumber(
+            @PathVariable String poNumber,
+            @Valid @RequestBody UpdatePurchaseOrderRequest request) {
+        return PurchaseOrderMapper.toResponse(numberService.updateByNumber(poNumber, request));
+    }
+
     private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
