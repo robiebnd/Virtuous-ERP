@@ -31,6 +31,25 @@ public class GoodsReceiptController {
         return service.create(request);
     }
 
+    /**
+     * Creates a draft Goods Receipt directly from a human-facing PO number.
+     * The PO UUID remains internal to the service/database layer.
+     */
+    @PostMapping("/from-purchase-order/number/{poNumber}")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_CREATE')")
+    public GoodsReceiptResponse createFromPurchaseOrderNumber(
+            @PathVariable String poNumber,
+            @Valid @RequestBody(required = false) CreateGoodsReceiptRequest request) {
+
+        CreateGoodsReceiptRequest effectiveRequest = request != null
+                ? request
+                : new CreateGoodsReceiptRequest();
+        effectiveRequest.setPurchaseOrderNumber(poNumber);
+        effectiveRequest.setPurchaseOrderId(null);
+
+        return service.create(effectiveRequest);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_UPDATE')")
     public GoodsReceiptResponse update(@PathVariable UUID id,
