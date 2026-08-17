@@ -15,9 +15,13 @@ public interface PurchaseRequisitionService {
     List<PurchaseRequisitionResponse> findByStatus(PurchaseRequisitionStatus status);
     List<PurchaseRequisitionResponse> findByWarehouse(UUID warehouseId);
     PurchaseRequisitionResponse submit(UUID id);
+    PurchaseRequisitionResponse submitByNumber(String requisitionNumber);
     PurchaseRequisitionResponse approve(UUID id);
+    PurchaseRequisitionResponse approveByNumber(String requisitionNumber);
     PurchaseRequisitionResponse reject(UUID id, String remarks);
+    PurchaseRequisitionResponse rejectByNumber(String requisitionNumber, String remarks);
     PurchaseRequisitionResponse cancel(UUID id);
+    PurchaseRequisitionResponse cancelByNumber(String requisitionNumber);
     void delete(UUID id);
     void clearLines(UUID id);
     PurchaseRequisitionResponse importQuotation(UUID requisitionId, UUID quotationId);
