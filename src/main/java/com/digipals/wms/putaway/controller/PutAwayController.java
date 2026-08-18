@@ -1,6 +1,7 @@
 package com.digipals.wms.putaway.controller;
 
 import com.digipals.wms.putaway.dto.AssignPutAwayRequest;
+import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
@@ -34,7 +35,7 @@ public class PutAwayController {
     @ResponseStatus(HttpStatus.CREATED)
     public PutAwayResponse createFromGoodsReceiptNumber(
             @PathVariable String grnNumber,
-            @Valid @RequestBody CreatePutAwayRequest request) {
+            @Valid @RequestBody CreatePutAwayFromGoodsReceiptNumberRequest request) {
         return service.createFromGoodsReceiptNumber(grnNumber, request);
     }
 
