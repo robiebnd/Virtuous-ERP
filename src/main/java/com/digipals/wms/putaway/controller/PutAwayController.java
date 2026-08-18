@@ -26,9 +26,16 @@ public class PutAwayController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PutAwayResponse create(
-            @Valid @RequestBody CreatePutAwayRequest request) {
+    public PutAwayResponse create(@Valid @RequestBody CreatePutAwayRequest request) {
         return service.create(request);
+    }
+
+    @PostMapping("/from-goods-receipt/number/{grnNumber}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PutAwayResponse createFromGoodsReceiptNumber(
+            @PathVariable String grnNumber,
+            @Valid @RequestBody CreatePutAwayRequest request) {
+        return service.createFromGoodsReceiptNumber(grnNumber, request);
     }
 
     @GetMapping
@@ -37,20 +44,22 @@ public class PutAwayController {
     }
 
     @GetMapping("/{id}")
-    public PutAwayResponse findById(
-            @PathVariable UUID id) {
+    public PutAwayResponse findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
+    @GetMapping("/number/{putAwayNumber}")
+    public PutAwayResponse findByNumber(@PathVariable String putAwayNumber) {
+        return service.findByNumber(putAwayNumber);
+    }
+
     @GetMapping("/warehouse/{warehouseId}")
-    public List<PutAwayResponse> findByWarehouse(
-            @PathVariable UUID warehouseId) {
+    public List<PutAwayResponse> findByWarehouse(@PathVariable UUID warehouseId) {
         return service.findByWarehouse(warehouseId);
     }
 
     @GetMapping("/goods-receipt/{goodsReceiptId}")
-    public List<PutAwayResponse> findByGoodsReceipt(
-            @PathVariable UUID goodsReceiptId) {
+    public List<PutAwayResponse> findByGoodsReceipt(@PathVariable UUID goodsReceiptId) {
         return service.findByGoodsReceipt(goodsReceiptId);
     }
 
@@ -75,28 +84,39 @@ public class PutAwayController {
         return service.putAwayLine(lineId, request);
     }
 
+    @PostMapping("/number/{putAwayNumber}/lines/{lineId}/put-away")
+    public PutAwayLineResponse putAwayLineByNumber(
+            @PathVariable String putAwayNumber,
+            @PathVariable UUID lineId,
+            @Valid @RequestBody UpdatePutAwayLineRequest request) {
+        PutAwayResponse putAway = service.findByNumber(putAwayNumber);
+        boolean belongsToPutAway = putAway.getLines().stream()
+                .anyMatch(line -> line.getId().equals(lineId));
+        if (!belongsToPutAway) {
+            throw new com.digipals.wms.common.exception.InvalidWorkflowException(
+                    "Put-Away line does not belong to Put-Away " + putAwayNumber + ".");
+        }
+        return service.putAwayLine(lineId, request);
+    }
+
     @GetMapping("/lines/{lineId}")
-    public PutAwayLineResponse findLineById(
-            @PathVariable UUID lineId) {
+    public PutAwayLineResponse findLineById(@PathVariable UUID lineId) {
         return service.findLineById(lineId);
     }
 
     @GetMapping("/{putAwayId}/lines")
-    public List<PutAwayLineResponse> findLinesByPutAway(
-            @PathVariable UUID putAwayId) {
+    public List<PutAwayLineResponse> findLinesByPutAway(@PathVariable UUID putAwayId) {
         return service.findLinesByPutAway(putAwayId);
     }
 
     @PostMapping("/{id}/cancel")
-    public PutAwayResponse cancel(
-            @PathVariable UUID id) {
+    public PutAwayResponse cancel(@PathVariable UUID id) {
         return service.cancel(id);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(
-            @PathVariable UUID id) {
+    public void delete(@PathVariable UUID id) {
         service.delete(id);
     }
 }
