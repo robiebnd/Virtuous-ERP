@@ -11,45 +11,29 @@ import java.util.UUID;
 
 public interface PutAwayService {
 
-    /**
-     * Creates a Put-Away from an approved Goods Receipt, generating one
-     * Put-Away Line per accepted Goods Receipt Line.
-     */
-    PutAwayResponse create(
-            CreatePutAwayRequest request);
+    PutAwayResponse create(CreatePutAwayRequest request);
 
-    PutAwayResponse update(
-            UUID id,
-            UpdatePutAwayRequest request);
+    PutAwayResponse createFromGoodsReceiptNumber(String grnNumber, CreatePutAwayRequest request);
 
-    PutAwayResponse findById(
-            UUID id);
+    PutAwayResponse update(UUID id, UpdatePutAwayRequest request);
+
+    PutAwayResponse findById(UUID id);
+
+    PutAwayResponse findByNumber(String putAwayNumber);
 
     List<PutAwayResponse> findAll();
 
-    List<PutAwayResponse> findByWarehouse(
-            UUID warehouseId);
+    List<PutAwayResponse> findByWarehouse(UUID warehouseId);
 
-    List<PutAwayResponse> findByGoodsReceipt(
-            UUID goodsReceiptId);
+    List<PutAwayResponse> findByGoodsReceipt(UUID goodsReceiptId);
 
-    /**
-     * Puts away a quantity of a line into a destination bin, updating
-     * bin-level inventory and recording the movement.
-     */
-    PutAwayLineResponse putAwayLine(
-            UUID lineId,
-            UpdatePutAwayLineRequest request);
+    PutAwayLineResponse putAwayLine(UUID lineId, UpdatePutAwayLineRequest request);
 
-    PutAwayLineResponse findLineById(
-            UUID lineId);
+    PutAwayLineResponse findLineById(UUID lineId);
 
-    List<PutAwayLineResponse> findLinesByPutAway(
-            UUID putAwayId);
+    List<PutAwayLineResponse> findLinesByPutAway(UUID putAwayId);
 
-    PutAwayResponse cancel(
-            UUID id);
+    PutAwayResponse cancel(UUID id);
 
-    void delete(
-            UUID id);
+    void delete(UUID id);
 }
