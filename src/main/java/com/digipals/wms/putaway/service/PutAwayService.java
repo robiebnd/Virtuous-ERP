@@ -1,5 +1,6 @@
 package com.digipals.wms.putaway.service;
 
+import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
@@ -13,7 +14,9 @@ public interface PutAwayService {
 
     PutAwayResponse create(CreatePutAwayRequest request);
 
-    PutAwayResponse createFromGoodsReceiptNumber(String grnNumber, CreatePutAwayRequest request);
+    PutAwayResponse createFromGoodsReceiptNumber(
+            String grnNumber,
+            CreatePutAwayFromGoodsReceiptNumberRequest request);
 
     PutAwayResponse update(UUID id, UpdatePutAwayRequest request);
 
