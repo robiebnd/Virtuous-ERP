@@ -106,6 +106,22 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     public GoodsReceiptResponse create(CreateGoodsReceiptRequest request) {
         PurchaseOrder purchaseOrder = resolvePurchaseOrder(request);
 
+        List<PurchaseOrderLine> outstandingLines = purchaseOrderLineRepository
+                .findByPurchaseOrderId(purchaseOrder.getId())
+                .stream()
+                .filter(line -> line.getOutstandingQuantity() != null
+                        && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+
+        // A fully received PO must never generate another GRN. Check the
+        // outstanding quantities before creating the GRN header so callers get
+        // the business-specific conflict instead of a generic status error.
+        if (outstandingLines.isEmpty()) {
+            throw new InvalidWorkflowException(
+                    "Purchase Order " + purchaseOrder.getPoNumber()
+                            + " has no outstanding quantities to receive.");
+        }
+
         if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED
                 && purchaseOrder.getStatus() != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
             throw new InvalidWorkflowException(
@@ -114,17 +130,6 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
         if (purchaseOrder.getWarehouse() == null) {
             throw new InvalidWorkflowException("Purchase Order has no warehouse assigned.");
-        }
-
-        List<PurchaseOrderLine> outstandingLines = purchaseOrderLineRepository
-                .findByPurchaseOrderId(purchaseOrder.getId())
-                .stream()
-                .filter(line -> line.getOutstandingQuantity() != null
-                        && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
-                .toList();
-
-        if (outstandingLines.isEmpty()) {
-            throw new InvalidWorkflowException("Purchase Order has no outstanding quantities to receive.");
         }
 
         User currentUser = currentUserService.getCurrentUser();
@@ -331,8 +336,6 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
             goodsReceiptLineRepository.save(receiptLine);
         }
 
-        // Re-query with an EntityGraph so the response is guaranteed to contain
-        // the newly persisted lines, even though GoodsReceipt.lines is LAZY.
         GoodsReceipt reloadedGoodsReceipt = getGoodsReceiptWithLines(goodsReceipt.getId());
         return GoodsReceiptMapper.toResponse(reloadedGoodsReceipt);
     }
