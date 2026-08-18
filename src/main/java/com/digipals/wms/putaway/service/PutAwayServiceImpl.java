@@ -20,6 +20,7 @@ import com.digipals.wms.inventorytransaction.entity.InventoryTransaction;
 import com.digipals.wms.inventorytransaction.entity.TransactionType;
 import com.digipals.wms.inventorytransaction.repository.InventoryTransactionRepository;
 import com.digipals.wms.putaway.entity.PutAwayLineStatus;
+import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
@@ -88,7 +89,7 @@ public class PutAwayServiceImpl implements PutAwayService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bin not found."));
     }
 
-    private void validateBinInWarehouse(Bin bin, com.digipals.wms.warehouse.entity.Warehouse warehouse, String label) {
+    private void validateBinInWarehouse(Bin bin, Warehouse warehouse, String label) {
         if (!bin.getWarehouse().getId().equals(warehouse.getId())) {
             throw new InvalidWorkflowException(label + " does not belong to the selected warehouse.");
         }
@@ -177,7 +178,7 @@ public class PutAwayServiceImpl implements PutAwayService {
     @Override
     public PutAwayResponse createFromGoodsReceiptNumber(
             String grnNumber,
-            CreatePutAwayRequest request) {
+            CreatePutAwayFromGoodsReceiptNumberRequest request) {
         return createFromGoodsReceipt(
                 getGoodsReceiptByNumber(grnNumber),
                 request.getFromBinId(),
@@ -241,12 +242,10 @@ public class PutAwayServiceImpl implements PutAwayService {
         PutAwayLine line = getPutAwayLine(lineId);
         PutAway putAway = line.getPutAway();
 
-        if (putAway.getStatus() != PutAwayStatus.DRAFT
-                && putAway.getStatus() != PutAwayStatus.IN_PROGRESS) {
+        if (putAway.getStatus() != PutAwayStatus.DRAFT && putAway.getStatus() != PutAwayStatus.IN_PROGRESS) {
             throw new InvalidWorkflowException("Put-Away is not in a state that allows put-away actions.");
         }
-        if (line.getStatus() != PutAwayLineStatus.PENDING
-                && line.getStatus() != PutAwayLineStatus.IN_PROGRESS) {
+        if (line.getStatus() != PutAwayLineStatus.PENDING && line.getStatus() != PutAwayLineStatus.IN_PROGRESS) {
             throw new InvalidWorkflowException("Line is not in a state that allows put-away actions.");
         }
 
@@ -255,12 +254,10 @@ public class PutAwayServiceImpl implements PutAwayService {
         validateBinInWarehouse(fromBin, putAway.getWarehouse(), "Source bin");
         validateBinInWarehouse(toBin, putAway.getWarehouse(), "Destination bin");
 
-        if (!Boolean.TRUE.equals(fromBin.getReceivingBin())) {
-            throw new InvalidWorkflowException("Source bin must be the warehouse receiving bin.");
-        }
         if (Boolean.TRUE.equals(toBin.getReceivingBin())) {
-            throw new InvalidWorkflowException("Destination bin cannot be the receiving bin.");
+            throw new InvalidWorkflowException("Destination bin must be a storage bin, not a receiving bin.");
         }
+
         if (fromBin.getId().equals(toBin.getId())) {
             throw new InvalidWorkflowException("Source and destination bins must be different.");
         }
@@ -274,34 +271,26 @@ public class PutAwayServiceImpl implements PutAwayService {
             throw new InvalidWorkflowException("Quantity exceeds the remaining planned quantity for this line.");
         }
 
-        BigDecimal availableCapacity = toBin.getCapacity().subtract(toBin.getUsedCapacity());
-        if (toBin.getCapacity().compareTo(BigDecimal.ZERO) > 0
-                && quantity.compareTo(availableCapacity) > 0) {
-            throw new InvalidWorkflowException("Destination bin does not have enough available capacity.");
-        }
-
         Product product = line.getProduct();
         InventoryBin sourceInventory = inventoryBinRepository
-                .findByWarehouseIdAndBinIdAndProductId(
-                        putAway.getWarehouse().getId(),
-                        fromBin.getId(),
-                        product.getId())
+                .findByWarehouseIdAndBinIdAndProductId(putAway.getWarehouse().getId(), fromBin.getId(), product.getId())
                 .orElseThrow(() -> new InvalidWorkflowException(
-                        "No inventory exists for product " + product.getId()
-                                + " in source bin " + fromBin.getCode() + "."));
+                        "No inventory exists for " + product.getId() + " in source bin " + fromBin.getCode() + "."));
 
         BigDecimal sourceBalanceBefore = sourceInventory.getQuantityOnHand();
         if (sourceBalanceBefore.compareTo(quantity) < 0) {
-            throw new InvalidWorkflowException(
-                    "Insufficient stock in source bin. Available: "
-                            + sourceBalanceBefore + ", requested: " + quantity + ".");
+            throw new InvalidWorkflowException("Insufficient stock in source bin. Available: " + sourceBalanceBefore
+                    + ", requested: " + quantity + ".");
+        }
+
+        if (toBin.getCapacity() != null
+                && toBin.getCapacity().compareTo(BigDecimal.ZERO) > 0
+                && toBin.getUsedCapacity().add(quantity).compareTo(toBin.getCapacity()) > 0) {
+            throw new InvalidWorkflowException("Destination bin does not have enough capacity.");
         }
 
         InventoryBin destinationInventory = inventoryBinRepository
-                .findByWarehouseIdAndBinIdAndProductId(
-                        putAway.getWarehouse().getId(),
-                        toBin.getId(),
-                        product.getId())
+                .findByWarehouseIdAndBinIdAndProductId(putAway.getWarehouse().getId(), toBin.getId(), product.getId())
                 .orElseGet(() -> InventoryBin.builder()
                         .warehouse(putAway.getWarehouse())
                         .bin(toBin)
@@ -353,9 +342,7 @@ public class PutAwayServiceImpl implements PutAwayService {
 
     private void refreshPutAwayStatus(PutAway putAway, User currentUser) {
         List<PutAwayLine> lines = putAwayLineRepository.findByPutAwayId(putAway.getId());
-        boolean allCompleted = !lines.isEmpty()
-                && lines.stream().allMatch(l -> l.getStatus() == PutAwayLineStatus.COMPLETED);
-
+        boolean allCompleted = lines.stream().allMatch(l -> l.getStatus() == PutAwayLineStatus.COMPLETED);
         if (allCompleted) {
             putAway.setStatus(PutAwayStatus.COMPLETED);
             putAway.setCompletedAt(LocalDateTime.now());
@@ -388,8 +375,7 @@ public class PutAwayServiceImpl implements PutAwayService {
             throw new InvalidWorkflowException("Only draft Put-Aways can be cancelled.");
         }
         putAway.setStatus(PutAwayStatus.CANCELLED);
-        putAway = putAwayRepository.save(putAway);
-        return toResponse(putAway);
+        return toResponse(putAwayRepository.save(putAway));
     }
 
     @Override
