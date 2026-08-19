@@ -11,7 +11,11 @@ import java.util.UUID;
 @Data
 public class CreateProductRequest {
 
-    @NotBlank(message = "SKU is required")
+    /**
+     * Optional ERP product number.
+     * When omitted, the ERP assigns an internal non-mnemonic SKU such as SKU-482731.
+     * When supplied, it is treated as an externally assigned ERP product number.
+     */
     private String sku;
 
     @NotBlank(message = "Product name is required")
