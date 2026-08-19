@@ -3,6 +3,7 @@ package com.digipals.wms.putaway.controller;
 import com.digipals.wms.putaway.dto.AssignPutAwayRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
+import com.digipals.wms.putaway.dto.PutAwayBySkuRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
 import com.digipals.wms.putaway.dto.UpdatePutAwayLineRequest;
@@ -98,6 +99,14 @@ public class PutAwayController {
                     "Put-Away line does not belong to Put-Away " + putAwayNumber + ".");
         }
         return service.putAwayLine(lineId, request);
+    }
+
+    @PostMapping("/number/{putAwayNumber}/lines/sku/{sku}/put-away")
+    public PutAwayLineResponse putAwayLineBySku(
+            @PathVariable String putAwayNumber,
+            @PathVariable String sku,
+            @Valid @RequestBody PutAwayBySkuRequest request) {
+        return service.putAwayLineBySku(putAwayNumber, sku, request);
     }
 
     @GetMapping("/lines/{lineId}")
