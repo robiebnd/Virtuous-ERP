@@ -15,186 +15,124 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
-public class ProductServiceImpl
-        implements ProductService {
+public class ProductServiceImpl implements ProductService {
+
+    private static final String INTERNAL_SKU_PREFIX = "SKU-";
+    private static final int INTERNAL_SKU_MIN = 100000;
+    private static final int INTERNAL_SKU_MAX = 999999;
 
     private final ProductRepository repository;
-
     private final ProductCategoryRepository categoryRepository;
-
     private final UnitOfMeasureRepository unitRepository;
 
-
     private Product findProduct(UUID id) {
-
-    return repository.findById(id)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Product not found."));
-        }
-
-        private ProductCategory findCategory(UUID id) {
-
-         return categoryRepository.findById(id)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Product category not found."));
-}
-
-private UnitOfMeasure findUnit(UUID id) {
-
-    return unitRepository.findById(id)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Unit of Measure not found."));
-}
-
-@Override
-public ProductResponse create(
-        CreateProductRequest request) {
-
-    if (repository.existsBySku(request.getSku())) {
-
-        throw new DuplicateResourceException(
-                "Product SKU already exists.");
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found."));
     }
 
-    ProductCategory category =
-            findCategory(request.getCategoryId());
+    private ProductCategory findCategory(UUID id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product category not found."));
+    }
 
-    UnitOfMeasure unit =
-            findUnit(request.getUnitOfMeasureId());
+    private UnitOfMeasure findUnit(UUID id) {
+        return unitRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Unit of Measure not found."));
+    }
 
-    Product product =
-            Product.builder()
+    private String generateInternalSku() {
+        String sku;
+        do {
+            int number = ThreadLocalRandom.current()
+                    .nextInt(INTERNAL_SKU_MIN, INTERNAL_SKU_MAX + 1);
+            sku = INTERNAL_SKU_PREFIX + number;
+        } while (repository.existsBySku(sku));
+        return sku;
+    }
 
-                    .sku(request.getSku())
+    @Override
+    public ProductResponse create(CreateProductRequest request) {
+        // SAP-style approach: omit the product number for internal assignment;
+        // provide one only when an externally assigned ERP product number is required.
+        String sku = request.getSku();
+        if (sku == null || sku.isBlank()) {
+            sku = generateInternalSku();
+        } else {
+            sku = sku.trim();
+            if (repository.existsBySku(sku)) {
+                throw new DuplicateResourceException("Product SKU already exists.");
+            }
+        }
 
-                    .name(request.getName())
+        ProductCategory category = findCategory(request.getCategoryId());
+        UnitOfMeasure unit = findUnit(request.getUnitOfMeasureId());
 
-                    .description(request.getDescription())
+        Product product = Product.builder()
+                .sku(sku)
+                .name(request.getName())
+                .description(request.getDescription())
+                .costPrice(request.getCostPrice())
+                .sellingPrice(request.getSellingPrice())
+                .category(category)
+                .unitOfMeasure(unit)
+                .active(request.getActive())
+                .build();
 
-                    .costPrice(request.getCostPrice())
+        product = repository.save(product);
+        return ProductMapper.toResponse(product);
+    }
 
-                    .sellingPrice(request.getSellingPrice())
+    @Override
+    public ProductResponse update(UUID id, UpdateProductRequest request) {
+        Product product = findProduct(id);
+        ProductCategory category = findCategory(request.getCategoryId());
+        UnitOfMeasure unit = findUnit(request.getUnitOfMeasureId());
 
-                    .category(category)
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setCostPrice(request.getCostPrice());
+        product.setSellingPrice(request.getSellingPrice());
+        product.setCategory(category);
+        product.setUnitOfMeasure(unit);
+        product.setActive(request.getActive());
 
-                    .unitOfMeasure(unit)
+        product = repository.save(product);
+        return ProductMapper.toResponse(product);
+    }
 
-                    .active(request.getActive())
+    @Override
+    public ProductResponse findById(UUID id) {
+        return ProductMapper.toResponse(findProduct(id));
+    }
 
-                    .build();
+    @Override
+    public ProductResponse findBySku(String sku) {
+        Product product = repository.findBySku(sku)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found."));
+        return ProductMapper.toResponse(product);
+    }
 
-    product = repository.save(product);
+    @Override
+    public List<ProductResponse> findAll() {
+        return repository.findAll().stream().map(ProductMapper::toResponse).toList();
+    }
 
-    return ProductMapper.toResponse(product);
-}
-@Override
-public ProductResponse update(
-        UUID id,
-        UpdateProductRequest request) {
+    @Override
+    public List<ProductResponse> findActive() {
+        return repository.findByActiveTrue().stream().map(ProductMapper::toResponse).toList();
+    }
 
-    Product product = findProduct(id);
+    @Override
+    public List<ProductResponse> findByCategory(UUID categoryId) {
+        return repository.findByCategoryId(categoryId).stream().map(ProductMapper::toResponse).toList();
+    }
 
-    ProductCategory category =
-            findCategory(request.getCategoryId());
-
-    UnitOfMeasure unit =
-            findUnit(request.getUnitOfMeasureId());
-
-    product.setName(
-            request.getName());
-
-    product.setDescription(
-            request.getDescription());
-
-    product.setCostPrice(
-            request.getCostPrice());
-
-    product.setSellingPrice(
-            request.getSellingPrice());
-
-    product.setCategory(
-            category);
-
-    product.setUnitOfMeasure(
-            unit);
-
-    product.setActive(
-            request.getActive());
-
-    product = repository.save(product);
-
-    return ProductMapper.toResponse(product);
-}
-@Override
-public ProductResponse findById(
-        UUID id) {
-
-    return ProductMapper.toResponse(
-            findProduct(id));
-}
-@Override
-public ProductResponse findBySku(
-        String sku) {
-
-    Product product =
-            repository.findBySku(sku)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "Product not found."));
-
-    return ProductMapper.toResponse(
-            product);
-}
-@Override
-public List<ProductResponse> findAll() {
-
-    return repository.findAll()
-
-            .stream()
-
-            .map(ProductMapper::toResponse)
-
-            .toList();
-}
-@Override
-public List<ProductResponse> findActive() {
-
-    return repository.findByActiveTrue()
-
-            .stream()
-
-            .map(ProductMapper::toResponse)
-
-            .toList();
-}
-@Override
-public List<ProductResponse> findByCategory(
-        UUID categoryId) {
-
-    return repository.findByCategoryId(categoryId)
-
-            .stream()
-
-            .map(ProductMapper::toResponse)
-
-            .toList();
-}
-
-@Override
-public void delete(
-        UUID id) {
-
-    Product product =
-            findProduct(id);
-
-    repository.delete(product);
-}
-
-
+    @Override
+    public void delete(UUID id) {
+        repository.delete(findProduct(id));
+    }
 }
