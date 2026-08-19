@@ -44,230 +44,93 @@ public class ProcurementServiceImpl implements ProcurementService {
     @Override
     public PurchaseOrderResponse generatePurchaseOrder(GeneratePurchaseOrderRequest request) {
         PurchaseRequisition requisition;
-
         if (request.getPurchaseRequisitionNumber() != null && !request.getPurchaseRequisitionNumber().isBlank()) {
             requisition = requisitionRepository.findByRequisitionNumber(request.getPurchaseRequisitionNumber().trim())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Purchase Requisition not found: " + request.getPurchaseRequisitionNumber()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found: " + request.getPurchaseRequisitionNumber()));
         } else {
             requisition = requisitionRepository.findById(request.getPurchaseRequisitionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
         }
-
         validator.validateApproved(requisition);
         validator.validateNotConverted(requisition);
-
         Supplier supplier = request.getSupplierId() != null
                 ? supplierRepository.findById(request.getSupplierId()).orElseThrow(() -> new ResourceNotFoundException("Supplier not found."))
                 : requisition.getSupplier();
-        if (supplier == null) {
-            throw new ResourceNotFoundException("No supplier is assigned to the Purchase Requisition.");
-        }
-
+        if (supplier == null) throw new ResourceNotFoundException("No supplier is assigned to the Purchase Requisition.");
         List<PurchaseRequisitionLine> lines = requisitionLineRepository.findByPurchaseRequisitionId(requisition.getId());
-        if (lines.isEmpty()) {
-            throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
-        }
+        if (lines.isEmpty()) throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
 
         PurchaseOrder po = purchaseOrderRepository.save(PurchaseOrder.builder()
                 .poNumber(documentNumberService.next(DocumentType.PURCHASE_ORDER))
-                .supplier(supplier)
-                .warehouse(requisition.getWarehouse())
-                .purchaseRequisition(requisition)
-                .source(ProcurementSource.REQUISITION)
-                .status(PurchaseOrderStatus.DRAFT)
-                .currency(normalizeCurrency(requisition.getCurrency()))
-                .createdBy(requisition.getRequestedBy())
-                .build());
+                .supplier(supplier).warehouse(requisition.getWarehouse()).purchaseRequisition(requisition)
+                .source(ProcurementSource.REQUISITION).status(PurchaseOrderStatus.DRAFT)
+                .currency(normalizeCurrency(requisition.getCurrency())).createdBy(requisition.getRequestedBy()).build());
 
         for (PurchaseRequisitionLine line : lines) {
             BigDecimal price = resolvePrice(supplier, line);
             if (!isValidPrice(price)) {
-                throw new InvalidWorkflowException(
-                        "Cannot generate Purchase Order: no valid price is available for product "
-                                + line.getProduct().getSku() + " (" + line.getProduct().getName()
-                                + "). Add a quoted PR price, supplier price, or product cost price before generating the PO.");
+                throw new InvalidWorkflowException("Cannot generate Purchase Order: no valid price is available for product "
+                        + line.getProduct().getSku() + " (" + line.getProduct().getName() + "). Add a quoted PR price, supplier price, or product cost price before generating the PO.");
             }
-
-            purchaseOrderLineRepository.save(PurchaseOrderLine.builder()
-                    .purchaseOrder(po)
-                    .product(line.getProduct())
-                    .quantity(line.getQuantity())
-                    .unitPrice(price.setScale(2, RoundingMode.HALF_UP))
-                    .build());
+            purchaseOrderLineRepository.save(PurchaseOrderLine.builder().purchaseOrder(po).product(line.getProduct())
+                    .quantity(line.getQuantity()).unitPrice(price.setScale(2, RoundingMode.HALF_UP)).build());
         }
-
         requisition.setStatus(PurchaseRequisitionStatus.CONVERTED_TO_PO);
         requisitionRepository.save(requisition);
         return PurchaseOrderMapper.toResponse(po);
     }
 
-    private String normalizeCurrency(String currency) {
-        return currency == null || currency.isBlank() ? null : currency.trim().toUpperCase();
-    }
-
+    private String normalizeCurrency(String currency) { return currency == null || currency.isBlank() ? null : currency.trim().toUpperCase(); }
     private BigDecimal resolvePrice(Supplier supplier, PurchaseRequisitionLine line) {
-        if (isValidPrice(line.getEstimatedUnitCost())) {
-            return line.getEstimatedUnitCost();
-        }
-
-        return purchaseOrderLineRepository
-                .findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
-                .filter(this::isValidPrice)
-                .orElse(line.getProduct().getCostPrice());
+        if (isValidPrice(line.getEstimatedUnitCost())) return line.getEstimatedUnitCost();
+        return purchaseOrderLineRepository.findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
+                .filter(this::isValidPrice).orElse(line.getProduct().getCostPrice());
     }
-
-    private boolean isValidPrice(BigDecimal price) {
-        return price != null && price.compareTo(BigDecimal.ZERO) > 0;
-    }
+    private boolean isValidPrice(BigDecimal price) { return price != null && price.compareTo(BigDecimal.ZERO) > 0; }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> recommendPurchaseOrder(UUID id) {
-        PurchaseRequisition pr = requisitionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
-        validator.validateApproved(pr);
-        validator.validateNotConverted(pr);
-
+        PurchaseRequisition pr = requisitionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
+        validator.validateApproved(pr); validator.validateNotConverted(pr);
         List<PurchaseRequisitionLine> lines = requisitionLineRepository.findByPurchaseRequisitionId(id);
-        if (lines.isEmpty()) {
-            throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
-        }
-
+        if (lines.isEmpty()) throw new ResourceNotFoundException("Purchase Requisition contains no lines.");
         List<Supplier> suppliers = supplierRepository.findByActiveTrue();
-        if (suppliers.isEmpty()) {
-            throw new ResourceNotFoundException("No active suppliers are available for recommendation.");
-        }
+        if (suppliers.isEmpty()) throw new ResourceNotFoundException("No active suppliers are available for recommendation.");
 
-        Supplier best = null;
-        BigDecimal bestTotal = null;
-        int bestHistory = -1;
-        List<Map<String, Object>> bestLines = null;
-        boolean bestFullyPriced = false;
-
+        Supplier best = null; BigDecimal bestTotal = null; int bestHistory = -1; List<Map<String, Object>> bestLines = null; boolean bestFullyPriced = false;
         for (Supplier supplier : suppliers) {
-            BigDecimal total = BigDecimal.ZERO;
-            int history = 0;
-            boolean fullyPriced = true;
-            List<Map<String, Object>> candidateLines = new ArrayList<>();
-
+            BigDecimal total = BigDecimal.ZERO; int history = 0; boolean fullyPriced = true; List<Map<String, Object>> candidateLines = new ArrayList<>();
             for (PurchaseRequisitionLine line : lines) {
-                BigDecimal historical = purchaseOrderLineRepository
-                        .findLatestUnitPrice(supplier.getId(), line.getProduct().getId())
-                        .orElse(null);
-                boolean usedHistory = isValidPrice(historical);
-                BigDecimal costPrice = line.getProduct().getCostPrice();
+                BigDecimal historical = purchaseOrderLineRepository.findLatestUnitPrice(supplier.getId(), line.getProduct().getId()).orElse(null);
+                boolean usedHistory = isValidPrice(historical); BigDecimal costPrice = line.getProduct().getCostPrice();
                 BigDecimal price = usedHistory ? historical : (isValidPrice(costPrice) ? costPrice : null);
-
-                if (usedHistory) {
-                    history++;
-                }
-                if (price == null) {
-                    fullyPriced = false;
-                } else {
-                    total = total.add(line.getQuantity().multiply(price));
-                }
-
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("productId", line.getProduct().getId());
-                item.put("sku", line.getProduct().getSku());
-                item.put("productName", line.getProduct().getName());
-                item.put("requestedQuantity", line.getQuantity());
-                item.put("recommendedQuantity", line.getQuantity());
-                item.put("recommendedUnitPrice", price);
-                item.put("estimatedLineTotal", price == null ? null : line.getQuantity().multiply(price));
-                item.put("historicalPriceUsed", usedHistory);
-                item.put("pricingBasis", usedHistory
-                        ? "LATEST_NON_CANCELLED_SUPPLIER_PRICE"
-                        : (price == null ? "PRICE_UNAVAILABLE" : "PRODUCT_COST_PRICE_FALLBACK"));
-                item.put("priceWarning", price == null);
-                candidateLines.add(item);
+                if (usedHistory) history++; if (price == null) fullyPriced = false; else total = total.add(line.getQuantity().multiply(price));
+                Map<String, Object> item = new LinkedHashMap<>(); item.put("productId", line.getProduct().getId()); item.put("sku", line.getProduct().getSku());
+                item.put("productName", line.getProduct().getName()); item.put("requestedQuantity", line.getQuantity()); item.put("recommendedQuantity", line.getQuantity());
+                item.put("recommendedUnitPrice", price); item.put("estimatedLineTotal", price == null ? null : line.getQuantity().multiply(price));
+                item.put("historicalPriceUsed", usedHistory); item.put("pricingBasis", usedHistory ? "LATEST_NON_CANCELLED_SUPPLIER_PRICE" : (price == null ? "PRICE_UNAVAILABLE" : "PRODUCT_COST_PRICE_FALLBACK"));
+                item.put("priceWarning", price == null); candidateLines.add(item);
             }
-
-            boolean preferred = pr.getSupplier() != null && pr.getSupplier().getId().equals(supplier.getId());
-            boolean better = false;
-
-            if (best == null) {
-                better = true;
-            } else if (fullyPriced && !bestFullyPriced) {
-                better = true;
-            } else if (fullyPriced == bestFullyPriced) {
-                if (fullyPriced) {
-                    better = total.compareTo(bestTotal) < 0
-                            || (total.compareTo(bestTotal) == 0 && history > bestHistory)
-                            || (total.compareTo(bestTotal) == 0 && history == bestHistory && preferred);
-                } else {
-                    better = history > bestHistory
-                            || (history == bestHistory && preferred);
-                }
+            boolean preferred = pr.getSupplier() != null && pr.getSupplier().getId().equals(supplier.getId()); boolean better = false;
+            if (best == null) better = true;
+            else if (fullyPriced && !bestFullyPriced) better = true;
+            else if (fullyPriced == bestFullyPriced) {
+                if (fullyPriced) better = total.compareTo(bestTotal) < 0 || (total.compareTo(bestTotal) == 0 && history > bestHistory) || (total.compareTo(bestTotal) == 0 && history == bestHistory && preferred);
+                else better = history > bestHistory || (history == bestHistory && preferred);
             }
-
-            if (better) {
-                best = supplier;
-                bestTotal = fullyPriced ? total : null;
-                bestHistory = history;
-                bestLines = candidateLines;
-                bestFullyPriced = fullyPriced;
-            }
+            if (better) { best = supplier; bestTotal = fullyPriced ? total : null; bestHistory = history; bestLines = candidateLines; bestFullyPriced = fullyPriced; }
         }
-
-        boolean hasRecommendation = best != null;
-        boolean canGeneratePurchaseOrder = bestFullyPriced;
-        BigDecimal confidence = calculateConfidence(lines.size(), bestHistory, bestFullyPriced);
-        String riskLevel = calculateRiskLevel(bestFullyPriced, bestHistory, lines.size());
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("purchaseRequisitionId", pr.getId());
-        result.put("requisitionNumber", pr.getRequisitionNumber());
-        result.put("recommendedSupplierId", hasRecommendation ? best.getId() : null);
-        result.put("recommendedSupplierCode", hasRecommendation ? best.getCode() : null);
-        result.put("recommendedSupplierName", hasRecommendation ? best.getName() : null);
-        result.put("supplierRecommendationBasis", bestFullyPriced
-                ? "LOWEST_SUPPORTED_ESTIMATED_COST"
-                : "BEST_AVAILABLE_PRICING_EVIDENCE");
-        result.put("estimatedTotal", bestTotal);
-        result.put("historicalPriceCoverage", Math.max(bestHistory, 0) + "/" + lines.size());
-        result.put("confidence", confidence);
-        result.put("riskLevel", riskLevel);
-        result.put("priceAvailable", canGeneratePurchaseOrder);
-        result.put("priceWarning", !canGeneratePurchaseOrder);
-        result.put("summary", buildSummary(best, bestFullyPriced, bestHistory, lines.size()));
-        result.put("lines", bestLines);
-        result.put("createsPurchaseOrder", false);
-        result.put("autoApprovesPurchaseOrder", false);
-        result.put("canGeneratePurchaseOrder", canGeneratePurchaseOrder);
-        result.put("nextAction", canGeneratePurchaseOrder
-                ? "Review the recommendation, then generate a DRAFT Purchase Order using the recommended supplier."
-                : "Obtain missing supplier quotations or product cost prices before generating the Purchase Order.");
+        Map<String, Object> result = new LinkedHashMap<>(); result.put("purchaseRequisitionId", pr.getId()); result.put("requisitionNumber", pr.getRequisitionNumber());
+        result.put("recommendedSupplierId", best == null ? null : best.getId()); result.put("recommendedSupplierCode", best == null ? null : best.getCode()); result.put("recommendedSupplierName", best == null ? null : best.getName());
+        result.put("supplierRecommendationBasis", bestFullyPriced ? "LOWEST_SUPPORTED_ESTIMATED_COST" : "BEST_AVAILABLE_PRICING_EVIDENCE"); result.put("estimatedTotal", bestTotal);
+        result.put("historicalPriceCoverage", Math.max(bestHistory, 0) + "/" + lines.size()); result.put("confidence", calculateConfidence(lines.size(), bestHistory, bestFullyPriced));
+        result.put("riskLevel", calculateRiskLevel(bestFullyPriced, bestHistory, lines.size())); result.put("priceAvailable", bestFullyPriced); result.put("priceWarning", !bestFullyPriced);
+        result.put("summary", buildSummary(bestFullyPriced, bestHistory, lines.size())); result.put("lines", bestLines); result.put("createsPurchaseOrder", false); result.put("autoApprovesPurchaseOrder", false);
+        result.put("canGeneratePurchaseOrder", bestFullyPriced); result.put("nextAction", bestFullyPriced ? "Review the recommendation, then generate a DRAFT Purchase Order using the recommended supplier." : "Obtain missing supplier quotations or product cost prices before generating the Purchase Order.");
         return result;
     }
-
-    private BigDecimal calculateConfidence(int lineCount, int historicalLines, boolean fullyPriced) {
-        if (lineCount <= 0) {
-            return BigDecimal.ZERO.setScale(2);
-        }
-        double coverage = Math.max(0, historicalLines) / (double) lineCount;
-        double score = fullyPriced ? 0.60 + (0.35 * coverage) : 0.20 + (0.25 * coverage);
-        return BigDecimal.valueOf(Math.min(score, 0.95)).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private String calculateRiskLevel(boolean fullyPriced, int historicalLines, int lineCount) {
-        if (!fullyPriced) {
-            return "HIGH";
-        }
-        if (historicalLines < lineCount) {
-            return "MEDIUM";
-        }
-        return "LOW";
-    }
-
-    private String buildSummary(Supplier supplier, boolean fullyPriced, int historicalLines, int lineCount) {
-        if (!fullyPriced) {
-            return "A supplier candidate was identified, but one or more requisition lines have no valid historical supplier price or product cost price. A Purchase Order must not be generated until pricing is available.";
-        }
-        if (historicalLines == lineCount) {
-            return "Recommendation is based on supported historical supplier pricing for all requisition lines.";
-        }
-        return "Recommendation uses historical supplier pricing where available and product cost price as fallback for the remaining lines.";
-    }
+    private BigDecimal calculateConfidence(int lineCount, int historicalLines, boolean fullyPriced) { if (lineCount <= 0) return BigDecimal.ZERO.setScale(2); double coverage = Math.max(0, historicalLines) / (double) lineCount; double score = fullyPriced ? 0.60 + (0.35 * coverage) : 0.20 + (0.25 * coverage); return BigDecimal.valueOf(Math.min(score, 0.95)).setScale(2, RoundingMode.HALF_UP); }
+    private String calculateRiskLevel(boolean fullyPriced, int historicalLines, int lineCount) { if (!fullyPriced) return "HIGH"; if (historicalLines < lineCount) return "MEDIUM"; return "LOW"; }
+    private String buildSummary(boolean fullyPriced, int historicalLines, int lineCount) { if (!fullyPriced) return "A supplier candidate was identified, but one or more requisition lines have no valid historical supplier price or product cost price. A Purchase Order must not be generated until pricing is available."; if (historicalLines == lineCount) return "Recommendation is based on supported historical supplier pricing for all requisition lines."; return "Recommendation uses historical supplier pricing where available and product cost price as fallback for the remaining lines."; }
 }
