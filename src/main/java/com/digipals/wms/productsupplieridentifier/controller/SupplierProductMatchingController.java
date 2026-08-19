@@ -1,4 +1,4 @@
-package com.digipals.wms.productssupplieridentifier.controller;
+package com.digipals.wms.productsupplieridentifier.controller;
 
 import com.digipals.wms.productsupplieridentifier.dto.SupplierProductLookupResponse;
 import com.digipals.wms.productsupplieridentifier.service.SupplierProductMatchingService;
