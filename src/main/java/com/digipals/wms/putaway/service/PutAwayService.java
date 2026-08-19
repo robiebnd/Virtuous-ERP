@@ -2,6 +2,7 @@ package com.digipals.wms.putaway.service;
 
 import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
+import com.digipals.wms.putaway.dto.PutAwayBySkuRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
 import com.digipals.wms.putaway.dto.UpdatePutAwayLineRequest;
@@ -31,6 +32,11 @@ public interface PutAwayService {
     List<PutAwayResponse> findByGoodsReceipt(UUID goodsReceiptId);
 
     PutAwayLineResponse putAwayLine(UUID lineId, UpdatePutAwayLineRequest request);
+
+    PutAwayLineResponse putAwayLineBySku(
+            String putAwayNumber,
+            String sku,
+            PutAwayBySkuRequest request);
 
     PutAwayLineResponse findLineById(UUID lineId);
 
