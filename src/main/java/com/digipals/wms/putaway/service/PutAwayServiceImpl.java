@@ -22,6 +22,7 @@ import com.digipals.wms.inventorytransaction.repository.InventoryTransactionRepo
 import com.digipals.wms.putaway.entity.PutAwayLineStatus;
 import com.digipals.wms.putaway.dto.CreatePutAwayFromGoodsReceiptNumberRequest;
 import com.digipals.wms.putaway.dto.CreatePutAwayRequest;
+import com.digipals.wms.putaway.dto.PutAwayBySkuRequest;
 import com.digipals.wms.putaway.dto.PutAwayLineResponse;
 import com.digipals.wms.putaway.dto.PutAwayResponse;
 import com.digipals.wms.putaway.dto.UpdatePutAwayLineRequest;
@@ -87,6 +88,12 @@ public class PutAwayServiceImpl implements PutAwayService {
     private Bin getBin(UUID id) {
         return binRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bin not found."));
+    }
+
+    private Bin getBinByCode(UUID warehouseId, String code) {
+        return binRepository.findByWarehouseIdAndCode(warehouseId, code)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Bin not found in warehouse: " + code));
     }
 
     private void validateBinInWarehouse(Bin bin, Warehouse warehouse, String label) {
@@ -216,25 +223,40 @@ public class PutAwayServiceImpl implements PutAwayService {
     @Override
     @Transactional(readOnly = true)
     public List<PutAwayResponse> findAll() {
-        return putAwayRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+        return putAwayRepository.findAll().stream().map(this::toResponse).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PutAwayResponse> findByWarehouse(UUID warehouseId) {
-        return putAwayRepository.findByWarehouseId(warehouseId).stream()
-                .map(this::toResponse)
-                .toList();
+        return putAwayRepository.findByWarehouseId(warehouseId).stream().map(this::toResponse).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PutAwayResponse> findByGoodsReceipt(UUID goodsReceiptId) {
-        return putAwayRepository.findByGoodsReceiptId(goodsReceiptId).stream()
-                .map(this::toResponse)
-                .toList();
+        return putAwayRepository.findByGoodsReceiptId(goodsReceiptId).stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    public PutAwayLineResponse putAwayLineBySku(
+            String putAwayNumber,
+            String sku,
+            PutAwayBySkuRequest request) {
+        PutAway putAway = getPutAwayByNumber(putAwayNumber);
+        PutAwayLine line = putAwayLineRepository
+                .findByPutAwayIdAndProductSku(putAway.getId(), sku)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "SKU " + sku + " is not a line on Put-Away " + putAwayNumber + "."));
+
+        Bin destination = getBinByCode(putAway.getWarehouse().getId(), request.getToBinCode());
+
+        UpdatePutAwayLineRequest internalRequest = new UpdatePutAwayLineRequest();
+        internalRequest.setToBinId(destination.getId());
+        internalRequest.setQuantity(request.getQuantity());
+        internalRequest.setRemarks(request.getRemarks());
+
+        return putAwayLine(line.getId(), internalRequest);
     }
 
     @Override
@@ -257,7 +279,6 @@ public class PutAwayServiceImpl implements PutAwayService {
         if (Boolean.TRUE.equals(toBin.getReceivingBin())) {
             throw new InvalidWorkflowException("Destination bin must be a storage bin, not a receiving bin.");
         }
-
         if (fromBin.getId().equals(toBin.getId())) {
             throw new InvalidWorkflowException("Source and destination bins must be different.");
         }
@@ -363,9 +384,7 @@ public class PutAwayServiceImpl implements PutAwayService {
     @Transactional(readOnly = true)
     public List<PutAwayLineResponse> findLinesByPutAway(UUID putAwayId) {
         getPutAway(putAwayId);
-        return putAwayLineRepository.findByPutAwayId(putAwayId).stream()
-                .map(PutAwayMapper::toLineResponse)
-                .toList();
+        return putAwayLineRepository.findByPutAwayId(putAwayId).stream().map(PutAwayMapper::toLineResponse).toList();
     }
 
     @Override
