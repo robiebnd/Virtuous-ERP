@@ -26,19 +26,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Quotation extraction service.
  *
- * Important: extraction preserves the supplier's item identifier as
- * supplierItemCode. Product-to-ERP-SKU resolution is performed later when
- * importing the quotation into a Purchase Requisition, using the
- * supplier/product identifier mapping.
+ * Extraction preserves the supplier's item identifier as supplierItemCode.
+ * Product-to-ERP-SKU resolution is performed later when importing the
+ * quotation into a Purchase Requisition.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class QuotationAiServiceImpl implements QuotationAiService {
+
+    private static final Pattern QUOTATION_LINE_PATTERN = Pattern.compile(
+            "^\\s*(?:\\d+[.)]\\s+)?([A-Za-z0-9][A-Za-z0-9._/-]*)\\s+(.+?)\\s+([0-9]+(?:\\.[0-9]+)?)\\s+([0-9]+(?:,?[0-9]{3})*(?:\\.[0-9]+)?)\\s*$"
+    );
 
     private final SupplierQuotationRepository quotationRepository;
     private final PurchaseRequisitionRepository requisitionRepository;
@@ -97,7 +102,9 @@ public class QuotationAiServiceImpl implements QuotationAiService {
 
         final String text;
         try (PDDocument document = Loader.loadPDF(bytes)) {
-            text = new PDFTextStripper().getText(document);
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);
+            text = stripper.getText(document);
         } catch (IOException e) {
             throw new InvalidWorkflowException("Unable to read quotation PDF.");
         }
@@ -119,33 +126,15 @@ public class QuotationAiServiceImpl implements QuotationAiService {
 
         String[] rawRows = normalized.split("\\n");
         for (String rawRow : rawRows) {
-            String row = rawRow.trim();
-            if (row.isBlank()) continue;
-            String[] cells = row.split("\\s{2,}|\\t");
-            if (cells.length < 4) continue;
-
-            String candidateCode = cells[0].trim();
-            if (candidateCode.equalsIgnoreCase("SKU") || candidateCode.equalsIgnoreCase("ITEM") || candidateCode.equalsIgnoreCase("CODE")) continue;
-
-            BigDecimal quantity = decimal(lastBeforeLast(cells));
-            BigDecimal unitPrice = decimal(cells[cells.length - 1]);
-            if (quantity == null || unitPrice == null) continue;
-
-            String supplierItemCode = candidateCode;
-            String description = String.join(" ", slice(cells, 1, cells.length - 2)).trim();
-            if (supplierItemCode.isBlank() || description.isBlank()) continue;
-
-            Map<String, Object> line = new LinkedHashMap<>();
-            line.put("supplierItemCode", supplierItemCode);
-            line.put("description", description);
-            line.put("quantity", quantity);
-            line.put("unitPrice", unitPrice);
-            line.put("currency", currency);
-            lines.add(line);
+            Map<String, Object> line = parseQuotationRow(rawRow);
+            if (line != null) {
+                line.put("currency", currency);
+                lines.add(line);
+            }
         }
 
         if (lines.isEmpty()) {
-            throw new InvalidWorkflowException("Mock extraction could not identify quotation lines in the supplied PDF. Expected rows containing supplier item code, description, quantity and unit price.");
+            throw new InvalidWorkflowException("Quotation extraction could not identify any line items. The PDF may use a different table layout or may be scanned/image-only. No supplier item, description, quantity and unit-price combination could be reliably extracted.");
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -157,6 +146,71 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         response.put("sourceFileName", filename);
         response.put("extractionMode", "MOCK");
         return response;
+    }
+
+    /**
+     * Parses common PDF table layouts without depending on column spacing.
+     * Examples accepted:
+     *   SC-BGF-001 Broiler Grower Feed 100 27.00
+     *   1 SC-BGF-001 Broiler Grower Feed 100 27.00
+     *   SC-BGF-001    Broiler Grower Feed    100    27.00
+     *
+     * The last two numeric values are treated as quantity and unit price,
+     * while everything between the supplier item code and quantity is the
+     * description. This makes extraction tolerant of PDFBox whitespace
+     * differences while avoiding invented business data.
+     */
+    private Map<String, Object> parseQuotationRow(String rawRow) {
+        if (rawRow == null || rawRow.isBlank()) return null;
+
+        String row = rawRow.replace('\u00A0', ' ').trim();
+        if (isQuotationHeader(row) || isNonItemRow(row)) return null;
+
+        Matcher matcher = QUOTATION_LINE_PATTERN.matcher(row);
+        if (!matcher.matches()) return null;
+
+        String supplierItemCode = matcher.group(1).trim();
+        String description = matcher.group(2).trim();
+        BigDecimal quantity = decimal(matcher.group(3));
+        BigDecimal unitPrice = decimal(matcher.group(4));
+
+        if (supplierItemCode.isBlank() || description.isBlank() || quantity == null || unitPrice == null) {
+            return null;
+        }
+
+        Map<String, Object> line = new LinkedHashMap<>();
+        line.put("supplierItemCode", supplierItemCode);
+        line.put("description", description);
+        line.put("quantity", quantity);
+        line.put("unitPrice", unitPrice);
+        return line;
+    }
+
+    private boolean isQuotationHeader(String row) {
+        String normalized = row.toLowerCase().replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        return normalized.equals("no supplier item code description qty unit price line total")
+                || normalized.equals("supplier item code description qty unit price line total")
+                || normalized.equals("item code description qty unit price")
+                || normalized.equals("supplier item code description quantity unit price")
+                || normalized.startsWith("no supplier item code")
+                || normalized.startsWith("supplier item code");
+    }
+
+    private boolean isNonItemRow(String row) {
+        String lower = row.toLowerCase();
+        return lower.startsWith("subtotal")
+                || lower.startsWith("total")
+                || lower.startsWith("tax")
+                || lower.startsWith("quotation no")
+                || lower.startsWith("quotation number")
+                || lower.startsWith("date ")
+                || lower.startsWith("valid until")
+                || lower.startsWith("customer")
+                || lower.startsWith("delivery")
+                || lower.startsWith("currency")
+                || lower.startsWith("supplier notes")
+                || lower.startsWith("prices are")
+                || lower.startsWith("thank you");
     }
 
     private String findCurrency(String text) {
@@ -175,16 +229,6 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         if (tail.startsWith(":")) tail = tail.substring(1).trim();
         int end = tail.indexOf('\n');
         return (end >= 0 ? tail.substring(0, end) : tail).trim();
-    }
-
-    private String[] slice(String[] values, int from, int toExclusive) {
-        String[] result = new String[Math.max(0, toExclusive - from)];
-        if (result.length > 0) System.arraycopy(values, from, result, 0, result.length);
-        return result;
-    }
-
-    private String lastBeforeLast(String[] cells) {
-        return cells.length >= 2 ? cells[cells.length - 2].trim() : null;
     }
 
     private BigDecimal decimal(String value) {
