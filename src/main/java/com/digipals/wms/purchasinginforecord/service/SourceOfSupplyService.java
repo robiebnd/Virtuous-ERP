@@ -124,7 +124,10 @@ public class SourceOfSupplyService {
         result.put("sku", line.getProduct().getSku());
         result.put("productName", line.getProduct().getName());
         result.put("requestedQuantity", line.getQuantity());
-        result.put("status", candidates.isEmpty() ? "NO_SOURCE" : "SOURCE_AVAILABLE");
+        result.put("sourceAssigned", line.getPurchasingInfoRecord() != null);
+        result.put("assignedPurchasingInfoRecordId", line.getPurchasingInfoRecord() == null ? null : line.getPurchasingInfoRecord().getId());
+        result.put("assignedSupplierId", line.getSourceSupplier() == null ? null : line.getSourceSupplier().getId());
+        result.put("status", line.getPurchasingInfoRecord() != null ? "ASSIGNED" : (candidates.isEmpty() ? "NO_SOURCE" : "SOURCE_AVAILABLE"));
         result.put("multipleSources", candidates.size() > 1);
         result.put("candidates", candidates.stream().map(this::toResponse).toList());
         result.put("selectedSource", candidates.isEmpty() ? null : toResponse(candidates.get(0)));
@@ -139,8 +142,7 @@ public class SourceOfSupplyService {
                 .filter(record -> record.getValidTo() == null || !date.isAfter(record.getValidTo()))
                 .sorted(Comparator
                         .comparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getAutomaticSourcing())).reversed()
-                        .thenComparing(Comparator.comparing(
-                                (PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed())
+                        .thenComparing(Comparator.comparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed())
                         .thenComparing(r -> r.getLastPurchasePrice() == null ? BigDecimal.valueOf(Double.MAX_VALUE) : r.getLastPurchasePrice())
                         .thenComparing(r -> r.getPlannedDeliveryDays() == null ? Integer.MAX_VALUE : r.getPlannedDeliveryDays()))
                 .toList();
