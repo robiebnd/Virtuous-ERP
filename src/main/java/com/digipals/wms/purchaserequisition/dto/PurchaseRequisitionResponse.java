@@ -61,6 +61,12 @@ public class PurchaseRequisitionResponse {
         private BigDecimal quantity;
         private BigDecimal estimatedUnitCost;
         private BigDecimal estimatedLineTotal;
+        private UUID sourceSupplierId;
+        private String sourceSupplierCode;
+        private String sourceSupplierName;
+        private UUID purchasingInfoRecordId;
+        private Integer plannedDeliveryDays;
+        private String supplierItemCode;
         private String remarks;
     }
 }
