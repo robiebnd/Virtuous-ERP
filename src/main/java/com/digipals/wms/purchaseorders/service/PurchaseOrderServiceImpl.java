@@ -72,6 +72,24 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             throw new InvalidWorkflowException("Purchase Requisition has no lines and cannot create a Purchase Order.");
         }
 
+        for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
+            if (requisitionLine.getPurchasingInfoRecord() == null || requisitionLine.getSourceSupplier() == null) {
+                throw new InvalidWorkflowException(
+                        "Source of Supply is not assigned for product " + requisitionLine.getProduct().getSku()
+                                + ". Determine and apply a Purchasing Info Record before creating the Purchase Order.");
+            }
+            if (!requisition.getSupplier().getId().equals(requisitionLine.getSourceSupplier().getId())) {
+                throw new InvalidWorkflowException(
+                        "Source supplier for product " + requisitionLine.getProduct().getSku()
+                                + " does not match the Purchase Requisition supplier. Split-by-supplier Purchase Orders are not enabled yet.");
+            }
+            if (requisitionLine.getEstimatedUnitCost() == null
+                    || requisitionLine.getEstimatedUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidWorkflowException(
+                        "No valid source price is available for product " + requisitionLine.getProduct().getSku() + ".");
+            }
+        }
+
         PurchaseOrder purchaseOrder = PurchaseOrder.builder()
                 .poNumber(documentNumberService.next(DocumentType.PURCHASE_ORDER))
                 .supplier(requisition.getSupplier())
@@ -87,22 +105,16 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         purchaseOrder = repository.save(purchaseOrder);
 
         for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
-            BigDecimal unitPrice = requisitionLine.getEstimatedUnitCost() != null
-                    ? requisitionLine.getEstimatedUnitCost()
-                    : BigDecimal.ZERO;
-
             PurchaseOrderLine purchaseOrderLine = PurchaseOrderLine.builder()
                     .purchaseOrder(purchaseOrder)
+                    .purchaseRequisitionLine(requisitionLine)
                     .product(requisitionLine.getProduct())
                     .quantity(requisitionLine.getQuantity())
-                    .unitPrice(unitPrice)
+                    .unitPrice(requisitionLine.getEstimatedUnitCost())
                     .receivedQuantity(BigDecimal.ZERO)
                     .build();
 
             purchaseOrderLine = purchaseOrderLineRepository.save(purchaseOrderLine);
-
-            // Keep the in-memory aggregate in sync so the response mapper
-            // includes the newly created lines immediately after PO creation.
             purchaseOrder.getLines().add(purchaseOrderLine);
         }
 
@@ -148,12 +160,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     @Override
     public PurchaseOrder receive(UUID id) {
-        PurchaseOrder purchaseOrder = getPurchaseOrder(id);
-        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED) {
-            throw new InvalidWorkflowException("Only approved Purchase Orders can be received.");
-        }
-        purchaseOrder.setStatus(PurchaseOrderStatus.RECEIVED);
-        return repository.save(purchaseOrder);
+        throw new InvalidWorkflowException(
+                "Purchase Order receiving is handled through Goods Receipt. Create and approve a Goods Receipt instead.");
     }
 
     @Override
