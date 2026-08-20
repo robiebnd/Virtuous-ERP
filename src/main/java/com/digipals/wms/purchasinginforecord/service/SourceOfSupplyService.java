@@ -10,9 +10,9 @@ import com.digipals.wms.purchasinginforecord.repository.PurchasingInfoRecordRepo
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisition;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionLine;
+import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionLineRepository;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
-import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -69,12 +69,8 @@ public class SourceOfSupplyService {
                 .map(line -> determineLine(line, requisition.getWarehouse().getId(), effectiveDate))
                 .toList();
 
-        long unresolved = lines.stream()
-                .filter(line -> "NO_SOURCE".equals(line.get("status")))
-                .count();
-        long ambiguous = lines.stream()
-                .filter(line -> Boolean.TRUE.equals(line.get("multipleSources")))
-                .count();
+        long unresolved = lines.stream().filter(line -> "NO_SOURCE".equals(line.get("status"))).count();
+        long ambiguous = lines.stream().filter(line -> Boolean.TRUE.equals(line.get("multipleSources"))).count();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("purchaseRequisitionId", requisitionId);
@@ -117,7 +113,7 @@ public class SourceOfSupplyService {
         }
         requisitionLineRepository.save(line);
 
-        return toRequisitionResponse(requisition);
+        return com.digipals.wms.common.mapper.PurchaseRequisitionMapper.toResponse(requisition);
     }
 
     private Map<String, Object> determineLine(PurchaseRequisitionLine line, UUID warehouseId, LocalDate deliveryDate) {
@@ -138,54 +134,31 @@ public class SourceOfSupplyService {
     private List<PurchasingInfoRecord> activeCandidates(UUID productId, UUID warehouseId, LocalDate date) {
         return repository.findByWarehouseId(warehouseId).stream()
                 .filter(record -> Boolean.TRUE.equals(record.getActive()))
-                .filter(record -> Boolean.TRUE.equals(record.getAutomaticSourcing()))
                 .filter(record -> record.getSupplierProduct().getProduct().getId().equals(productId))
                 .filter(record -> record.getValidFrom() == null || !date.isBefore(record.getValidFrom()))
                 .filter(record -> record.getValidTo() == null || !date.isAfter(record.getValidTo()))
                 .sorted(Comparator
-                        .comparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed()
-                        .thenComparing(r -> r.getLastPurchasePrice() == null
-                                ? BigDecimal.valueOf(Double.MAX_VALUE)
-                                : r.getLastPurchasePrice())
+                        .comparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getAutomaticSourcing())).reversed()
+                        .thenComparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed()
+                        .thenComparing(r -> r.getLastPurchasePrice() == null ? BigDecimal.valueOf(Double.MAX_VALUE) : r.getLastPurchasePrice())
                         .thenComparing(r -> r.getPlannedDeliveryDays() == null ? Integer.MAX_VALUE : r.getPlannedDeliveryDays()))
                 .toList();
     }
 
-    private void validateCandidate(
-            PurchasingInfoRecord record,
-            UUID productId,
-            UUID warehouseId,
-            String requisitionCurrency,
-            LocalDate date) {
-        if (!Boolean.TRUE.equals(record.getActive())) {
-            throw new InvalidWorkflowException("Purchasing info record is inactive.");
-        }
-        if (!record.getWarehouse().getId().equals(warehouseId)) {
-            throw new InvalidWorkflowException("Purchasing info record does not belong to the requisition warehouse.");
-        }
-        if (!record.getSupplierProduct().getProduct().getId().equals(productId)) {
-            throw new InvalidWorkflowException("Purchasing info record does not belong to the requisition product.");
-        }
-        if (record.getValidFrom() != null && date.isBefore(record.getValidFrom())) {
-            throw new InvalidWorkflowException("Purchasing info record is not yet valid.");
-        }
-        if (record.getValidTo() != null && date.isAfter(record.getValidTo())) {
-            throw new InvalidWorkflowException("Purchasing info record has expired.");
-        }
+    private void validateCandidate(PurchasingInfoRecord record, UUID productId, UUID warehouseId, String requisitionCurrency, LocalDate date) {
+        if (!Boolean.TRUE.equals(record.getActive())) throw new InvalidWorkflowException("Purchasing info record is inactive.");
+        if (!record.getWarehouse().getId().equals(warehouseId)) throw new InvalidWorkflowException("Purchasing info record does not belong to the requisition warehouse.");
+        if (!record.getSupplierProduct().getProduct().getId().equals(productId)) throw new InvalidWorkflowException("Purchasing info record does not belong to the requisition product.");
+        if (record.getValidFrom() != null && date.isBefore(record.getValidFrom())) throw new InvalidWorkflowException("Purchasing info record is not yet valid.");
+        if (record.getValidTo() != null && date.isAfter(record.getValidTo())) throw new InvalidWorkflowException("Purchasing info record has expired.");
         if (requisitionCurrency != null && !requisitionCurrency.equalsIgnoreCase(record.getCurrency())) {
-            throw new InvalidWorkflowException(
-                    "Purchasing info record currency " + record.getCurrency()
-                            + " does not match Purchase Requisition currency " + requisitionCurrency + ".");
+            throw new InvalidWorkflowException("Purchasing info record currency " + record.getCurrency() + " does not match Purchase Requisition currency " + requisitionCurrency + ".");
         }
     }
 
     private PurchaseRequisition getRequisition(UUID id) {
         return requisitionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
-    }
-
-    private PurchaseRequisitionResponse toRequisitionResponse(PurchaseRequisition requisition) {
-        return com.digipals.wms.common.mapper.PurchaseRequisitionMapper.toResponse(requisition);
     }
 
     private PurchasingInfoRecordResponse toResponse(PurchasingInfoRecord entity) {
