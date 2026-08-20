@@ -16,15 +16,11 @@ public final class PurchaseOrderMapper {
     }
 
     public static PurchaseOrderResponse toResponse(PurchaseOrder purchaseOrder) {
-        if (purchaseOrder == null) {
-            return null;
-        }
+        if (purchaseOrder == null) return null;
 
         List<PurchaseOrderLineResponse> lines = purchaseOrder.getLines() == null
                 ? Collections.emptyList()
-                : purchaseOrder.getLines().stream()
-                .map(PurchaseOrderMapper::toLineResponse)
-                .toList();
+                : purchaseOrder.getLines().stream().map(PurchaseOrderMapper::toLineResponse).toList();
 
         return PurchaseOrderResponse.builder()
                 .id(purchaseOrder.getId())
@@ -53,12 +49,11 @@ public final class PurchaseOrderMapper {
     }
 
     public static PurchaseOrderLineResponse toLineResponse(PurchaseOrderLine line) {
-        if (line == null) {
-            return null;
-        }
+        if (line == null) return null;
 
         return PurchaseOrderLineResponse.builder()
                 .id(line.getId())
+                .purchaseRequisitionLineId(line.getPurchaseRequisitionLine() == null ? null : line.getPurchaseRequisitionLine().getId())
                 .productId(line.getProduct() == null ? null : line.getProduct().getId())
                 .sku(line.getProduct() == null ? null : line.getProduct().getSku())
                 .productName(line.getProduct() == null ? null : line.getProduct().getName())
