@@ -11,6 +11,8 @@ public interface ProductSupplierIdentifierService {
 
     ProductSupplierIdentifierResponse create(CreateProductSupplierIdentifierRequest request);
 
+    List<ProductSupplierIdentifierResponse> createBulk(List<CreateProductSupplierIdentifierRequest> requests);
+
     ProductSupplierIdentifierResponse update(UUID id, UpdateProductSupplierIdentifierRequest request);
 
     ProductSupplierIdentifierResponse findById(UUID id);
