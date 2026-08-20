@@ -2,8 +2,12 @@ package com.digipals.wms.supplierquotation.service;
 
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
+import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionLineRepository;
+import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.supplier.repository.SupplierRepository;
+import com.digipals.wms.supplierquotation.entity.SupplierQuotation;
+import com.digipals.wms.supplierquotation.repository.SupplierQuotationRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
