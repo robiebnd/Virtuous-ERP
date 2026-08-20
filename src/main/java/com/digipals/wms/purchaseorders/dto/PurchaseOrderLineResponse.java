@@ -11,22 +11,14 @@ import java.util.UUID;
 public class PurchaseOrderLineResponse {
 
     private UUID id;
-
+    private UUID purchaseRequisitionLineId;
     private UUID productId;
-
     private String sku;
-
     private String productName;
-
     private BigDecimal quantity;
-
     private BigDecimal unitPrice;
-
     private BigDecimal discount;
-
     private BigDecimal tax;
-
     private BigDecimal lineTotal;
-
     private String remarks;
 }
