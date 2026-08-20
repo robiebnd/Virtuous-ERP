@@ -29,21 +29,14 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Quotation extraction service.
- *
- * Extraction preserves the supplier's item identifier as supplierItemCode.
- * Product-to-ERP-SKU resolution is performed later when importing the
- * quotation into a Purchase Requisition.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class QuotationAiServiceImpl implements QuotationAiService {
 
-    private static final Pattern QUOTATION_LINE_PATTERN = Pattern.compile(
-            "^\\s*(?:\\d+[.)]\\s+)?([A-Za-z0-9][A-Za-z0-9._/-]*)\\s+(.+?)\\s+([0-9]+(?:\\.[0-9]+)?)\\s+([0-9]+(?:,?[0-9]{3})*(?:\\.[0-9]+)?)\\s*$"
-    );
+    private static final Pattern SUPPLIER_ITEM_CODE_PATTERN = Pattern.compile("^[A-Za-z][A-Za-z0-9._/-]*-[A-Za-z0-9._/-]+$");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("^[0-9]+(?:,[0-9]{3})*(?:\\.[0-9]+)?$");
+    private static final Pattern DATE_PATTERN = Pattern.compile("(?i)date\\s*:?\\s*([0-9]{1,2}\\s+[A-Za-z]+\\s+[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})");
 
     private final SupplierQuotationRepository quotationRepository;
     private final PurchaseRequisitionRepository requisitionRepository;
@@ -123,9 +116,9 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         String currency = findCurrency(normalized);
         String quotationNumber = findAfterLabel(normalized, "quotation number");
         if (quotationNumber == null) quotationNumber = findAfterLabel(normalized, "quotation no");
+        String quotationDate = findDate(normalized);
 
-        String[] rawRows = normalized.split("\\n");
-        for (String rawRow : rawRows) {
+        for (String rawRow : normalized.split("\\n")) {
             Map<String, Object> line = parseQuotationRow(rawRow);
             if (line != null) {
                 line.put("currency", currency);
@@ -141,7 +134,7 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         response.put("supplierId", supplier.getId());
         response.put("supplierName", supplier.getName());
         response.put("quotationNumber", quotationNumber);
-        response.put("quotationDate", null);
+        response.put("quotationDate", quotationDate);
         response.put("lines", lines);
         response.put("sourceFileName", filename);
         response.put("extractionMode", "MOCK");
@@ -149,16 +142,14 @@ public class QuotationAiServiceImpl implements QuotationAiService {
     }
 
     /**
-     * Parses common PDF table layouts without depending on column spacing.
-     * Examples accepted:
-     *   SC-BGF-001 Broiler Grower Feed 100 27.00
-     *   1 SC-BGF-001 Broiler Grower Feed 100 27.00
-     *   SC-BGF-001    Broiler Grower Feed    100    27.00
+     * Handles PDF table rows with or without a leading line number and with
+     * optional line-total columns. The parser anchors on the supplier item
+     * code rather than assuming that the first whitespace-delimited token is
+     * the code.
      *
-     * The last two numeric values are treated as quantity and unit price,
-     * while everything between the supplier item code and quantity is the
-     * description. This makes extraction tolerant of PDFBox whitespace
-     * differences while avoiding invented business data.
+     * Examples:
+     *   1 SC-BGF-001 Broiler Grower Feed 100 27.00 2700.00
+     *   SC-BGF-001 Broiler Grower Feed 100 27.00
      */
     private Map<String, Object> parseQuotationRow(String rawRow) {
         if (rawRow == null || rawRow.isBlank()) return null;
@@ -166,17 +157,52 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         String row = rawRow.replace('\u00A0', ' ').trim();
         if (isQuotationHeader(row) || isNonItemRow(row)) return null;
 
-        Matcher matcher = QUOTATION_LINE_PATTERN.matcher(row);
-        if (!matcher.matches()) return null;
-
-        String supplierItemCode = matcher.group(1).trim();
-        String description = matcher.group(2).trim();
-        BigDecimal quantity = decimal(matcher.group(3));
-        BigDecimal unitPrice = decimal(matcher.group(4));
-
-        if (supplierItemCode.isBlank() || description.isBlank() || quantity == null || unitPrice == null) {
-            return null;
+        String[] tokens = row.split("\\s+");
+        int codeIndex = -1;
+        for (int i = 0; i < tokens.length; i++) {
+            if (SUPPLIER_ITEM_CODE_PATTERN.matcher(tokens[i]).matches()) {
+                codeIndex = i;
+                break;
+            }
         }
+        if (codeIndex < 0) return null;
+
+        String supplierItemCode = tokens[codeIndex].trim();
+        List<Integer> numericIndexes = new ArrayList<>();
+        for (int i = codeIndex + 1; i < tokens.length; i++) {
+            if (NUMBER_PATTERN.matcher(tokens[i]).matches()) {
+                numericIndexes.add(i);
+            }
+        }
+
+        // A normal quotation row has quantity + unit price. A common table
+        // also has a third number at the end for line total.
+        if (numericIndexes.size() < 2) return null;
+
+        int quantityIndex = numericIndexes.get(numericIndexes.size() - 2);
+        int unitPriceIndex = numericIndexes.get(numericIndexes.size() - 1);
+
+        // If there are three numeric values, the last one is normally line
+        // total, so use the third-from-last as quantity and second-from-last
+        // as unit price.
+        if (numericIndexes.size() >= 3) {
+            quantityIndex = numericIndexes.get(numericIndexes.size() - 3);
+            unitPriceIndex = numericIndexes.get(numericIndexes.size() - 2);
+        }
+
+        if (quantityIndex <= codeIndex || unitPriceIndex <= quantityIndex) return null;
+
+        StringBuilder descriptionBuilder = new StringBuilder();
+        for (int i = codeIndex + 1; i < quantityIndex; i++) {
+            if (descriptionBuilder.length() > 0) descriptionBuilder.append(' ');
+            descriptionBuilder.append(tokens[i]);
+        }
+        String description = descriptionBuilder.toString().trim();
+        if (description.isBlank()) return null;
+
+        BigDecimal quantity = decimal(tokens[quantityIndex]);
+        BigDecimal unitPrice = decimal(tokens[unitPriceIndex]);
+        if (quantity == null || unitPrice == null) return null;
 
         Map<String, Object> line = new LinkedHashMap<>();
         line.put("supplierItemCode", supplierItemCode);
@@ -227,8 +253,22 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         if (index < 0) return null;
         String tail = text.substring(index + label.length()).trim();
         if (tail.startsWith(":")) tail = tail.substring(1).trim();
+
+        // PDFBox can place the following Date field on the same extracted
+        // line. Stop at the next known metadata label rather than returning
+        // the date as part of the quotation number.
+        Matcher nextLabel = Pattern.compile("(?i)\\s+(?:date|valid until|currency|customer|delivery)\\s*:?").matcher(tail);
+        if (nextLabel.find()) {
+            tail = tail.substring(0, nextLabel.start()).trim();
+        }
+
         int end = tail.indexOf('\n');
         return (end >= 0 ? tail.substring(0, end) : tail).trim();
+    }
+
+    private String findDate(String text) {
+        Matcher matcher = DATE_PATTERN.matcher(text);
+        return matcher.find() ? matcher.group(1).trim() : null;
     }
 
     private BigDecimal decimal(String value) {
