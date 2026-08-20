@@ -46,6 +46,7 @@ public class PurchaseRequisitionController {
     @DeleteMapping("/{id}/lines") public ResponseEntity<Void> clearLines(@PathVariable UUID id) { service.clearLines(id); return ResponseEntity.noContent().build(); }
     @PostMapping("/{requisitionId}/import-quotation/{quotationId}") public PurchaseRequisitionResponse importQuotation(@PathVariable UUID requisitionId, @PathVariable UUID quotationId) { return service.importQuotation(requisitionId, quotationId); }
     @PostMapping("/{requisitionId}/import-quotation/number/{quotationNumber}") public PurchaseRequisitionResponse importQuotationByNumber(@PathVariable UUID requisitionId, @PathVariable String quotationNumber) { return service.importQuotationByNumber(requisitionId, quotationNumber); }
+    @PostMapping("/number/{requisitionNumber}/import-quotation/number/{quotationNumber}") public PurchaseRequisitionResponse importQuotationByRequisitionNumber(@PathVariable String requisitionNumber, @PathVariable String quotationNumber) { return service.importQuotationByRequisitionNumber(requisitionNumber, quotationNumber); }
 
     private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) { HttpHeaders headers = new HttpHeaders(); headers.setContentType(MediaType.APPLICATION_PDF); headers.setContentDisposition(ContentDisposition.inline().filename(filename).build()); headers.setContentLength(bytes.length); return ResponseEntity.ok().headers(headers).body(bytes); }
 }
