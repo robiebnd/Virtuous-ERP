@@ -91,6 +91,28 @@ public class ProductSupplierIdentifierServiceImpl implements ProductSupplierIden
     }
 
     @Override
+    public List<ProductSupplierIdentifierResponse> createBulk(List<CreateProductSupplierIdentifierRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("At least one supplier product mapping is required.");
+        }
+
+        // Validate the complete batch before writing anything. This keeps a quotation
+        // mapping operation atomic: either every requested mapping is valid or none is created.
+        for (CreateProductSupplierIdentifierRequest request : requests) {
+            if (request == null) {
+                throw new IllegalArgumentException("Supplier product mapping cannot be null.");
+            }
+            String code = normalize(request.getSupplierItemCode());
+            if (code == null || code.isBlank()) {
+                throw new IllegalArgumentException("Supplier item code is required.");
+            }
+            validateUnique(request.getSupplierId(), code, null);
+        }
+
+        return requests.stream().map(this::create).toList();
+    }
+
+    @Override
     public ProductSupplierIdentifierResponse update(UUID id, UpdateProductSupplierIdentifierRequest request) {
         ProductSupplierIdentifier entity = findEntity(id);
         String code = normalize(request.getSupplierItemCode());
