@@ -28,6 +28,14 @@ public class ProductSupplierIdentifierController {
         return service.create(request);
     }
 
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('PRODUCT_SUPPLIER_IDENTIFIER_CREATE')")
+    public List<ProductSupplierIdentifierResponse> createBulk(
+            @Valid @RequestBody List<@Valid CreateProductSupplierIdentifierRequest> requests) {
+        return service.createBulk(requests);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PRODUCT_SUPPLIER_IDENTIFIER_UPDATE')")
     public ProductSupplierIdentifierResponse update(
