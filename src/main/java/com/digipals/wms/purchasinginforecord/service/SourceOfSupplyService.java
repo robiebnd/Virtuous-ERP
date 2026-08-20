@@ -139,7 +139,8 @@ public class SourceOfSupplyService {
                 .filter(record -> record.getValidTo() == null || !date.isAfter(record.getValidTo()))
                 .sorted(Comparator
                         .comparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getAutomaticSourcing())).reversed()
-                        .thenComparing((PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed()
+                        .thenComparing(Comparator.comparing(
+                                (PurchasingInfoRecord r) -> Boolean.TRUE.equals(r.getRegularSupplier())).reversed())
                         .thenComparing(r -> r.getLastPurchasePrice() == null ? BigDecimal.valueOf(Double.MAX_VALUE) : r.getLastPurchasePrice())
                         .thenComparing(r -> r.getPlannedDeliveryDays() == null ? Integer.MAX_VALUE : r.getPlannedDeliveryDays()))
                 .toList();
