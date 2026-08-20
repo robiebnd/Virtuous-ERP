@@ -3,13 +3,14 @@ package com.digipals.wms.procurement.service;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
+import com.digipals.wms.procurement.entity.ProductSupplierIdentifier;
+import com.digipals.wms.procurement.repository.ProductSupplierIdentifierRepository;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -18,13 +19,14 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class SupplierProductResolutionService {
 
     private final ProductSupplierIdentifierRepository identifierRepository;
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
 
+    @Transactional(readOnly = true)
     public Product resolve(UUID supplierId, String supplierItemCode) {
         if (supplierId == null) {
             throw new ResourceNotFoundException("Supplier is required to resolve a supplier item code.");
