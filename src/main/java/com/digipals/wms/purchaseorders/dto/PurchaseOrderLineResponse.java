@@ -16,6 +16,8 @@ public class PurchaseOrderLineResponse {
     private String sku;
     private String productName;
     private BigDecimal quantity;
+    private BigDecimal receivedQuantity;
+    private BigDecimal outstandingQuantity;
     private BigDecimal unitPrice;
     private BigDecimal discount;
     private BigDecimal tax;
