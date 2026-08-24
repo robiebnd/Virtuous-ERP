@@ -58,6 +58,8 @@ public final class PurchaseOrderMapper {
                 .sku(line.getProduct() == null ? null : line.getProduct().getSku())
                 .productName(line.getProduct() == null ? null : line.getProduct().getName())
                 .quantity(scale(line.getQuantity()))
+                .receivedQuantity(scale(line.getReceivedQuantity()))
+                .outstandingQuantity(scale(line.getOutstandingQuantity()))
                 .unitPrice(scale(line.getUnitPrice()))
                 .lineTotal(scale(line.getLineTotal()))
                 .build();
