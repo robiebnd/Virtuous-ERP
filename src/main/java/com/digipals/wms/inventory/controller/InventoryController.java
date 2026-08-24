@@ -67,7 +67,7 @@ public class InventoryController {
         return InventoryBinMapper.toResponse(service.getInventory(warehouseId, binId, productId));
     }
 
-    @GetMapping("/warehouse/{warehouseCode}/bin/{binCode}/product/{sku}")
+    @GetMapping("/by-code/warehouse/{warehouseCode}/bin/{binCode}/product/{sku}")
     public InventoryBinResponse getInventoryByCodes(
             @PathVariable String warehouseCode,
             @PathVariable String binCode,
