@@ -2,6 +2,9 @@ package com.digipals.wms.common.mapper;
 
 import com.digipals.wms.goodsreceiving.dto.GoodsReceiptLineResponse;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
+import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
+
+import java.math.BigDecimal;
 
 public final class GoodsReceiptLineMapper {
 
@@ -15,14 +18,24 @@ public final class GoodsReceiptLineMapper {
             return null;
         }
 
+        PurchaseOrderLine poLine = line.getPurchaseOrderLine();
+
+        BigDecimal previouslyReceivedQuantity = poLine == null || poLine.getReceivedQuantity() == null
+                ? BigDecimal.ZERO
+                : poLine.getReceivedQuantity();
+
+        BigDecimal outstandingQuantity = poLine == null || poLine.getOutstandingQuantity() == null
+                ? BigDecimal.ZERO
+                : poLine.getOutstandingQuantity();
+
         return GoodsReceiptLineResponse.builder()
 
                 .id(line.getId())
 
                 .purchaseOrderLineId(
-                        line.getPurchaseOrderLine() == null
+                        poLine == null
                                 ? null
-                                : line.getPurchaseOrderLine().getId())
+                                : poLine.getId())
 
                 .productId(
                         line.getProduct() == null
@@ -39,23 +52,21 @@ public final class GoodsReceiptLineMapper {
                                 ? null
                                 : line.getProduct().getName())
 
-                .orderedQuantity(
-                        line.getOrderedQuantity())
+                .orderedQuantity(line.getOrderedQuantity())
 
-                .receivedQuantity(
-                        line.getReceivedQuantity())
+                .previouslyReceivedQuantity(previouslyReceivedQuantity)
 
-                .acceptedQuantity(
-                        line.getAcceptedQuantity())
+                .outstandingQuantity(outstandingQuantity)
 
-                .rejectedQuantity(
-                        line.getRejectedQuantity())
+                .receivedQuantity(line.getReceivedQuantity())
 
-                .unitCost(
-                        line.getUnitCost())
+                .acceptedQuantity(line.getAcceptedQuantity())
 
-                .remarks(
-                        line.getRemarks())
+                .rejectedQuantity(line.getRejectedQuantity())
+
+                .unitCost(line.getUnitCost())
+
+                .remarks(line.getRemarks())
 
                 .build();
     }
