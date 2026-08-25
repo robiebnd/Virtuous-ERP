@@ -7,17 +7,19 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record InventoryMovementResponse(
+        UUID id,
         LocalDateTime movementDate,
         InventoryMovementType movementType,
         String referenceType,
+        UUID referenceId,
         String referenceNumber,
-        String warehouseCode,
-        String fromBinCode,
-        String toBinCode,
+        UUID warehouseId,
+        UUID fromBinId,
+        UUID toBinId,
+        UUID productId,
         String sku,
-        String productName,
         BigDecimal quantity,
-        String performedBy,
+        UUID performedById,
         String remarks,
         LocalDateTime createdAt
 ) {}
