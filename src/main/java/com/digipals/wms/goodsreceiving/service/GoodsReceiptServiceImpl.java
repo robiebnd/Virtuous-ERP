@@ -16,6 +16,9 @@ import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptLineRepository;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptRepository;
 import com.digipals.wms.inventory.service.InventoryService;
+import com.digipals.wms.inventorymovement.entity.InventoryMovement;
+import com.digipals.wms.inventorymovement.entity.InventoryMovementType;
+import com.digipals.wms.inventorymovement.service.InventoryMovementService;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
@@ -44,6 +47,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final BinRepository binRepository;
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final InventoryService inventoryService;
+    private final InventoryMovementService inventoryMovementService;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
 
     private GoodsReceipt getGoodsReceipt(UUID id) {
@@ -113,9 +117,6 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                         && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0)
                 .toList();
 
-        // A fully received PO must never generate another GRN. Check the
-        // outstanding quantities before creating the GRN header so callers get
-        // the business-specific conflict instead of a generic status error.
         if (outstandingLines.isEmpty()) {
             throw new InvalidWorkflowException(
                     "Purchase Order " + purchaseOrder.getPoNumber()
@@ -204,6 +205,21 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                         "GOODS_RECEIPT",
                         receiptLine.getRemarks(),
                         currentUser);
+
+                inventoryMovementService.create(InventoryMovement.builder()
+                        .warehouseId(goodsReceipt.getWarehouse().getId())
+                        .fromBinId(null)
+                        .toBinId(receivingBin.getId())
+                        .productId(receiptLine.getProduct().getId())
+                        .sku(receiptLine.getProduct().getSku())
+                        .quantity(acceptedQuantity)
+                        .movementType(InventoryMovementType.RECEIPT)
+                        .referenceType("GRN")
+                        .referenceId(goodsReceipt.getId())
+                        .referenceNumber(goodsReceipt.getGrnNumber())
+                        .performedById(currentUser.getId())
+                        .remarks(receiptLine.getRemarks())
+                        .build());
             }
 
             purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
