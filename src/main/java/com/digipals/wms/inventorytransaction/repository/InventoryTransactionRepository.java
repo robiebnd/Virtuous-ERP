@@ -10,39 +10,23 @@ import java.util.UUID;
 public interface InventoryTransactionRepository
         extends JpaRepository<InventoryTransaction, UUID> {
 
-    /**
-     * Transaction history for a specific InventoryBin.
-     */
-    List<InventoryTransaction> findByInventoryBinId(
-            UUID inventoryBinId);
+    List<InventoryTransaction> findByInventoryBinIdOrderByTransactionDateDesc(UUID inventoryBinId);
 
-    /**
-     * All transactions for a source bin.
-     */
-    List<InventoryTransaction> findByFromBinId(
-            UUID fromBinId);
+    List<InventoryTransaction> findByFromBinIdOrderByTransactionDateDesc(UUID fromBinId);
 
-    /**
-     * All transactions for a destination bin.
-     */
-    List<InventoryTransaction> findByToBinId(
-            UUID toBinId);
+    List<InventoryTransaction> findByToBinIdOrderByTransactionDateDesc(UUID toBinId);
 
-    /**
-     * Lookup transactions by reference number.
-     */
-    List<InventoryTransaction> findByReferenceNumber(
-            String referenceNumber);
+    List<InventoryTransaction> findByReferenceNumberOrderByTransactionDateDesc(String referenceNumber);
 
-    /**
-     * Lookup transactions by document type.
-     */
-    List<InventoryTransaction> findByReferenceType(
-            String referenceType);
+    List<InventoryTransaction> findByReferenceTypeOrderByTransactionDateDesc(String referenceType);
 
-    /**
-     * Lookup transactions by transaction type.
-     */
-    List<InventoryTransaction> findByTransactionType(
+    List<InventoryTransaction> findByTransactionTypeOrderByTransactionDateDesc(TransactionType transactionType);
+
+    List<InventoryTransaction> findByInventoryBin_Warehouse_CodeOrderByTransactionDateDesc(String warehouseCode);
+
+    boolean existsByReferenceNumberAndReferenceTypeAndInventoryBinIdAndTransactionType(
+            String referenceNumber,
+            String referenceType,
+            UUID inventoryBinId,
             TransactionType transactionType);
 }
