@@ -24,9 +24,5 @@ public interface InventoryTransactionRepository
 
     List<InventoryTransaction> findByInventoryBin_Warehouse_CodeOrderByTransactionDateDesc(String warehouseCode);
 
-    boolean existsByReferenceNumberAndReferenceTypeAndInventoryBinIdAndTransactionType(
-            String referenceNumber,
-            String referenceType,
-            UUID inventoryBinId,
-            TransactionType transactionType);
+    List<InventoryTransaction> findByInventoryBin_Product_SkuOrderByTransactionDateDesc(String sku);
 }
