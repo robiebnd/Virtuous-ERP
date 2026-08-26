@@ -9,44 +9,24 @@ import java.util.UUID;
 
 public interface InventoryTransactionService {
 
-    InventoryTransaction receiveStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            String referenceNumber,
-            String referenceType,
-            String remarks);
+    InventoryTransaction receiveStock(UUID warehouseId, UUID binId, UUID productId,
+                                      BigDecimal quantity, String referenceNumber,
+                                      String referenceType, String remarks);
 
-    InventoryTransaction issueStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            String referenceNumber,
-            String referenceType,
-            String remarks);
+    InventoryTransaction issueStock(UUID warehouseId, UUID binId, UUID productId,
+                                    BigDecimal quantity, String referenceNumber,
+                                    String referenceType, String remarks);
 
-    InventoryTransaction adjustStock(
-            UUID warehouseId,
-            UUID binId,
-            UUID productId,
-            BigDecimal quantity,
-            TransactionType transactionType,
-            String referenceNumber,
-            String remarks);
+    InventoryTransaction adjustStock(UUID warehouseId, UUID binId, UUID productId,
+                                     BigDecimal quantity, TransactionType transactionType,
+                                     String referenceNumber, String remarks);
 
     List<InventoryTransaction> findAll();
-
     List<InventoryTransaction> findByInventoryBin(UUID inventoryBinId);
-
     List<InventoryTransaction> findByBin(UUID binId);
-
     List<InventoryTransaction> findByReferenceNumber(String referenceNumber);
-
     List<InventoryTransaction> findByReferenceType(String referenceType);
-
     List<InventoryTransaction> findByWarehouseCode(String warehouseCode);
-
+    List<InventoryTransaction> findBySku(String sku);
     InventoryTransaction findById(UUID id);
 }
