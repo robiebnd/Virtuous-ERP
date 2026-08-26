@@ -38,8 +38,7 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
     private final CurrentUserService currentUserService;
 
     private InventoryBin getInventoryBin(UUID warehouseId, UUID binId, UUID productId) {
-        return inventoryBinRepository
-                .findByWarehouseIdAndBinIdAndProductId(warehouseId, binId, productId)
+        return inventoryBinRepository.findByWarehouseIdAndBinIdAndProductId(warehouseId, binId, productId)
                 .orElseGet(() -> {
                     Warehouse warehouse = warehouseRepository.findById(warehouseId)
                             .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found."));
@@ -47,34 +46,25 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                             .orElseThrow(() -> new ResourceNotFoundException("Bin not found."));
                     Product product = productRepository.findById(productId)
                             .orElseThrow(() -> new ResourceNotFoundException("Product not found."));
-
-                    return inventoryBinRepository.save(
-                            InventoryBin.builder()
-                                    .warehouse(warehouse)
-                                    .bin(bin)
-                                    .product(product)
-                                    .quantityOnHand(BigDecimal.ZERO)
-                                    .quantityReserved(BigDecimal.ZERO)
-                                    .build());
+                    return inventoryBinRepository.save(InventoryBin.builder()
+                            .warehouse(warehouse)
+                            .bin(bin)
+                            .product(product)
+                            .quantityOnHand(BigDecimal.ZERO)
+                            .quantityReserved(BigDecimal.ZERO)
+                            .build());
                 });
     }
 
-    private InventoryTransaction findDuplicate(
-            InventoryBin inventory,
-            TransactionType transactionType,
-            String referenceNumber,
-            String referenceType) {
-
+    private InventoryTransaction findDuplicate(InventoryBin inventory, TransactionType transactionType,
+                                               String referenceNumber, String referenceType) {
         if (referenceNumber == null || referenceNumber.isBlank()) {
             throw new IllegalArgumentException("Reference number is required.");
         }
         if (referenceType == null || referenceType.isBlank()) {
             throw new IllegalArgumentException("Reference type is required.");
         }
-
-        return transactionRepository
-                .findByReferenceNumberOrderByTransactionDateDesc(referenceNumber)
-                .stream()
+        return transactionRepository.findByReferenceNumberOrderByTransactionDateDesc(referenceNumber).stream()
                 .filter(t -> t.getInventoryBin() != null)
                 .filter(t -> inventory.getId().equals(t.getInventoryBin().getId()))
                 .filter(t -> t.getTransactionType() == transactionType)
@@ -83,22 +73,13 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                 .orElse(null);
     }
 
-    private InventoryTransaction createTransaction(
-            InventoryBin inventory,
-            TransactionType transactionType,
-            BigDecimal quantity,
-            String referenceNumber,
-            String referenceType,
-            String remarks,
-            Bin fromBin,
-            Bin toBin) {
-
+    private InventoryTransaction createTransaction(InventoryBin inventory, TransactionType transactionType,
+                                                   BigDecimal quantity, String referenceNumber,
+                                                   String referenceType, String remarks,
+                                                   Bin fromBin, Bin toBin) {
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("Transaction quantity cannot be zero.");
         }
-
-        User user = currentUserService.getCurrentUser();
-
         InventoryTransaction transaction = InventoryTransaction.builder()
                 .inventoryBin(inventory)
                 .transactionType(transactionType)
@@ -106,13 +87,12 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                 .balanceAfter(inventory.getQuantityOnHand())
                 .referenceNumber(referenceNumber)
                 .referenceType(referenceType)
-                .performedBy(user)
+                .performedBy(currentUserService.getCurrentUser())
                 .remarks(remarks)
                 .fromBin(fromBin)
                 .toBin(toBin)
                 .transactionDate(LocalDateTime.now())
                 .build();
-
         return transactionRepository.save(transaction);
     }
 
@@ -141,16 +121,11 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                                              BigDecimal quantity, String referenceNumber,
                                              String referenceType, String remarks) {
         validatePositiveQuantity(quantity);
-
         InventoryBin inventory = getInventoryBin(warehouseId, binId, productId);
-        InventoryTransaction duplicate = findDuplicate(
-                inventory, TransactionType.GOODS_RECEIPT, referenceNumber, referenceType);
-        if (duplicate != null) {
-            return duplicate;
-        }
-
+        InventoryTransaction duplicate = findDuplicate(inventory, TransactionType.GOODS_RECEIPT,
+                referenceNumber, referenceType);
+        if (duplicate != null) return duplicate;
         inventory = updateInventory(inventory, inventory.getQuantityOnHand().add(quantity));
-
         return createTransaction(inventory, TransactionType.GOODS_RECEIPT, quantity,
                 referenceNumber, referenceType, remarks, null, inventory.getBin());
     }
@@ -160,17 +135,12 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
                                            BigDecimal quantity, String referenceNumber,
                                            String referenceType, String remarks) {
         validatePositiveQuantity(quantity);
-
         InventoryBin inventory = getInventoryBin(warehouseId, binId, productId);
-        InventoryTransaction duplicate = findDuplicate(
-                inventory, TransactionType.TRANSFER_OUT, referenceNumber, referenceType);
-        if (duplicate != null) {
-            return duplicate;
-        }
-
+        InventoryTransaction duplicate = findDuplicate(inventory, TransactionType.TRANSFER_OUT,
+                referenceNumber, referenceType);
+        if (duplicate != null) return duplicate;
         validateStock(inventory, quantity);
         inventory = updateInventory(inventory, inventory.getQuantityOnHand().subtract(quantity));
-
         return createTransaction(inventory, TransactionType.TRANSFER_OUT, quantity.negate(),
                 referenceNumber, referenceType, remarks, inventory.getBin(), null);
     }
@@ -182,28 +152,23 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         if (quantity == null || quantity.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalArgumentException("Adjustment quantity cannot be zero.");
         }
-        if (transactionType == null) {
-            throw new IllegalArgumentException("Transaction type is required.");
-        }
+        if (transactionType == null) throw new IllegalArgumentException("Transaction type is required.");
 
         InventoryBin inventory = getInventoryBin(warehouseId, binId, productId);
         String referenceType = transactionType.name();
-        InventoryTransaction duplicate = findDuplicate(
-                inventory, transactionType, referenceNumber, referenceType);
-        if (duplicate != null) {
-            return duplicate;
-        }
+        InventoryTransaction duplicate = findDuplicate(inventory, transactionType, referenceNumber, referenceType);
+        if (duplicate != null) return duplicate;
 
+        BigDecimal amount = quantity.abs();
         BigDecimal newBalance;
-
         switch (transactionType) {
             case ADJUSTMENT_IN, TRANSFER_IN, GOODS_RECEIPT, PURCHASE_RECEIPT,
                     CUSTOMER_RETURN, RETURN_IN, REPLENISHMENT_IN ->
-                    newBalance = inventory.getQuantityOnHand().add(quantity.abs());
+                    newBalance = inventory.getQuantityOnHand().add(amount);
             case ADJUSTMENT_OUT, TRANSFER_OUT, SALE, SUPPLIER_RETURN, WRITE_OFF,
                     PICK, RETURN_OUT, REPLENISHMENT_OUT -> {
-                validateStock(inventory, quantity.abs());
-                newBalance = inventory.getQuantityOnHand().subtract(quantity.abs());
+                validateStock(inventory, amount);
+                newBalance = inventory.getQuantityOnHand().subtract(amount);
             }
             case ADJUSTMENT -> {
                 newBalance = inventory.getQuantityOnHand().add(quantity);
@@ -215,22 +180,18 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         }
 
         inventory = updateInventory(inventory, newBalance);
-
         BigDecimal ledgerQuantity = switch (transactionType) {
             case ADJUSTMENT_OUT, TRANSFER_OUT, SALE, SUPPLIER_RETURN, WRITE_OFF,
-                    PICK, RETURN_OUT, REPLENISHMENT_OUT -> quantity.abs().negate();
-            default -> transactionType == TransactionType.ADJUSTMENT ? quantity : quantity.abs();
+                    PICK, RETURN_OUT, REPLENISHMENT_OUT -> amount.negate();
+            default -> transactionType == TransactionType.ADJUSTMENT ? quantity : amount;
         };
-
         return createTransaction(inventory, transactionType, ledgerQuantity,
                 referenceNumber, referenceType, remarks, null, inventory.getBin());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<InventoryTransaction> findAll() {
-        return transactionRepository.findAll();
-    }
+    public List<InventoryTransaction> findAll() { return transactionRepository.findAll(); }
 
     @Override
     @Transactional(readOnly = true)
@@ -244,8 +205,7 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
         List<InventoryTransaction> transactions = new ArrayList<>();
         transactions.addAll(transactionRepository.findByFromBinIdOrderByTransactionDateDesc(binId));
         transactionRepository.findByToBinIdOrderByTransactionDateDesc(binId).stream()
-                .filter(t -> !transactions.contains(t))
-                .forEach(transactions::add);
+                .filter(t -> !transactions.contains(t)).forEach(transactions::add);
         transactions.sort((a, b) -> b.getTransactionDate().compareTo(a.getTransactionDate()));
         return transactions;
     }
@@ -266,6 +226,12 @@ public class InventoryTransactionServiceImpl implements InventoryTransactionServ
     @Transactional(readOnly = true)
     public List<InventoryTransaction> findByWarehouseCode(String warehouseCode) {
         return transactionRepository.findByInventoryBin_Warehouse_CodeOrderByTransactionDateDesc(warehouseCode);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InventoryTransaction> findBySku(String sku) {
+        return transactionRepository.findByInventoryBin_Product_SkuOrderByTransactionDateDesc(sku);
     }
 
     @Override
