@@ -38,15 +38,15 @@ public interface InventoryTransactionService {
 
     List<InventoryTransaction> findAll();
 
-    List<InventoryTransaction> findByInventoryBin(
-            UUID inventoryBinId);
+    List<InventoryTransaction> findByInventoryBin(UUID inventoryBinId);
 
-    List<InventoryTransaction> findByBin(
-            UUID binId);
+    List<InventoryTransaction> findByBin(UUID binId);
 
-    List<InventoryTransaction> findByReferenceNumber(
-            String referenceNumber);
+    List<InventoryTransaction> findByReferenceNumber(String referenceNumber);
 
-    InventoryTransaction findById(
-            UUID id);
+    List<InventoryTransaction> findByReferenceType(String referenceType);
+
+    List<InventoryTransaction> findByWarehouseCode(String warehouseCode);
+
+    InventoryTransaction findById(UUID id);
 }
