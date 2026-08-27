@@ -5,12 +5,15 @@ import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
+import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisition;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionLine;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionLineRepository;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.purchaserequisition.validator.PurchaseRequisitionValidator;
+import com.digipals.wms.purchasinginforecord.entity.PurchasingInfoRecord;
+import com.digipals.wms.purchasinginforecord.repository.PurchasingInfoRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +29,7 @@ public class PurchaseRequisitionLineServiceImpl implements PurchaseRequisitionLi
     private final PurchaseRequisitionLineRepository repository;
     private final PurchaseRequisitionRepository purchaseRequisitionRepository;
     private final ProductRepository productRepository;
+    private final PurchasingInfoRecordRepository purchasingInfoRecordRepository;
     private final PurchaseRequisitionValidator validator;
 
     private PurchaseRequisition getPurchaseRequisition(UUID id) {
@@ -55,8 +59,7 @@ public class PurchaseRequisitionLineServiceImpl implements PurchaseRequisitionLi
 
         if (repository.existsByPurchaseRequisitionIdAndProductId(
                 requisition.getId(), product.getId())) {
-            throw new RuntimeException(
-                    "Product already exists on this Purchase Requisition.");
+            throw new RuntimeException("Product already exists on this Purchase Requisition.");
         }
 
         PurchaseRequisitionLine line = PurchaseRequisitionLine.builder()
@@ -81,6 +84,49 @@ public class PurchaseRequisitionLineServiceImpl implements PurchaseRequisitionLi
         line.setQuantity(request.getQuantity());
         line.setEstimatedUnitCost(request.getEstimatedUnitCost());
         line.setRemarks(request.getRemarks());
+
+        return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
+    }
+
+    @Override
+    public PurchaseRequisitionLineResponse setSourceOfSupply(
+            UUID id,
+            SetPurchaseRequisitionLineSourceRequest request) {
+
+        PurchaseRequisitionLine line = getLine(id);
+        PurchaseRequisition requisition = line.getPurchaseRequisition();
+        validator.validateDraft(requisition);
+
+        PurchasingInfoRecord pir = purchasingInfoRecordRepository.findById(
+                        request.getPurchasingInfoRecordId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Purchasing Info Record not found."));
+
+        if (pir.getSupplierProduct() == null
+                || pir.getSupplierProduct().getProduct() == null
+                || !pir.getSupplierProduct().getProduct().getId().equals(line.getProduct().getId())) {
+            throw new RuntimeException(
+                    "Purchasing Info Record does not belong to the Product on this requisition line.");
+        }
+
+        if (pir.getWarehouse() == null
+                || requisition.getWarehouse() == null
+                || !pir.getWarehouse().getId().equals(requisition.getWarehouse().getId())) {
+            throw new RuntimeException(
+                    "Purchasing Info Record does not belong to the Purchase Requisition warehouse.");
+        }
+
+        if (pir.getSupplierProduct().getSupplier() == null) {
+            throw new RuntimeException(
+                    "Purchasing Info Record has no supplier assigned.");
+        }
+
+        line.setPurchasingInfoRecord(pir);
+        line.setSourceSupplier(pir.getSupplierProduct().getSupplier());
+
+        if (pir.getLastPurchasePrice() != null) {
+            line.setEstimatedUnitCost(pir.getLastPurchasePrice());
+        }
 
         return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
