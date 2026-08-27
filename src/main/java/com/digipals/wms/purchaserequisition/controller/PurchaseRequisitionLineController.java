@@ -2,6 +2,7 @@ package com.digipals.wms.purchaserequisition.controller;
 
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
+import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionLineService;
 import jakarta.validation.Valid;
@@ -29,21 +30,24 @@ public class PurchaseRequisitionLineController {
     public PurchaseRequisitionLineResponse create(
             @PathVariable UUID requisitionId,
             @Valid @RequestBody CreatePurchaseRequisitionLineRequest request) {
-
         return service.create(requisitionId, request);
+    }
+
+    @PostMapping("/lines/{id}/source-of-supply")
+    public PurchaseRequisitionLineResponse setSourceOfSupply(
+            @PathVariable UUID id,
+            @Valid @RequestBody SetPurchaseRequisitionLineSourceRequest request) {
+        return service.setSourceOfSupply(id, request);
     }
 
     @GetMapping("/{requisitionId}/lines")
     public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
             @PathVariable UUID requisitionId) {
-
         return service.findByPurchaseRequisition(requisitionId);
     }
 
     @GetMapping("/lines/{id}")
-    public PurchaseRequisitionLineResponse findById(
-            @PathVariable UUID id) {
-
+    public PurchaseRequisitionLineResponse findById(@PathVariable UUID id) {
         return service.findById(id);
     }
 
@@ -51,7 +55,6 @@ public class PurchaseRequisitionLineController {
     public PurchaseRequisitionLineResponse update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdatePurchaseRequisitionLineRequest request) {
-
         return service.update(id, request);
     }
 
