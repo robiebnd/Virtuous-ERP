@@ -40,7 +40,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class GoodsReceiptServiceImpl implements GoodsReceiptService {
-
     private final GoodsReceiptRepository repository;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final DocumentNumberService documentNumberService;
@@ -50,35 +49,19 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final GoodsMovementService goodsMovementService;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
 
-    private GoodsReceipt getGoodsReceipt(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found."));
-    }
-    private GoodsReceipt getGoodsReceiptWithLines(UUID id) {
-        return repository.findWithLinesById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found."));
-    }
-    private GoodsReceipt getGoodsReceiptByNumber(String grnNumber) {
-        return repository.findByGrnNumber(grnNumber).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber));
-    }
-    private GoodsReceipt getGoodsReceiptByNumberWithLines(String grnNumber) {
-        return repository.findWithLinesByGrnNumber(grnNumber).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber));
-    }
+    private GoodsReceipt getGoodsReceipt(UUID id) { return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
+    private GoodsReceipt getGoodsReceiptWithLines(UUID id) { return repository.findWithLinesById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
+    private GoodsReceipt getGoodsReceiptByNumberWithLines(String grnNumber) { return repository.findWithLinesByGrnNumber(grnNumber).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found: " + grnNumber)); }
     private PurchaseOrder resolvePurchaseOrder(CreateGoodsReceiptRequest request) {
-        PurchaseOrder byId = null;
-        PurchaseOrder byNumber = null;
+        PurchaseOrder byId = null, byNumber = null;
         if (request.getPurchaseOrderId() != null) byId = getPurchaseOrder(request.getPurchaseOrderId());
-        if (request.getPurchaseOrderNumber() != null && !request.getPurchaseOrderNumber().isBlank()) {
-            byNumber = purchaseOrderRepository.findByPoNumber(request.getPurchaseOrderNumber().trim()).orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found: " + request.getPurchaseOrderNumber()));
-        }
+        if (request.getPurchaseOrderNumber() != null && !request.getPurchaseOrderNumber().isBlank()) byNumber = purchaseOrderRepository.findByPoNumber(request.getPurchaseOrderNumber().trim()).orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found: " + request.getPurchaseOrderNumber()));
         if (byId == null && byNumber == null) throw new InvalidWorkflowException("Purchase Order ID or Purchase Order number is required.");
         if (byId != null && byNumber != null && !byId.getId().equals(byNumber.getId())) throw new InvalidWorkflowException("Purchase Order ID and Purchase Order number refer to different Purchase Orders.");
         return byId != null ? byId : byNumber;
     }
-    private PurchaseOrder getPurchaseOrder(UUID id) {
-        return purchaseOrderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found."));
-    }
-    private Bin getReceivingBin(UUID warehouseId) {
-        return binRepository.findByWarehouseIdAndReceivingBinTrue(warehouseId).orElseThrow(() -> new ResourceNotFoundException("Receiving Bin not configured for the Purchase Order warehouse."));
-    }
+    private PurchaseOrder getPurchaseOrder(UUID id) { return purchaseOrderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found.")); }
+    private Bin getReceivingBin(UUID warehouseId) { return binRepository.findByWarehouseIdAndReceivingBinTrue(warehouseId).orElseThrow(() -> new ResourceNotFoundException("Receiving Bin not configured for the Purchase Order warehouse.")); }
 
     @Override
     public GoodsReceiptResponse create(CreateGoodsReceiptRequest request) {
@@ -87,8 +70,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         if (purchaseOrder.getWarehouse() == null) throw new InvalidWorkflowException("Purchase Order has no warehouse assigned.");
         List<PurchaseOrderLine> outstandingLines = purchaseOrderLineRepository.findByPurchaseOrderId(purchaseOrder.getId()).stream().filter(line -> line.getOutstandingQuantity() != null && line.getOutstandingQuantity().compareTo(BigDecimal.ZERO) > 0).toList();
         if (outstandingLines.isEmpty()) throw new InvalidWorkflowException("Purchase Order " + purchaseOrder.getPoNumber() + " has no outstanding quantities to receive. No Goods Receipt was created.");
-        User currentUser = currentUserService.getCurrentUser();
-        GoodsReceipt goodsReceipt = GoodsReceipt.builder().grnNumber(documentNumberService.next(DocumentType.GOODS_RECEIPT)).purchaseOrder(purchaseOrder).warehouse(purchaseOrder.getWarehouse()).receivedBy(currentUser).status(ReceiptStatus.DRAFT).supplierDeliveryNote(request.getSupplierDeliveryNote()).remarks(request.getRemarks()).receivedDate(LocalDateTime.now()).build();
+        GoodsReceipt goodsReceipt = GoodsReceipt.builder().grnNumber(documentNumberService.next(DocumentType.GOODS_RECEIPT)).purchaseOrder(purchaseOrder).warehouse(purchaseOrder.getWarehouse()).receivedBy(currentUserService.getCurrentUser()).status(ReceiptStatus.DRAFT).supplierDeliveryNote(request.getSupplierDeliveryNote()).remarks(request.getRemarks()).receivedDate(LocalDateTime.now()).build();
         goodsReceipt = repository.save(goodsReceipt);
         for (PurchaseOrderLine poLine : outstandingLines) {
             GoodsReceiptLine receiptLine = GoodsReceiptLine.builder().goodsReceipt(goodsReceipt).purchaseOrderLine(poLine).product(poLine.getProduct()).orderedQuantity(poLine.getOutstandingQuantity()).receivedQuantity(BigDecimal.ZERO).acceptedQuantity(BigDecimal.ZERO).rejectedQuantity(BigDecimal.ZERO).unitCost(poLine.getUnitPrice()).remarks(null).build();
@@ -106,7 +88,6 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         if (goodsReceipt.getStatus() != ReceiptStatus.DRAFT) throw new InvalidWorkflowException("Only draft Goods Receipts can be updated.");
         goodsReceipt.setSupplierDeliveryNote(request.getSupplierDeliveryNote());
         goodsReceipt.setRemarks(request.getRemarks());
-
         if (request.getLines() != null) {
             if (request.getLines().isEmpty()) throw new InvalidWorkflowException("Receipt lines cannot be empty when supplied.");
             for (UpdateGoodsReceiptRequest.LineQuantityRequest requestedLine : request.getLines()) {
@@ -119,15 +100,9 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                 if (received.compareTo(BigDecimal.ZERO) < 0 || accepted.compareTo(BigDecimal.ZERO) < 0 || rejected.compareTo(BigDecimal.ZERO) < 0) throw new InvalidWorkflowException("Receipt quantities cannot be negative.");
                 if (accepted.add(rejected).compareTo(received) != 0) throw new InvalidWorkflowException("Accepted quantity + rejected quantity must equal received quantity for SKU " + requestedLine.getSku() + ".");
                 if (received.compareTo(ordered) > 0) throw new InvalidWorkflowException("Received quantity cannot exceed the outstanding quantity for SKU " + requestedLine.getSku() + ".");
-
-                // Outstanding quantity is the current quantity still to be received on this GRN line.
-                // It changes immediately when the draft receipt quantities are entered.
-                BigDecimal remainingQuantity = ordered.subtract(received);
                 receiptLine.setReceivedQuantity(received);
                 receiptLine.setAcceptedQuantity(accepted);
                 receiptLine.setRejectedQuantity(rejected);
-                receiptLine.setOutstandingQuantity(remainingQuantity.max(BigDecimal.ZERO));
-
                 if (requestedLine.getRemarks() != null) receiptLine.setRemarks(requestedLine.getRemarks());
                 goodsReceiptLineRepository.save(receiptLine);
             }
@@ -159,7 +134,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                 goodsMovementService.post(movement.getId());
             }
             purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
-            purchaseOrderLine.setOutstandingQuantity(purchaseOrderLine.getQuantity().subtract(newReceivedQuantity));
+            purchaseOrderLine.setOutstandingQuantity(purchaseOrderLine.getQuantity().subtract(newReceivedQuantity).max(BigDecimal.ZERO));
             purchaseOrderLineRepository.save(purchaseOrderLine);
         }
         updatePurchaseOrderReceiptStatus(goodsReceipt.getPurchaseOrder());
