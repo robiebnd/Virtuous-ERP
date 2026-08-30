@@ -152,6 +152,42 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             throw new InvalidWorkflowException("Only draft Purchase Orders can be approved.");
         }
 
+        List<PurchaseOrderLine> lines = purchaseOrderLineRepository
+                .findByPurchaseOrderId(purchaseOrder.getId());
+        if (lines.isEmpty()) {
+            throw new InvalidWorkflowException("Purchase Order cannot be approved without any lines.");
+        }
+
+        if (purchaseOrder.getPurchaseRequisition() != null) {
+            PurchaseRequisition requisition = purchaseOrder.getPurchaseRequisition();
+            if (requisition.getStatus() != PurchaseRequisitionStatus.CONVERTED_TO_PO) {
+                throw new InvalidWorkflowException(
+                        "Purchase Requisition must be converted to Purchase Order before the Purchase Order can be approved.");
+            }
+
+            if (requisition.getSupplier() == null || purchaseOrder.getSupplier() == null
+                    || !requisition.getSupplier().getId().equals(purchaseOrder.getSupplier().getId())) {
+                throw new InvalidWorkflowException(
+                        "Purchase Order supplier must match its Purchase Requisition supplier.");
+            }
+        }
+
+        for (PurchaseOrderLine line : lines) {
+            if (line.getProduct() == null) {
+                throw new InvalidWorkflowException("Purchase Order contains a line without a product.");
+            }
+            if (line.getQuantity() == null || line.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidWorkflowException(
+                        "Purchase Order line quantity must be greater than zero for product "
+                                + line.getProduct().getSku() + ".");
+            }
+            if (line.getUnitPrice() == null || line.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidWorkflowException(
+                        "Purchase Order line unit price must be greater than zero for product "
+                                + line.getProduct().getSku() + ".");
+            }
+        }
+
         purchaseOrder.setStatus(PurchaseOrderStatus.APPROVED);
         purchaseOrder.setApprovedBy(currentUserService.getCurrentUser());
         purchaseOrder.setApprovedAt(LocalDateTime.now());
