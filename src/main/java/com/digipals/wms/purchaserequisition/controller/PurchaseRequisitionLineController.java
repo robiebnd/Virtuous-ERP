@@ -3,8 +3,9 @@ package com.digipals.wms.purchaserequisition.controller;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
 import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
-import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
+import com.digals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionLineService;
+import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,11 +26,26 @@ import java.util.UUID;
 public class PurchaseRequisitionLineController {
 
     private final PurchaseRequisitionLineService service;
+    private final PurchaseRequisitionService purchaseRequisitionService;
 
     @PostMapping("/{requisitionId}/lines")
     public PurchaseRequisitionLineResponse create(
             @PathVariable UUID requisitionId,
             @Valid @RequestBody CreatePurchaseRequisitionLineRequest request) {
+        return service.create(requisitionId, request);
+    }
+
+    /**
+     * Frontend-facing route. Requisition numbers are business identifiers;
+     * UUIDs remain internal implementation details.
+     */
+    @PostMapping("/number/{requisitionNumber}/lines")
+    public PurchaseRequisitionLineResponse createByNumber(
+            @PathVariable String requisitionNumber,
+            @Valid @RequestBody CreatePurchaseRequisitionLineRequest request) {
+        UUID requisitionId = purchaseRequisitionService
+                .findByRequisitionNumber(requisitionNumber)
+                .getId();
         return service.create(requisitionId, request);
     }
 
@@ -40,6 +56,9 @@ public class PurchaseRequisitionLineController {
         return service.setSourceOfSupply(id, request);
     }
 
+    /**
+     * Frontend-facing source-of-supply route using the requisition line UUID.
+     */
     @GetMapping("/{requisitionId}/lines")
     public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
             @PathVariable UUID requisitionId) {
