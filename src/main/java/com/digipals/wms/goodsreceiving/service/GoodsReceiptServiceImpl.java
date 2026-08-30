@@ -130,7 +130,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         if (outstandingLines.isEmpty()) {
             throw new InvalidWorkflowException(
                     "Purchase Order " + purchaseOrder.getPoNumber()
-                            + " has no outstanding quantities to receive.");
+                            + " has no outstanding quantities to receive. No Goods Receipt was created.");
         }
 
         User currentUser = currentUserService.getCurrentUser();
@@ -148,8 +148,8 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
 
         goodsReceipt = repository.save(goodsReceipt);
 
-        // A GRN created from a PO is created together with its outstanding lines.
-        // This prevents empty GRNs and removes a mandatory intermediate loading step.
+        // A GRN created from a PO must contain every currently outstanding PO line.
+        // The GRN is never intentionally created as an empty document.
         for (PurchaseOrderLine poLine : outstandingLines) {
             GoodsReceiptLine receiptLine = GoodsReceiptLine.builder()
                     .goodsReceipt(goodsReceipt)
@@ -164,7 +164,13 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     .build();
 
             goodsReceiptLineRepository.save(receiptLine);
+            goodsReceipt.getLines().add(receiptLine);
         }
+
+        // Flush the header and lines before returning the response so the persisted
+        // GRN and its lines are visible immediately and atomically.
+        goodsReceiptLineRepository.flush();
+        repository.flush();
 
         return GoodsReceiptMapper.toResponse(getGoodsReceiptWithLines(goodsReceipt.getId()));
     }
@@ -363,7 +369,11 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                     .build();
 
             goodsReceiptLineRepository.save(receiptLine);
+            goodsReceipt.getLines().add(receiptLine);
         }
+
+        goodsReceiptLineRepository.flush();
+        repository.flush();
 
         GoodsReceipt reloadedGoodsReceipt = getGoodsReceiptWithLines(goodsReceipt.getId());
         return GoodsReceiptMapper.toResponse(reloadedGoodsReceipt);
