@@ -110,6 +110,16 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     public GoodsReceiptResponse create(CreateGoodsReceiptRequest request) {
         PurchaseOrder purchaseOrder = resolvePurchaseOrder(request);
 
+        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED
+                && purchaseOrder.getStatus() != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
+            throw new InvalidWorkflowException(
+                    "Only approved or partially received Purchase Orders can be received.");
+        }
+
+        if (purchaseOrder.getWarehouse() == null) {
+            throw new InvalidWorkflowException("Purchase Order has no warehouse assigned.");
+        }
+
         List<PurchaseOrderLine> outstandingLines = purchaseOrderLineRepository
                 .findByPurchaseOrderId(purchaseOrder.getId())
                 .stream()
@@ -121,16 +131,6 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
             throw new InvalidWorkflowException(
                     "Purchase Order " + purchaseOrder.getPoNumber()
                             + " has no outstanding quantities to receive.");
-        }
-
-        if (purchaseOrder.getStatus() != PurchaseOrderStatus.APPROVED
-                && purchaseOrder.getStatus() != PurchaseOrderStatus.PARTIALLY_RECEIVED) {
-            throw new InvalidWorkflowException(
-                    "Only approved or partially received Purchase Orders can be received.");
-        }
-
-        if (purchaseOrder.getWarehouse() == null) {
-            throw new InvalidWorkflowException("Purchase Order has no warehouse assigned.");
         }
 
         User currentUser = currentUserService.getCurrentUser();
@@ -146,7 +146,27 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                 .receivedDate(LocalDateTime.now())
                 .build();
 
-        return GoodsReceiptMapper.toResponse(repository.save(goodsReceipt));
+        goodsReceipt = repository.save(goodsReceipt);
+
+        // A GRN created from a PO is created together with its outstanding lines.
+        // This prevents empty GRNs and removes a mandatory intermediate loading step.
+        for (PurchaseOrderLine poLine : outstandingLines) {
+            GoodsReceiptLine receiptLine = GoodsReceiptLine.builder()
+                    .goodsReceipt(goodsReceipt)
+                    .purchaseOrderLine(poLine)
+                    .product(poLine.getProduct())
+                    .orderedQuantity(poLine.getOutstandingQuantity())
+                    .receivedQuantity(BigDecimal.ZERO)
+                    .acceptedQuantity(BigDecimal.ZERO)
+                    .rejectedQuantity(BigDecimal.ZERO)
+                    .unitCost(poLine.getUnitPrice())
+                    .remarks(null)
+                    .build();
+
+            goodsReceiptLineRepository.save(receiptLine);
+        }
+
+        return GoodsReceiptMapper.toResponse(getGoodsReceiptWithLines(goodsReceipt.getId()));
     }
 
     @Override
