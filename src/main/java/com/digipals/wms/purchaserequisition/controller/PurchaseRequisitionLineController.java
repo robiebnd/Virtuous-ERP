@@ -3,7 +3,7 @@ package com.digipals.wms.purchaserequisition.controller;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
 import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
-import com.digals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
+import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionLineService;
 import com.digipals.wms.purchaserequisition.service.PurchaseRequisitionService;
 import jakarta.validation.Valid;
@@ -56,9 +56,6 @@ public class PurchaseRequisitionLineController {
         return service.setSourceOfSupply(id, request);
     }
 
-    /**
-     * Frontend-facing source-of-supply route using the requisition line UUID.
-     */
     @GetMapping("/{requisitionId}/lines")
     public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
             @PathVariable UUID requisitionId) {
