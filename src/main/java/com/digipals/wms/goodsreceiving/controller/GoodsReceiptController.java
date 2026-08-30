@@ -57,6 +57,19 @@ public class GoodsReceiptController {
         return service.update(id, request);
     }
 
+    /**
+     * Updates a draft GRN using its human-facing GRN number.
+     * Product SKUs identify lines inside the request body; line UUIDs are not
+     * required in the frontend URL.
+     */
+    @PutMapping("/number/{grnNumber}")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_UPDATE')")
+    public GoodsReceiptResponse updateByNumber(
+            @PathVariable String grnNumber,
+            @Valid @RequestBody UpdateGoodsReceiptRequest request) {
+        return service.update(service.findByNumber(grnNumber).getId(), request);
+    }
+
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_APPROVE')")
     public GoodsReceiptResponse approve(@PathVariable UUID id) {
@@ -121,6 +134,12 @@ public class GoodsReceiptController {
     @PreAuthorize("hasAuthority('GOODS_RECEIPT_DELETE')")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
+    }
+
+    @DeleteMapping("/number/{grnNumber}")
+    @PreAuthorize("hasAuthority('GOODS_RECEIPT_DELETE')")
+    public void deleteByNumber(@PathVariable String grnNumber) {
+        service.delete(service.findByNumber(grnNumber).getId());
     }
 
     private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
