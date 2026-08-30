@@ -15,10 +15,11 @@ import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
 import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptLineRepository;
 import com.digipals.wms.goodsreceiving.repository.GoodsReceiptRepository;
-import com.digipals.wms.inventory.service.InventoryService;
-import com.digipals.wms.inventorymovement.entity.InventoryMovement;
-import com.digipals.wms.inventorymovement.entity.InventoryMovementType;
-import com.digipals.wms.inventorymovement.service.InventoryMovementService;
+import com.digipals.wms.goodsmovement.dto.CreateGoodsMovementLineRequest;
+import com.digipals.wms.goodsmovement.dto.CreateGoodsMovementRequest;
+import com.digipals.wms.goodsmovement.dto.GoodsMovementResponse;
+import com.digipals.wms.goodsmovement.entity.GoodsMovementType;
+import com.digipals.wms.goodsmovement.service.GoodsMovementService;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderLine;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
@@ -46,8 +47,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final CurrentUserService currentUserService;
     private final BinRepository binRepository;
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
-    private final InventoryService inventoryService;
-    private final InventoryMovementService inventoryMovementService;
+    private final GoodsMovementService goodsMovementService;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
 
     private GoodsReceipt getGoodsReceipt(UUID id) {
@@ -196,30 +196,23 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
             }
 
             if (acceptedQuantity.compareTo(BigDecimal.ZERO) > 0) {
-                inventoryService.receiveStock(
-                        goodsReceipt.getWarehouse(),
-                        receivingBin,
-                        receiptLine.getProduct(),
-                        acceptedQuantity,
-                        goodsReceipt.getGrnNumber(),
-                        "GOODS_RECEIPT",
-                        receiptLine.getRemarks(),
-                        currentUser);
-
-                inventoryMovementService.create(InventoryMovement.builder()
+                CreateGoodsMovementRequest movementRequest = CreateGoodsMovementRequest.builder()
+                        .movementType(GoodsMovementType.GOODS_RECEIPT)
                         .warehouseId(goodsReceipt.getWarehouse().getId())
-                        .fromBinId(null)
-                        .toBinId(receivingBin.getId())
-                        .productId(receiptLine.getProduct().getId())
-                        .sku(receiptLine.getProduct().getSku())
-                        .quantity(acceptedQuantity)
-                        .movementType(InventoryMovementType.RECEIPT)
-                        .referenceType("GRN")
-                        .referenceId(goodsReceipt.getId())
                         .referenceNumber(goodsReceipt.getGrnNumber())
-                        .performedById(currentUser.getId())
-                        .remarks(receiptLine.getRemarks())
-                        .build());
+                        .referenceType("GRN")
+                        .remarks(goodsReceipt.getRemarks())
+                        .lines(List.of(CreateGoodsMovementLineRequest.builder()
+                                .productId(receiptLine.getProduct().getId())
+                                .toBinId(receivingBin.getId())
+                                .quantity(acceptedQuantity)
+                                .unitCost(receiptLine.getUnitCost())
+                                .remarks(receiptLine.getRemarks())
+                                .build()))
+                        .build();
+
+                GoodsMovementResponse movement = goodsMovementService.create(movementRequest);
+                goodsMovementService.post(movement.getId());
             }
 
             purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
