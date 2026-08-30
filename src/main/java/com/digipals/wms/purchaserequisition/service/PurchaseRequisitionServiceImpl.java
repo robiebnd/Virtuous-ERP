@@ -119,6 +119,39 @@ public class PurchaseRequisitionServiceImpl implements PurchaseRequisitionServic
                             .quantity(line.getQuantity())
                             .estimatedUnitCost(unitCost)
                             .estimatedLineTotal(lineTotal)
+                            .sourceSupplierId(
+                                    line.getSourceSupplier() == null
+                                            ? null
+                                            : line.getSourceSupplier().getId()
+                            )
+                            .sourceSupplierCode(
+                                    line.getSourceSupplier() == null
+                                            ? null
+                                            : line.getSourceSupplier().getCode()
+                            )
+                            .sourceSupplierName(
+                                    line.getSourceSupplier() == null
+                                            ? null
+                                            : line.getSourceSupplier().getName()
+                            )
+                            .purchasingInfoRecordId(
+                                    line.getPurchasingInfoRecord() == null
+                                            ? null
+                                            : line.getPurchasingInfoRecord().getId()
+                            )
+                            .plannedDeliveryDays(
+                                    line.getPurchasingInfoRecord() == null
+                                            ? null
+                                            : line.getPurchasingInfoRecord().getPlannedDeliveryDays()
+                            )
+                            .supplierItemCode(
+                                    line.getPurchasingInfoRecord() == null
+                                            || line.getPurchasingInfoRecord().getSupplierProduct() == null
+                                            ? null
+                                            : line.getPurchasingInfoRecord()
+                                                    .getSupplierProduct()
+                                                    .getSupplierItemCode()
+                            )
                             .remarks(line.getRemarks())
                             .build();
                 })
