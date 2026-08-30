@@ -1,5 +1,6 @@
 package com.digipals.wms.purchaserequisition.controller;
 
+import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
 import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
@@ -43,10 +44,19 @@ public class PurchaseRequisitionLineController {
     public PurchaseRequisitionLineResponse createByNumber(
             @PathVariable String requisitionNumber,
             @Valid @RequestBody CreatePurchaseRequisitionLineRequest request) {
-        UUID requisitionId = purchaseRequisitionService
-                .findByRequisitionNumber(requisitionNumber)
-                .getId();
-        return service.create(requisitionId, request);
+        String normalizedNumber = requisitionNumber == null ? "" : requisitionNumber.trim();
+        if (normalizedNumber.isBlank()) {
+            throw new IllegalArgumentException("Purchase Requisition number is required.");
+        }
+
+        PurchaseRequisitionResponseMatch match = purchaseRequisitionService.findAll().stream()
+                .filter(item -> normalizedNumber.equalsIgnoreCase(item.getRequisitionNumber()))
+                .map(item -> new PurchaseRequisitionResponseMatch(item.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Purchase Requisition not found: " + normalizedNumber));
+
+        return service.create(match.id(), request);
     }
 
     @PostMapping("/lines/{id}/source-of-supply")
@@ -78,4 +88,6 @@ public class PurchaseRequisitionLineController {
     public void delete(@PathVariable UUID id) {
         service.delete(id);
     }
+
+    private record PurchaseRequisitionResponseMatch(UUID id) {}
 }
