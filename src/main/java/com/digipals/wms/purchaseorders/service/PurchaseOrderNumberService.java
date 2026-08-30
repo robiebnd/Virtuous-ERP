@@ -7,6 +7,7 @@ import com.digipals.wms.purchaseorders.entity.PurchaseOrder;
 import com.digipals.wms.purchaseorders.entity.PurchaseOrderStatus;
 import com.digipals.wms.purchaseorders.repository.PurchaseOrderRepository;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisition;
+import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionStatus;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.supplier.entity.Supplier;
@@ -49,6 +50,23 @@ public class PurchaseOrderNumberService {
         if (purchaseOrder.getStatus() != PurchaseOrderStatus.DRAFT) {
             throw new InvalidWorkflowException("Only draft Purchase Orders can be approved.");
         }
+
+        // A PO created from a requisition may only be approved after its
+        // requisition has completed the required approval/conversion step.
+        if (purchaseOrder.getPurchaseRequisition() != null) {
+            PurchaseRequisition requisition = purchaseOrder.getPurchaseRequisition();
+            PurchaseRequisitionStatus status = requisition.getStatus();
+            if (status != PurchaseRequisitionStatus.CONVERTED_TO_PO) {
+                throw new InvalidWorkflowException(
+                        "Purchase Requisition " + requisition.getRequisitionNumber()
+                                + " must be approved and converted before this Purchase Order can be approved.");
+            }
+        }
+
+        if (purchaseOrder.getLines() == null || purchaseOrder.getLines().isEmpty()) {
+            throw new InvalidWorkflowException("Purchase Order cannot be approved without any Purchase Order lines.");
+        }
+
         purchaseOrder.setStatus(PurchaseOrderStatus.APPROVED);
         purchaseOrder.setApprovedBy(currentUserService.getCurrentUser());
         purchaseOrder.setApprovedAt(LocalDateTime.now());
