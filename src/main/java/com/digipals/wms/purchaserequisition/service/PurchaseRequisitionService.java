@@ -11,6 +11,7 @@ public interface PurchaseRequisitionService {
     PurchaseRequisitionResponse create(CreatePurchaseRequisitionRequest request);
     PurchaseRequisitionResponse update(UUID id, UpdatePurchaseRequisitionRequest request);
     PurchaseRequisitionResponse findById(UUID id);
+    PurchaseRequisitionResponse findByRequisitionNumber(String requisitionNumber);
     List<PurchaseRequisitionResponse> findAll();
     List<PurchaseRequisitionResponse> findByStatus(PurchaseRequisitionStatus status);
     List<PurchaseRequisitionResponse> findByWarehouse(UUID warehouseId);
