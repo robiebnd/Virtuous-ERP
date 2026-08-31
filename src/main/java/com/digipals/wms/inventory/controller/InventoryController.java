@@ -1,15 +1,15 @@
 package com.digipals.wms.inventory.controller;
 
-import com.digipals.wms.bin.entity.Bin;
-import com.digipals.wms.bin.repository.BinRepository;
 import com.digipals.wms.common.mapper.InventoryBinMapper;
+import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.inventorybin.dto.InventoryBinResponse;
 import com.digipals.wms.inventorybin.entity.InventoryBin;
-import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
+import com.digipals.wms.bin.entity.Bin;
+import com.digipals.wms.bin.repository.BinRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -67,7 +67,11 @@ public class InventoryController {
         return InventoryBinMapper.toResponse(service.getInventory(warehouseId, binId, productId));
     }
 
-    @GetMapping("/by-code/warehouse/{warehouseCode}/bin/{binCode}/product/{sku}")
+    /**
+     * Public/business-key inventory lookup. UUIDs remain internal.
+     * Example: /api/inventory/warehouse/WH003/bin/STORAGE-01/product/SKU-205817
+     */
+    @GetMapping("/warehouse/{warehouseCode}/bin/{binCode}/product/{sku}")
     public InventoryBinResponse getInventoryByCodes(
             @PathVariable String warehouseCode,
             @PathVariable String binCode,
