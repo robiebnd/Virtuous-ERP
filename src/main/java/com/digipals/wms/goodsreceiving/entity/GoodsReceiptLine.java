@@ -33,7 +33,7 @@ public class GoodsReceiptLine extends BaseEntity {
     @Column(name = "ordered_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal orderedQuantity;
 
-    /** Quantity received against the linked PO line before this GRN was created. */
+    /** Quantity already received before this GRN was created. This is historical and must not be overwritten on approval. */
     @Column(name = "previously_received_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal previouslyReceivedQuantity;
 
@@ -51,4 +51,13 @@ public class GoodsReceiptLine extends BaseEntity {
 
     @Column(length = 500)
     private String remarks;
+
+    @PrePersist
+    private void initializePreviouslyReceivedQuantity() {
+        if (previouslyReceivedQuantity == null) {
+            previouslyReceivedQuantity = purchaseOrderLine == null || purchaseOrderLine.getReceivedQuantity() == null
+                    ? BigDecimal.ZERO
+                    : purchaseOrderLine.getReceivedQuantity();
+        }
+    }
 }
