@@ -15,11 +15,9 @@ public final class GoodsReceiptLineMapper {
         if (line == null) return null;
 
         PurchaseOrderLine poLine = line.getPurchaseOrderLine();
-        BigDecimal previouslyReceivedQuantity = poLine == null || poLine.getReceivedQuantity() == null
-                ? BigDecimal.ZERO : poLine.getReceivedQuantity();
+        BigDecimal previouslyReceivedQuantity = line.getPreviouslyReceivedQuantity() == null
+                ? BigDecimal.ZERO : line.getPreviouslyReceivedQuantity();
 
-        // Outstanding is always the current quantity still to be received for this GRN line.
-        // It must reflect the quantities entered on the draft GRN immediately.
         BigDecimal orderedQuantity = line.getOrderedQuantity() == null ? BigDecimal.ZERO : line.getOrderedQuantity();
         BigDecimal receivedQuantity = line.getReceivedQuantity() == null ? BigDecimal.ZERO : line.getReceivedQuantity();
         BigDecimal outstandingQuantity = orderedQuantity.subtract(receivedQuantity).max(BigDecimal.ZERO);
