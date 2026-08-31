@@ -59,7 +59,11 @@ public class InventoryController {
         return InventoryBinMapper.toResponse(service.adjustStock(id, quantity));
     }
 
-    @GetMapping("/warehouse/{warehouseId}/bin/{binId}/product/{productId}")
+    /**
+     * Internal UUID lookup. UUIDs are deliberately kept behind an explicit /id path
+     * so this cannot conflict with the public business-key route below.
+     */
+    @GetMapping("/id/warehouse/{warehouseId}/bin/{binId}/product/{productId}")
     public InventoryBinResponse getInventory(
             @PathVariable UUID warehouseId,
             @PathVariable UUID binId,
