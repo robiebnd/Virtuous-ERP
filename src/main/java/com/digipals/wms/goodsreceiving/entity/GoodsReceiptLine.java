@@ -19,56 +19,34 @@ import java.math.BigDecimal;
 public class GoodsReceiptLine extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "goods_receipt_id",
-            nullable = false)
+    @JoinColumn(name = "goods_receipt_id", nullable = false)
     private GoodsReceipt goodsReceipt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "purchase_order_line_id",
-            nullable = false)
+    @JoinColumn(name = "purchase_order_line_id", nullable = false)
     private PurchaseOrderLine purchaseOrderLine;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "product_id",
-            nullable = false)
+    @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(
-            name = "ordered_quantity",
-            nullable = false,
-            precision = 18,
-            scale = 2)
+    @Column(name = "ordered_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal orderedQuantity;
 
-    @Column(
-            name = "received_quantity",
-            nullable = false,
-            precision = 18,
-            scale = 2)
+    /** Quantity received against the linked PO line before this GRN was created. */
+    @Column(name = "previously_received_quantity", nullable = false, precision = 18, scale = 2)
+    private BigDecimal previouslyReceivedQuantity;
+
+    @Column(name = "received_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal receivedQuantity;
 
-    @Column(
-            name = "accepted_quantity",
-            nullable = false,
-            precision = 18,
-            scale = 2)
+    @Column(name = "accepted_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal acceptedQuantity;
 
-    @Column(
-            name = "rejected_quantity",
-            nullable = false,
-            precision = 18,
-            scale = 2)
+    @Column(name = "rejected_quantity", nullable = false, precision = 18, scale = 2)
     private BigDecimal rejectedQuantity;
 
-    @Column(
-            name = "unit_cost",
-            nullable = false,
-            precision = 18,
-            scale = 2)
+    @Column(name = "unit_cost", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitCost;
 
     @Column(length = 500)
