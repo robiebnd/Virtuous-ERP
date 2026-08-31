@@ -1,2 +1,0 @@
--- Intentionally empty placeholder.
--- This file must not be used; migration sequence continues at V24 in the existing database history.
