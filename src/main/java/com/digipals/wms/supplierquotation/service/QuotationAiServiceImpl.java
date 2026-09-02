@@ -2,6 +2,10 @@ package com.digipals.wms.supplierquotation.service;
 
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
+import com.digipals.wms.products.Product;
+import com.digipals.wms.productsupplieridentifier.entity.ProductSupplierIdentifier;
+import com.digipals.wms.productsupplieridentifier.repository.ProductSupplierIdentifierRepository;
+import com.digipals.wms.purchaserequisition.entity.PurchaseRequisitionLine;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionLineRepository;
 import com.digipals.wms.purchaserequisition.repository.PurchaseRequisitionRepository;
 import com.digipals.wms.supplier.entity.Supplier;
@@ -22,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,11 +47,142 @@ public class QuotationAiServiceImpl implements QuotationAiService {
     private final PurchaseRequisitionRepository requisitionRepository;
     private final PurchaseRequisitionLineRepository requisitionLineRepository;
     private final SupplierRepository supplierRepository;
+    private final ProductSupplierIdentifierRepository identifierRepository;
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> recommend(UUID purchaseRequisitionId) {
-        throw new InvalidWorkflowException("Quotation recommendation remains available through the configured AI provider and is not part of supplier-item-code mapping.");
+        if (purchaseRequisitionId == null) {
+            throw new InvalidWorkflowException("Purchase Requisition is required.");
+        }
+
+        requisitionRepository.findById(purchaseRequisitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase Requisition not found."));
+
+        List<PurchaseRequisitionLine> requisitionLines = requisitionLineRepository
+                .findByPurchaseRequisitionId(purchaseRequisitionId);
+        if (requisitionLines.isEmpty()) {
+            throw new InvalidWorkflowException("Purchase Requisition has no lines to evaluate.");
+        }
+
+        List<SupplierQuotation> quotations = quotationRepository
+                .findByPurchaseRequisitionIdOrderByCreatedAtDesc(purchaseRequisitionId);
+        if (quotations.isEmpty()) {
+            throw new InvalidWorkflowException("No supplier quotations are available for this Purchase Requisition.");
+        }
+
+        List<Map<String, Object>> candidates = new ArrayList<>();
+        for (SupplierQuotation quotation : quotations) {
+            Map<String, Object> extraction = extractLinesFromQuotation(quotation.getId());
+            Object rawLines = extraction.get("lines");
+            if (!(rawLines instanceof List<?> extractedLines)) continue;
+
+            for (Object rawLine : extractedLines) {
+                if (!(rawLine instanceof Map<?, ?> raw)) continue;
+                String supplierItemCode = text(raw.get("supplierItemCode"));
+                String legacySku = text(raw.get("sku"));
+                String description = text(raw.get("description"));
+                BigDecimal unitPrice = decimal(raw.get("unitPrice"));
+                String currency = text(raw.get("currency"));
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                Product product = resolveProduct(quotation.getSupplier(), supplierItemCode, legacySku);
+                if (product == null) continue;
+
+                Map<String, Object> candidate = new LinkedHashMap<>();
+                candidate.put("quotationId", quotation.getId());
+                candidate.put("quotationNumber", quotation.getQuotationNumber());
+                candidate.put("supplierId", quotation.getSupplier().getId());
+                candidate.put("supplierCode", quotation.getSupplier().getCode());
+                candidate.put("supplierName", quotation.getSupplier().getName());
+                candidate.put("productId", product.getId());
+                candidate.put("sku", product.getSku());
+                candidate.put("productName", product.getName());
+                candidate.put("supplierItemCode", supplierItemCode);
+                candidate.put("description", description);
+                candidate.put("unitPrice", unitPrice);
+                candidate.put("currency", currency);
+                candidates.add(candidate);
+            }
+        }
+
+        List<Map<String, Object>> recommendations = new ArrayList<>();
+        BigDecimal estimatedTotal = BigDecimal.ZERO;
+        int covered = 0;
+
+        for (PurchaseRequisitionLine requisitionLine : requisitionLines) {
+            Product requiredProduct = requisitionLine.getProduct();
+            if (requiredProduct == null) continue;
+
+            List<Map<String, Object>> matches = candidates.stream()
+                    .filter(candidate -> requiredProduct.getId().equals(candidate.get("productId")))
+                    .sorted(Comparator.comparing(candidate -> (BigDecimal) candidate.get("unitPrice")))
+                    .toList();
+
+            Map<String, Object> recommendation = new LinkedHashMap<>();
+            recommendation.put("requisitionLineId", requisitionLine.getId());
+            recommendation.put("productId", requiredProduct.getId());
+            recommendation.put("sku", requiredProduct.getSku());
+            recommendation.put("productName", requiredProduct.getName());
+            recommendation.put("requiredQuantity", requisitionLine.getQuantity());
+
+            if (matches.isEmpty()) {
+                recommendation.put("status", "NO_QUOTATION");
+                recommendation.put("reason", "No resolved supplier quotation line was found for this product.");
+            } else {
+                Map<String, Object> best = matches.get(0);
+                BigDecimal quantity = requisitionLine.getQuantity() == null ? BigDecimal.ZERO : requisitionLine.getQuantity();
+                BigDecimal unitPrice = (BigDecimal) best.get("unitPrice");
+                BigDecimal extendedValue = quantity.multiply(unitPrice);
+
+                recommendation.put("status", "RECOMMENDED");
+                recommendation.put("supplierId", best.get("supplierId"));
+                recommendation.put("supplierCode", best.get("supplierCode"));
+                recommendation.put("supplierName", best.get("supplierName"));
+                recommendation.put("quotationId", best.get("quotationId"));
+                recommendation.put("quotationNumber", best.get("quotationNumber"));
+                recommendation.put("supplierItemCode", best.get("supplierItemCode"));
+                recommendation.put("unitPrice", unitPrice);
+                recommendation.put("currency", best.get("currency"));
+                recommendation.put("extendedValue", extendedValue);
+                recommendation.put("alternativesConsidered", matches.size());
+                recommendation.put("reason", "Lowest valid quoted unit price among resolved supplier quotations.");
+
+                estimatedTotal = estimatedTotal.add(extendedValue);
+                covered++;
+            }
+            recommendations.add(recommendation);
+        }
+
+        String status = covered == requisitionLines.size() ? "READY_FOR_REVIEW" : "PARTIAL_RECOMMENDATION";
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("purchaseRequisitionId", purchaseRequisitionId);
+        response.put("status", status);
+        response.put("recommendationMethod", "EXPLAINABLE_COST_OPTIMIZATION");
+        response.put("quotationsEvaluated", quotations.size());
+        response.put("linesCovered", covered);
+        response.put("linesRequested", requisitionLines.size());
+        response.put("estimatedTotal", estimatedTotal);
+        response.put("recommendations", recommendations);
+        response.put("nextAction", covered == requisitionLines.size()
+                ? "Review the recommendations and create the Purchase Order."
+                : "Resolve missing supplier quotations or product mappings before creating the Purchase Order.");
+        return response;
+    }
+
+    private Product resolveProduct(Supplier supplier, String supplierItemCode, String legacySku) {
+        if (supplierItemCode != null && !supplierItemCode.isBlank()) {
+            ProductSupplierIdentifier identifier = identifierRepository
+                    .findBySupplierIdAndSupplierItemCodeIgnoreCase(supplier.getId(), supplierItemCode)
+                    .orElse(null);
+            if (identifier != null && Boolean.TRUE.equals(identifier.getActive())) {
+                return identifier.getProduct();
+            }
+        }
+        if (legacySku != null && !legacySku.isBlank()) {
+            return null;
+        }
+        return null;
     }
 
     @Override
@@ -141,16 +277,6 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         return response;
     }
 
-    /**
-     * Handles PDF table rows with or without a leading line number and with
-     * optional line-total columns. The parser anchors on the supplier item
-     * code rather than assuming that the first whitespace-delimited token is
-     * the code.
-     *
-     * Examples:
-     *   1 SC-BGF-001 Broiler Grower Feed 100 27.00 2700.00
-     *   SC-BGF-001 Broiler Grower Feed 100 27.00
-     */
     private Map<String, Object> parseQuotationRow(String rawRow) {
         if (rawRow == null || rawRow.isBlank()) return null;
 
@@ -170,26 +296,16 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         String supplierItemCode = tokens[codeIndex].trim();
         List<Integer> numericIndexes = new ArrayList<>();
         for (int i = codeIndex + 1; i < tokens.length; i++) {
-            if (NUMBER_PATTERN.matcher(tokens[i]).matches()) {
-                numericIndexes.add(i);
-            }
+            if (NUMBER_PATTERN.matcher(tokens[i]).matches()) numericIndexes.add(i);
         }
-
-        // A normal quotation row has quantity + unit price. A common table
-        // also has a third number at the end for line total.
         if (numericIndexes.size() < 2) return null;
 
         int quantityIndex = numericIndexes.get(numericIndexes.size() - 2);
         int unitPriceIndex = numericIndexes.get(numericIndexes.size() - 1);
-
-        // If there are three numeric values, the last one is normally line
-        // total, so use the third-from-last as quantity and second-from-last
-        // as unit price.
         if (numericIndexes.size() >= 3) {
             quantityIndex = numericIndexes.get(numericIndexes.size() - 3);
             unitPriceIndex = numericIndexes.get(numericIndexes.size() - 2);
         }
-
         if (quantityIndex <= codeIndex || unitPriceIndex <= quantityIndex) return null;
 
         StringBuilder descriptionBuilder = new StringBuilder();
@@ -224,19 +340,12 @@ public class QuotationAiServiceImpl implements QuotationAiService {
 
     private boolean isNonItemRow(String row) {
         String lower = row.toLowerCase();
-        return lower.startsWith("subtotal")
-                || lower.startsWith("total")
-                || lower.startsWith("tax")
-                || lower.startsWith("quotation no")
-                || lower.startsWith("quotation number")
-                || lower.startsWith("date ")
-                || lower.startsWith("valid until")
-                || lower.startsWith("customer")
-                || lower.startsWith("delivery")
-                || lower.startsWith("currency")
-                || lower.startsWith("supplier notes")
-                || lower.startsWith("prices are")
-                || lower.startsWith("thank you");
+        return lower.startsWith("subtotal") || lower.startsWith("total") || lower.startsWith("tax")
+                || lower.startsWith("quotation no") || lower.startsWith("quotation number")
+                || lower.startsWith("date ") || lower.startsWith("valid until")
+                || lower.startsWith("customer") || lower.startsWith("delivery")
+                || lower.startsWith("currency") || lower.startsWith("supplier notes")
+                || lower.startsWith("prices are") || lower.startsWith("thank you");
     }
 
     private String findCurrency(String text) {
@@ -253,15 +362,8 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         if (index < 0) return null;
         String tail = text.substring(index + label.length()).trim();
         if (tail.startsWith(":")) tail = tail.substring(1).trim();
-
-        // PDFBox can place the following Date field on the same extracted
-        // line. Stop at the next known metadata label rather than returning
-        // the date as part of the quotation number.
         Matcher nextLabel = Pattern.compile("(?i)\\s+(?:date|valid until|currency|customer|delivery)\\s*:?").matcher(tail);
-        if (nextLabel.find()) {
-            tail = tail.substring(0, nextLabel.start()).trim();
-        }
-
+        if (nextLabel.find()) tail = tail.substring(0, nextLabel.start()).trim();
         int end = tail.indexOf('\n');
         return (end >= 0 ? tail.substring(0, end) : tail).trim();
     }
@@ -271,10 +373,16 @@ public class QuotationAiServiceImpl implements QuotationAiService {
         return matcher.find() ? matcher.group(1).trim() : null;
     }
 
-    private BigDecimal decimal(String value) {
-        if (value == null || value.isBlank()) return null;
+    private String text(Object value) {
+        return value == null ? null : value.toString().trim();
+    }
+
+    private BigDecimal decimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal decimal) return decimal;
+        if (value instanceof Number number) return new BigDecimal(number.toString());
         try {
-            return new BigDecimal(value.replace(",", ""));
+            return new BigDecimal(value.toString().replace(",", ""));
         } catch (NumberFormatException e) {
             return null;
         }
