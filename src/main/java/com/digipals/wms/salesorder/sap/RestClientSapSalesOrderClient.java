@@ -39,7 +39,8 @@ public class RestClientSapSalesOrderClient implements SapSalesOrderClient {
                 .retrieve()
                 .body(SapSalesOrderResponse.class);
 
-        if (response == null || response.salesOrderNumber() == null || response.salesOrderNumber().isBlank()) {
+        if (response == null || response.resolvedSalesOrderNumber() == null
+                || response.resolvedSalesOrderNumber().isBlank()) {
             throw new IllegalStateException("SAP did not return a sales order number");
         }
 
