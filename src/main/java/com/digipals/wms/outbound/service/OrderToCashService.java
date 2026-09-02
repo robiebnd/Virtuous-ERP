@@ -46,6 +46,11 @@ public class OrderToCashService {
         return orders.save(o);
     }
 
+    @Transactional public SalesOrder releaseCreditBlock(String number){
+        SalesOrder o=order(number); if(o.getStatus()!=SalesOrderStatus.CREDIT_BLOCKED)throw new IllegalStateException("Sales order is not credit blocked");
+        o.setCreditBlocked(false); o.setStatus(SalesOrderStatus.DRAFT); return o;
+    }
+
     @Transactional public SalesOrder confirmOrder(String number){
         SalesOrder o=order(number); if(o.getStatus()==SalesOrderStatus.CREDIT_BLOCKED)throw new IllegalStateException("Sales order is credit blocked");
         if(o.getStatus()!=SalesOrderStatus.DRAFT)throw new IllegalStateException("Only draft orders can be confirmed");
