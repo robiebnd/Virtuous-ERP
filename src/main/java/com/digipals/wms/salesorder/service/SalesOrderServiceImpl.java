@@ -31,7 +31,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private boolean sapIntegrationEnabled;
 
     @Override
-    @Transactional
+    @Transactional(noRollbackOn = RuntimeException.class)
     public SalesOrder create(CreateSalesOrderRequest request) {
         SalesOrder order = SalesOrder.builder()
                 .orderNumber(generateOrderNumber())
