@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface IncomingPaymentService {
     IncomingPayment receive(CreateIncomingPaymentRequest request);
+    IncomingPayment cancel(UUID id);
     IncomingPayment findById(UUID id);
     List<IncomingPayment> findAll();
     List<IncomingPayment> findByCustomerCode(String customerCode);
