@@ -8,6 +8,7 @@ import com.digipals.wms.dunning.entity.DunningCase;
 import com.digipals.wms.dunning.entity.DunningStatus;
 import com.digipals.wms.dunning.repository.DunningCaseRepository;
 import com.digipals.wms.payment.entity.PaymentAllocation;
+import com.digipals.wms.payment.entity.PaymentStatus;
 import com.digipals.wms.payment.repository.PaymentAllocationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,51 +35,39 @@ public class DunningServiceImpl implements DunningService {
         BillingDocument billing = billingRepository.findById(request.billingDocumentId())
                 .orElseThrow(() -> new EntityNotFoundException("Billing document not found: " + request.billingDocumentId()));
 
-        if (billing.getStatus() != BillingStatus.POSTED) {
-            throw new IllegalStateException("Dunning can only be created for a posted billing document");
+        if (billing.getStatus() != BillingStatus.POSTED) throw new IllegalStateException("Dunning can only be created for a posted billing document");
+        if (billing.getDueDate() == null) throw new IllegalStateException("Billing document has no due date");
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!billing.getDueDate().isBefore(now)) {
+            throw new IllegalStateException("Billing document is not overdue and is not eligible for dunning");
         }
 
-        BigDecimal applied = allocationRepository.findByBillingDocumentId(billing.getId()).stream()
-                .map(PaymentAllocation::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal outstanding = billing.getTotalAmount().subtract(applied).max(BigDecimal.ZERO);
+        BigDecimal applied = allocationRepository.findActiveByBillingDocumentId(billing.getId(), PaymentStatus.CANCELLED).stream()
+                .map(PaymentAllocation::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = billing.getTotalAmount() == null ? BigDecimal.ZERO : billing.getTotalAmount();
+        BigDecimal outstanding = total.subtract(applied).max(BigDecimal.ZERO);
+        if (outstanding.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalStateException("Billing document has no outstanding balance and is not eligible for dunning");
 
-        if (outstanding.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("Billing document has no outstanding balance");
-        }
-
-        DunningCase existing = dunningRepository
-                .findByBillingDocumentIdAndStatusNot(billing.getId(), DunningStatus.CANCELLED)
-                .orElse(null);
-        if (existing != null && existing.getStatus() != DunningStatus.RESOLVED) {
-            throw new IllegalStateException("An active dunning case already exists for this billing document");
-        }
+        DunningCase existing = dunningRepository.findByBillingDocumentIdAndStatusNot(billing.getId(), DunningStatus.CANCELLED).orElse(null);
+        if (existing != null && existing.getStatus() != DunningStatus.RESOLVED) throw new IllegalStateException("An active dunning case already exists for this billing document");
 
         int level = request.dunningLevel() == null ? 1 : request.dunningLevel();
         if (level < 1) throw new IllegalArgumentException("Dunning level must be at least 1");
 
         DunningCase dunning = DunningCase.builder()
                 .dunningNumber("DUN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT))
-                .billingDocument(billing)
-                .customerCode(billing.getCustomerCode())
-                .currency(billing.getCurrency())
-                .outstandingAmount(outstanding)
-                .dueDate(billing.getBillingDate())
-                .dunningDate(LocalDateTime.now())
-                .dunningLevel(level)
-                .status(DunningStatus.OPEN)
-                .message(request.message())
-                .build();
-
+                .billingDocument(billing).customerCode(billing.getCustomerCode()).currency(billing.getCurrency())
+                .outstandingAmount(outstanding).dueDate(billing.getDueDate()).dunningDate(now)
+                .dunningLevel(level).status(DunningStatus.OPEN).message(request.message()).build();
         return dunningRepository.save(dunning);
     }
 
     @Override
     public DunningCase send(UUID id) {
         DunningCase dunning = findById(id);
-        if (dunning.getStatus() != DunningStatus.OPEN) {
-            throw new IllegalStateException("Only open dunning cases can be sent");
-        }
+        if (dunning.getStatus() != DunningStatus.OPEN) throw new IllegalStateException("Only open dunning cases can be sent");
+        if (dunning.getDueDate() == null || !dunning.getDueDate().isBefore(LocalDateTime.now())) throw new IllegalStateException("Dunning cannot be sent before the invoice is overdue");
         dunning.setStatus(DunningStatus.SENT);
         dunning.setDunningDate(LocalDateTime.now());
         return dunningRepository.save(dunning);
@@ -87,29 +76,17 @@ public class DunningServiceImpl implements DunningService {
     @Override
     public DunningCase resolve(UUID id) {
         DunningCase dunning = findById(id);
-        if (dunning.getStatus() == DunningStatus.CANCELLED) {
-            throw new IllegalStateException("Cancelled dunning case cannot be resolved");
-        }
+        if (dunning.getStatus() == DunningStatus.CANCELLED) throw new IllegalStateException("Cancelled dunning case cannot be resolved");
+        if (dunning.getBillingDocument().getStatus() != BillingStatus.POSTED) throw new IllegalStateException("Dunning can only be resolved for a posted billing document");
+        BigDecimal applied = allocationRepository.findActiveByBillingDocumentId(dunning.getBillingDocument().getId(), PaymentStatus.CANCELLED).stream().map(PaymentAllocation::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal outstanding = dunning.getBillingDocument().getTotalAmount().subtract(applied).max(BigDecimal.ZERO);
+        if (outstanding.compareTo(BigDecimal.ZERO) > 0) throw new IllegalStateException("Dunning cannot be resolved while an outstanding balance remains");
+        dunning.setOutstandingAmount(BigDecimal.ZERO);
         dunning.setStatus(DunningStatus.RESOLVED);
         return dunningRepository.save(dunning);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public DunningCase findById(UUID id) {
-        return dunningRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Dunning case not found: " + id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<DunningCase> findAll() {
-        return dunningRepository.findAll();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<DunningCase> findByCustomerCode(String customerCode) {
-        return dunningRepository.findByCustomerCodeOrderByDunningDateDesc(customerCode);
-    }
+    @Override @Transactional(readOnly = true) public DunningCase findById(UUID id) { return dunningRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Dunning case not found: " + id)); }
+    @Override @Transactional(readOnly = true) public List<DunningCase> findAll() { return dunningRepository.findAll(); }
+    @Override @Transactional(readOnly = true) public List<DunningCase> findByCustomerCode(String customerCode) { return dunningRepository.findByCustomerCodeOrderByDunningDateDesc(customerCode); }
 }
