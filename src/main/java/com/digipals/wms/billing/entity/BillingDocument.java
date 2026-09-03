@@ -45,6 +45,9 @@ public class BillingDocument extends BaseDocument {
     @Column(name = "billing_date", nullable = false)
     private LocalDateTime billingDate;
 
+    @Column(name = "due_date", nullable = false)
+    private LocalDateTime dueDate;
+
     @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
@@ -56,6 +59,7 @@ public class BillingDocument extends BaseDocument {
     @PrePersist
     protected void prePersistBilling() {
         if (billingDate == null) billingDate = LocalDateTime.now();
+        if (dueDate == null) dueDate = billingDate.plusDays(30);
         if (status == null) status = BillingStatus.DRAFT;
         if (totalAmount == null) totalAmount = BigDecimal.ZERO;
         if (billingType == null || billingType.isBlank()) billingType = "F2";
