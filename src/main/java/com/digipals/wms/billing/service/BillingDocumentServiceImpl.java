@@ -34,6 +34,10 @@ public class BillingDocumentServiceImpl implements BillingDocumentService {
             throw new InvalidWorkflowException("Outbound delivery is required for billing.");
         }
 
+        if (request.currency() == null || request.currency().isBlank()) {
+            throw new InvalidWorkflowException("Currency is required for billing.");
+        }
+
         OutboundDelivery delivery = outboundDeliveryRepository.findById(request.outboundDeliveryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Outbound delivery not found: " + request.outboundDeliveryId()));
 
@@ -62,8 +66,22 @@ public class BillingDocumentServiceImpl implements BillingDocumentService {
 
         for (OutboundDeliveryItem deliveryItem : delivery.getItems()) {
             BigDecimal quantity = deliveryItem.getDeliveredQuantity();
+            if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidWorkflowException(
+                        "Delivered quantity must be greater than zero for delivery item: " + deliveryItem.getItemNumber());
+            }
+            if (deliveryItem.getOrderedQuantity() != null
+                    && quantity.compareTo(deliveryItem.getOrderedQuantity()) > 0) {
+                throw new InvalidWorkflowException(
+                        "Delivered quantity cannot exceed ordered quantity for delivery item: " + deliveryItem.getItemNumber());
+            }
+
             SalesOrderItem sourceItem = findSalesOrderItem(delivery, deliveryItem);
             BigDecimal unitPrice = sourceItem.getUnitPrice() == null ? BigDecimal.ZERO : sourceItem.getUnitPrice();
+            if (unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                throw new InvalidWorkflowException(
+                        "Unit price cannot be negative for delivery item: " + deliveryItem.getItemNumber());
+            }
             BigDecimal netValue = unitPrice.multiply(quantity);
 
             BillingDocumentItem item = BillingDocumentItem.builder()
@@ -77,6 +95,10 @@ public class BillingDocumentServiceImpl implements BillingDocumentService {
             billing.addItem(item);
             total = total.add(netValue);
             itemNumber += 10;
+        }
+
+        if (billing.getItems().isEmpty()) {
+            throw new InvalidWorkflowException("Billing document must contain at least one delivered item.");
         }
 
         billing.setTotalAmount(total);
