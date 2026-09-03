@@ -11,10 +11,10 @@ import com.digipals.wms.salesorder.sap.SapSalesOrderClient;
 import com.digipals.wms.salesorder.sap.SapSalesOrderItem;
 import com.digipals.wms.salesorder.sap.SapSalesOrderRequest;
 import com.digipals.wms.salesorder.sap.SapSalesOrderResponse;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,7 +31,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     private boolean sapIntegrationEnabled;
 
     @Override
-    @Transactional(noRollbackOn = RuntimeException.class)
+    @Transactional(noRollbackFor = RuntimeException.class)
     public SalesOrder create(CreateSalesOrderRequest request) {
         SalesOrder order = SalesOrder.builder()
                 .orderNumber(generateOrderNumber())
