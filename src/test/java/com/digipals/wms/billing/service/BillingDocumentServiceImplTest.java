@@ -56,7 +56,7 @@ class BillingDocumentServiceImplTest {
         when(deliveryRepository.findById(deliveryId)).thenReturn(Optional.of(delivery));
 
         assertThrows(InvalidWorkflowException.class,
-                () -> service.create(new CreateBillingRequest(deliveryId, "USD")));
+                () -> service.create(new CreateBillingRequest(deliveryId, "USD", null)));
         verify(billingRepository, never()).save(any());
     }
 
@@ -103,7 +103,7 @@ class BillingDocumentServiceImplTest {
         when(billingRepository.save(any(BillingDocument.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        BillingDocument result = service.create(new CreateBillingRequest(deliveryId, "usd"));
+        BillingDocument result = service.create(new CreateBillingRequest(deliveryId, "usd", null));
 
         assertEquals("USD", result.getCurrency());
         assertEquals("F2", result.getBillingType());
