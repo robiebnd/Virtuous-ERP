@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -118,11 +119,15 @@ class BillingDocumentServiceImplTest {
     @Test
     void postMovesDraftBillingToPosted() {
         UUID billingId = UUID.randomUUID();
+        LocalDateTime billingDate = LocalDateTime.now();
+
         BillingDocument billing = BillingDocument.builder()
                 .id(billingId)
                 .billingNumber("INV-1001")
                 .currency("USD")
                 .status(BillingStatus.DRAFT)
+                .billingDate(billingDate)
+                .dueDate(billingDate.plusDays(30))
                 .totalAmount(new BigDecimal("100.00"))
                 .build();
 
