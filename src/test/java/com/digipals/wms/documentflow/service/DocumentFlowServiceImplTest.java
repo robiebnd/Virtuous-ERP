@@ -7,6 +7,10 @@ import com.digipals.wms.documentflow.dto.DocumentFlowResponse;
 import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryStatus;
 import com.digipals.wms.outbounddelivery.repository.OutboundDeliveryRepository;
+import com.digipals.wms.payment.repository.PaymentAllocationRepository;
+import com.digipals.wms.dunning.entity.DunningCase;
+import com.digipals.wms.dunning.entity.DunningStatus;
+import com.digipals.wms.dunning.repository.DunningCaseRepository;
 import com.digipals.wms.salesorder.entity.SalesOrder;
 import com.digipals.wms.salesorder.entity.SalesOrderStatus;
 import com.digipals.wms.salesorder.repository.SalesOrderRepository;
@@ -35,11 +39,22 @@ class DocumentFlowServiceImplTest {
     @Mock
     private BillingDocumentRepository billingRepository;
 
+    @Mock
+    private PaymentAllocationRepository paymentAllocationRepository;
+
+    @Mock
+    private DunningCaseRepository dunningCaseRepository;
+
     private DocumentFlowServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new DocumentFlowServiceImpl(salesOrderRepository, deliveryRepository, billingRepository);
+        service = new DocumentFlowServiceImpl(
+                salesOrderRepository,
+                deliveryRepository,
+                billingRepository,
+                paymentAllocationRepository,
+                dunningCaseRepository);
     }
 
     @Test
@@ -79,6 +94,10 @@ class DocumentFlowServiceImplTest {
         when(salesOrderRepository.findById(orderId)).thenReturn(Optional.of(order));
         when(deliveryRepository.findBySalesOrderIdOrderByCreatedAtDesc(orderId)).thenReturn(List.of(delivery));
         when(billingRepository.findByOutboundDeliveryId(deliveryId)).thenReturn(Optional.of(billing));
+        when(paymentAllocationRepository.findActiveByBillingDocumentId(eq(billingId), any()))
+                .thenReturn(List.of());
+        when(dunningCaseRepository.findByBillingDocumentIdAndStatusNot(eq(billingId), any()))
+                .thenReturn(Optional.empty());
 
         DocumentFlowResponse result = service.getBySalesOrderId(orderId);
 
