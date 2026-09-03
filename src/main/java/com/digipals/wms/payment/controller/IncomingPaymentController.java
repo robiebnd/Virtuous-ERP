@@ -3,6 +3,7 @@ package com.digipals.wms.payment.controller;
 import com.digipals.wms.payment.dto.CreateIncomingPaymentRequest;
 import com.digipals.wms.payment.dto.PaymentResponse;
 import com.digipals.wms.payment.entity.IncomingPayment;
+import com.digipals.wms.payment.entity.PaymentStatus;
 import com.digipals.wms.payment.service.IncomingPaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,11 @@ public class IncomingPaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(paymentService.receive(request)));
     }
 
+    @PostMapping("/{id}/cancel")
+    public PaymentResponse cancel(@PathVariable UUID id) {
+        return toResponse(paymentService.cancel(id));
+    }
+
     @GetMapping
     public List<PaymentResponse> findAll() {
         return paymentService.findAll().stream().map(this::toResponse).toList();
@@ -42,9 +48,11 @@ public class IncomingPaymentController {
     }
 
     private PaymentResponse toResponse(IncomingPayment payment) {
-        BigDecimal applied = payment.getAllocations().stream()
-                .map(allocation -> allocation.getAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal applied = payment.getStatus() == PaymentStatus.CANCELLED
+                ? BigDecimal.ZERO
+                : payment.getAllocations().stream()
+                    .map(allocation -> allocation.getAmount())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         UUID billingDocumentId = payment.getAllocations().stream()
                 .findFirst()
