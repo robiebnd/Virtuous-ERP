@@ -33,11 +33,14 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
         if (request.salesOrderId() == null) {
             throw new InvalidWorkflowException("Sales order is required.");
         }
+        if (request.shippingPoint() == null || request.shippingPoint().isBlank()) {
+            throw new InvalidWorkflowException("Shipping point is required.");
+        }
 
         SalesOrder order = salesOrderRepository.findById(request.salesOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + request.salesOrderId()));
 
-        if (order.getStatus() != SalesOrderStatus.CREATED && order.getStatus() != SalesOrderStatus.DRAFT) {
+        if (order.getStatus() != SalesOrderStatus.CREATED) {
             throw new InvalidWorkflowException("Sales order is not eligible for outbound delivery: " + order.getStatus());
         }
         if (order.getItems() == null || order.getItems().isEmpty()) {
@@ -87,7 +90,15 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
     public OutboundDelivery confirmPicking(UUID id) {
         OutboundDelivery delivery = get(id);
         requireStatus(delivery, OutboundDeliveryStatus.PICKING);
-        delivery.getItems().forEach(item -> item.setPickedQuantity(item.getOrderedQuantity()));
+        if (delivery.getItems() == null || delivery.getItems().isEmpty()) {
+            throw new InvalidWorkflowException("Delivery must contain at least one item before picking can be confirmed.");
+        }
+        delivery.getItems().forEach(item -> {
+            if (item.getOrderedQuantity() == null || item.getOrderedQuantity().signum() <= 0) {
+                throw new InvalidWorkflowException("Delivery item quantity must be greater than zero: " + item.getItemNumber());
+            }
+            item.setPickedQuantity(item.getOrderedQuantity());
+        });
         delivery.setPickedAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.PICKED);
         return deliveryRepository.save(delivery);
@@ -99,10 +110,15 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
         OutboundDelivery delivery = get(id);
         requireStatus(delivery, OutboundDeliveryStatus.PICKED);
         delivery.getItems().forEach(item -> {
-            if (item.getPickedQuantity().compareTo(item.getOrderedQuantity()) < 0) {
+            BigDecimal picked = item.getPickedQuantity() == null ? BigDecimal.ZERO : item.getPickedQuantity();
+            BigDecimal ordered = item.getOrderedQuantity() == null ? BigDecimal.ZERO : item.getOrderedQuantity();
+            if (picked.signum() < 0 || picked.compareTo(ordered) > 0) {
+                throw new InvalidWorkflowException("Invalid picked quantity for delivery item: " + item.getItemNumber());
+            }
+            if (picked.compareTo(ordered) < 0) {
                 throw new InvalidWorkflowException("Cannot pack an incompletely picked delivery item: " + item.getItemNumber());
             }
-            item.setPackedQuantity(item.getPickedQuantity());
+            item.setPackedQuantity(picked);
         });
         delivery.setPackedAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.PACKED);
@@ -115,10 +131,15 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
         OutboundDelivery delivery = get(id);
         requireStatus(delivery, OutboundDeliveryStatus.PACKED);
         delivery.getItems().forEach(item -> {
-            if (item.getPackedQuantity().compareTo(item.getOrderedQuantity()) < 0) {
+            BigDecimal packed = item.getPackedQuantity() == null ? BigDecimal.ZERO : item.getPackedQuantity();
+            BigDecimal ordered = item.getOrderedQuantity() == null ? BigDecimal.ZERO : item.getOrderedQuantity();
+            if (packed.signum() < 0 || packed.compareTo(ordered) > 0) {
+                throw new InvalidWorkflowException("Invalid packed quantity for delivery item: " + item.getItemNumber());
+            }
+            if (packed.compareTo(ordered) < 0) {
                 throw new InvalidWorkflowException("Cannot post goods issue for an incompletely packed item: " + item.getItemNumber());
             }
-            item.setDeliveredQuantity(item.getPackedQuantity());
+            item.setDeliveredQuantity(packed);
         });
         delivery.setGoodsIssueAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.POSTED_GOODS_ISSUE);
