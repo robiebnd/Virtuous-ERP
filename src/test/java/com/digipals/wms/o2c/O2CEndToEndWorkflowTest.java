@@ -36,7 +36,6 @@ import com.digipals.wms.salesorder.sap.SapSalesOrderResponse;
 import com.digipals.wms.salesorder.service.SalesOrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Answers;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -49,7 +48,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class O2CEndToEndWorkflowTest {
@@ -117,7 +115,6 @@ class O2CEndToEndWorkflowTest {
         });
 
         when(sapClient.createSalesOrder(any())).thenReturn(new SapSalesOrderResponse(null, "SAP-SO-10001"));
-
         when(deliveryRepository.existsBySalesOrderId(any())).thenReturn(false);
         when(billingRepository.findByOutboundDeliveryId(any())).thenReturn(Optional.empty());
         when(dunningRepository.findByBillingDocumentIdAndStatusNot(any(), any())).thenReturn(Optional.empty());
@@ -130,14 +127,10 @@ class O2CEndToEndWorkflowTest {
 
     @Test
     void completesFullO2CFlowFromSalesOrderToDunningResolution() {
-        // 1. Sales Order -> SAP CREATED
         SalesOrder salesOrder = salesOrderService.create(new CreateSalesOrderRequest(
-                "CUST-100",
-                "1000",
-                "10",
-                "00",
-                "O2C integration test",
-                List.of(new CreateSalesOrderItemRequest("MAT-001", new BigDecimal("10"), new BigDecimal("100")))
+                "CUST-100", "1000", "10", "00", "O2C integration test",
+                List.of(new CreateSalesOrderItemRequest(
+                        "MAT-001", new BigDecimal("10"), new BigDecimal("100")))
         ));
 
         UUID salesOrderId = UUID.randomUUID();
@@ -149,7 +142,6 @@ class O2CEndToEndWorkflowTest {
         assertThat(salesOrder.getSapOrderNumber()).isEqualTo("SAP-SO-10001");
         assertThat(salesOrder.getTotalAmount()).isEqualByComparingTo("1000.00");
 
-        // 2. Outbound Delivery -> Picking -> Packing -> PGI
         OutboundDelivery delivery = deliveryService.create(new CreateOutboundDeliveryRequest(
                 salesOrderId, "SP-01", LocalDateTime.now().plusDays(1)));
         UUID deliveryId = UUID.randomUUID();
@@ -167,8 +159,6 @@ class O2CEndToEndWorkflowTest {
         assertThat(delivery.getStatus()).isEqualTo(OutboundDeliveryStatus.POSTED_GOODS_ISSUE);
         assertThat(delivery.getItems().get(0).getDeliveredQuantity()).isEqualByComparingTo("10");
 
-        // 3. Billing -> POSTED
-        when(deliveryRepository.findById(deliveryId)).thenReturn(Optional.of(delivery));
         BillingDocument billing = billingService.create(new CreateBillingRequest(deliveryId, "USD", null));
         UUID billingId = UUID.randomUUID();
         billing.setId(billingId);
@@ -180,7 +170,6 @@ class O2CEndToEndWorkflowTest {
         billingService.post(billingId);
         assertThat(billing.getStatus()).isEqualTo(BillingStatus.POSTED);
 
-        // 4. First payment partially settles the invoice.
         IncomingPayment firstPayment = paymentService.receive(new CreateIncomingPaymentRequest(
                 billingId, new BigDecimal("400.00"), "USD", "BANK-001"));
         UUID firstPaymentId = UUID.randomUUID();
@@ -190,7 +179,6 @@ class O2CEndToEndWorkflowTest {
         assertThat(billing.getTotalAmount().subtract(sumActiveAmountForBilling(billingId)))
                 .isEqualByComparingTo("600.00");
 
-        // 5. Simulate a second unapplied receipt, then explicitly cash-apply it.
         IncomingPayment finalPayment = IncomingPayment.builder()
                 .paymentNumber("PAY-E2E-002")
                 .customerCode(billing.getCustomerCode())
@@ -204,7 +192,6 @@ class O2CEndToEndWorkflowTest {
         persistedPayments.add(finalPayment);
         when(paymentRepository.findById(finalPaymentId)).thenReturn(Optional.of(finalPayment));
 
-        // 6. Move the invoice into an overdue state before creating dunning.
         billing.setDueDate(LocalDateTime.now().minusDays(1));
 
         DunningCase dunning = dunningService.create(new CreateDunningRequest(
@@ -219,19 +206,16 @@ class O2CEndToEndWorkflowTest {
         dunningService.send(dunningId);
         assertThat(dunning.getStatus()).isEqualTo(DunningStatus.SENT);
 
-        // 7. Final cash application clears the remaining balance.
         cashApplicationService.apply(new CashApplicationRequest(
                 finalPaymentId, billingId, new BigDecimal("600.00")));
 
         assertThat(sumActiveAmountForBilling(billingId)).isEqualByComparingTo("1000.00");
         assertThat(finalPayment.getStatus()).isEqualTo(PaymentStatus.FULLY_APPLIED);
 
-        // 8. Dunning can only resolve after the invoice is fully settled.
         dunningService.resolve(dunningId);
         assertThat(dunning.getStatus()).isEqualTo(DunningStatus.RESOLVED);
         assertThat(dunning.getOutstandingAmount()).isEqualByComparingTo("0.00");
 
-        // 9. Document flow exposes the complete O2C chain.
         when(deliveryRepository.findBySalesOrderIdOrderByCreatedAtDesc(salesOrderId))
                 .thenReturn(List.of(delivery));
         when(dunningRepository.findByBillingDocumentIdAndStatusNot(billingId, DunningStatus.CANCELLED))
@@ -271,6 +255,7 @@ class O2CEndToEndWorkflowTest {
                 .unitPrice(new BigDecimal("100"))
                 .netValue(new BigDecimal("100"))
                 .build());
+        when(salesOrderRepository.findById(salesOrder.getId())).thenReturn(Optional.of(salesOrder));
 
         OutboundDelivery delivery = deliveryService.create(new CreateOutboundDeliveryRequest(
                 salesOrder.getId(), "SP-01", null));
