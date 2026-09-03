@@ -31,10 +31,12 @@ public class CashApplicationServiceImpl implements CashApplicationService {
     public IncomingPayment apply(CashApplicationRequest request) {
         IncomingPayment payment = paymentRepository.findById(request.paymentId())
                 .orElseThrow(() -> new EntityNotFoundException("Incoming payment not found: " + request.paymentId()));
-
         BillingDocument billing = billingDocumentRepository.findById(request.billingDocumentId())
                 .orElseThrow(() -> new EntityNotFoundException("Billing document not found: " + request.billingDocumentId()));
 
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            throw new IllegalStateException("Cancelled payment cannot be applied");
+        }
         if (billing.getStatus() != BillingStatus.POSTED) {
             throw new IllegalStateException("Cash can only be applied to a posted billing document");
         }
@@ -44,29 +46,29 @@ public class CashApplicationServiceImpl implements CashApplicationService {
         if (!payment.getCurrency().equalsIgnoreCase(billing.getCurrency())) {
             throw new IllegalArgumentException("Payment currency must match billing document currency");
         }
-        if (payment.getStatus() == PaymentStatus.CANCELLED) {
-            throw new IllegalStateException("Cancelled payment cannot be applied");
+        if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Application amount must be greater than zero");
         }
 
-        BigDecimal alreadyApplied = payment.getAllocations().stream()
-                .map(PaymentAllocation::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal unapplied = payment.getAmount().subtract(alreadyApplied);
-        if (unapplied.compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal paymentApplied = allocationRepository
+                .sumActiveAmountByPaymentId(payment.getId(), PaymentStatus.CANCELLED);
+        BigDecimal paymentUnapplied = payment.getAmount().subtract(paymentApplied).max(BigDecimal.ZERO);
+        if (paymentUnapplied.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalStateException("Payment has no unapplied balance");
         }
 
-        BigDecimal billingApplied = allocationRepository.findByBillingDocumentId(billing.getId()).stream()
+        BigDecimal invoiceApplied = allocationRepository
+                .findActiveByBillingDocumentId(billing.getId(), PaymentStatus.CANCELLED).stream()
                 .map(PaymentAllocation::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal billingOutstanding = billing.getTotalAmount().subtract(billingApplied);
-        if (billingOutstanding.compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal invoiceOutstanding = billing.getTotalAmount().subtract(invoiceApplied);
+        if (invoiceOutstanding.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalStateException("Billing document is already fully paid");
         }
 
-        BigDecimal applied = request.amount().min(unapplied).min(billingOutstanding);
+        BigDecimal applied = request.amount().min(paymentUnapplied).min(invoiceOutstanding);
         if (applied.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Application amount must be greater than zero");
+            throw new IllegalArgumentException("No amount is available for application");
         }
 
         PaymentAllocation allocation = PaymentAllocation.builder()
@@ -75,8 +77,8 @@ public class CashApplicationServiceImpl implements CashApplicationService {
                 .build();
         payment.addAllocation(allocation);
 
-        BigDecimal newUnapplied = unapplied.subtract(applied);
-        payment.setStatus(newUnapplied.compareTo(BigDecimal.ZERO) == 0
+        BigDecimal newPaymentApplied = paymentApplied.add(applied);
+        payment.setStatus(newPaymentApplied.compareTo(payment.getAmount()) >= 0
                 ? PaymentStatus.FULLY_APPLIED
                 : PaymentStatus.PARTIALLY_APPLIED);
 
