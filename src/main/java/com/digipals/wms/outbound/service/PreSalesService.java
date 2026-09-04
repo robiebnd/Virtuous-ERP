@@ -136,7 +136,7 @@ public class PreSalesService {
         for (SalesQuotationLine ql : q.getLines()) {
             Product product = product(ql.getSku());
             SalesOrderItem item = SalesOrderItem.builder()
-                    .lineNumber(ql.getLineNumber())
+                    .itemNumber(ql.getLineNumber())
                     .materialCode(product.getSku())
                     .quantity(ql.getQuantity())
                     .unitPrice(ql.getUnitPrice())
