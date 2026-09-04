@@ -1,12 +1,21 @@
 package com.digipals.wms.outbound.service;
 
 import com.digipals.wms.outbound.dto.PreSalesRequests.*;
-import com.digipals.wms.outbound.entity.*;
+import com.digipals.wms.outbound.entity.Customer;
+import com.digipals.wms.outbound.entity.SalesInquiry;
+import com.digipals.wms.outbound.entity.SalesInquiryLine;
+import com.digipals.wms.outbound.entity.SalesInquiryStatus;
+import com.digipals.wms.outbound.entity.SalesQuotation;
+import com.digipals.wms.outbound.entity.SalesQuotationLine;
+import com.digipals.wms.outbound.entity.SalesQuotationStatus;
 import com.digipals.wms.outbound.repository.SalesInquiryRepository;
-import com.digipals.wms.outbound.repository.SalesOrderRepository;
 import com.digipals.wms.outbound.repository.SalesQuotationRepository;
 import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
+import com.digipals.wms.salesorder.entity.SalesOrder;
+import com.digipals.wms.salesorder.entity.SalesOrderItem;
+import com.digipals.wms.salesorder.entity.SalesOrderStatus;
+import com.digipals.wms.salesorder.repository.SalesOrderRepository;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import jakarta.persistence.EntityManager;
@@ -104,22 +113,40 @@ public class PreSalesService {
         SalesQuotation q = quotation(number); ensureNotExpired(q);
         if (q.getStatus() != SalesQuotationStatus.ACCEPTED) throw bad("Quotation must be ACCEPTED before conversion to a sales order");
         if (q.getConvertedOrderNumber() != null) throw bad("Quotation has already been converted: " + q.getConvertedOrderNumber());
+
         Warehouse warehouse = warehouseRepository.findByCode(r.warehouseCode()).orElseThrow(() -> bad("Warehouse not found: " + r.warehouseCode()));
+        var salesArea = entityManager.createQuery(
+                        "select s from SalesArea s where s.id = :id and s.active = true")
+                .setParameter("id", q.getSalesAreaId())
+                .getResultStream().findFirst()
+                .orElseThrow(() -> bad("Sales area not found for quotation"));
+
         LocalDateTime requestedDate = r.requestedDeliveryDate() != null ? r.requestedDeliveryDate() : q.getValidTo().atTime(23, 59, 59);
-        SalesOrder order = SalesOrder.builder().orderNumber(nextNumber("SO")).customer(q.getCustomer()).warehouse(warehouse)
-                .orderDate(LocalDateTime.now()).requestedDeliveryDate(requestedDate).status(SalesOrderStatus.DRAFT)
-                .currency(q.getCurrency()).paymentTerms(r.paymentTerms() != null ? r.paymentTerms() : q.getCustomer().getPaymentTerms())
-                .subtotal(q.getSubtotal()).discountAmount(q.getDiscountAmount()).taxAmount(q.getTaxAmount()).totalAmount(q.getTotalAmount()).creditBlocked(false).build();
-        List<SalesOrderLine> orderLines = new ArrayList<>();
+        SalesOrder order = SalesOrder.builder()
+                .orderNumber(nextNumber("SO"))
+                .customerCode(q.getCustomer().getCustomerNumber())
+                .salesOrganization(salesArea.getSalesOrganization().getCode())
+                .distributionChannel(salesArea.getDistributionChannel().getCode())
+                .division(salesArea.getDivision().getCode())
+                .orderDate(LocalDateTime.now())
+                .status(SalesOrderStatus.DRAFT)
+                .totalAmount(q.getTotalAmount())
+                .build();
+
         for (SalesQuotationLine ql : q.getLines()) {
             Product product = product(ql.getSku());
-            orderLines.add(SalesOrderLine.builder().salesOrder(order).lineNumber(ql.getLineNumber()).product(product)
-                    .quantity(ql.getQuantity()).unitPrice(ql.getUnitPrice()).discountAmount(ql.getDiscountAmount())
-                    .taxAmount(ql.getTaxAmount()).lineTotal(ql.getLineTotal()).build());
+            SalesOrderItem item = SalesOrderItem.builder()
+                    .lineNumber(ql.getLineNumber())
+                    .materialCode(product.getSku())
+                    .quantity(ql.getQuantity())
+                    .unitPrice(ql.getUnitPrice())
+                    .build();
+            order.addItem(item);
         }
-        order.setLines(orderLines);
+
         SalesOrder saved = salesOrderRepository.save(order);
-        q.setConvertedOrderNumber(saved.getOrderNumber()); q.setStatus(SalesQuotationStatus.CONVERTED);
+        q.setConvertedOrderNumber(saved.getOrderNumber());
+        q.setStatus(SalesQuotationStatus.CONVERTED);
         return saved;
     }
 
