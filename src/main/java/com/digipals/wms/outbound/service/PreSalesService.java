@@ -16,7 +16,6 @@ import com.digipals.wms.salesorder.entity.SalesOrder;
 import com.digipals.wms.salesorder.entity.SalesOrderItem;
 import com.digipals.wms.salesorder.entity.SalesOrderStatus;
 import com.digipals.wms.salesorder.repository.SalesOrderRepository;
-import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -114,20 +113,21 @@ public class PreSalesService {
         if (q.getStatus() != SalesQuotationStatus.ACCEPTED) throw bad("Quotation must be ACCEPTED before conversion to a sales order");
         if (q.getConvertedOrderNumber() != null) throw bad("Quotation has already been converted: " + q.getConvertedOrderNumber());
 
-        Warehouse warehouse = warehouseRepository.findByCode(r.warehouseCode()).orElseThrow(() -> bad("Warehouse not found: " + r.warehouseCode()));
-        var salesArea = entityManager.createQuery(
-                        "select s from SalesArea s where s.id = :id and s.active = true")
+        warehouseRepository.findByCode(r.warehouseCode()).orElseThrow(() -> bad("Warehouse not found: " + r.warehouseCode()));
+
+        Object[] salesArea = entityManager.createQuery(
+                        "select s.salesOrganization.code, s.distributionChannel.code, s.division.code " +
+                        "from SalesArea s where s.id = :id and s.active = true", Object[].class)
                 .setParameter("id", q.getSalesAreaId())
                 .getResultStream().findFirst()
                 .orElseThrow(() -> bad("Sales area not found for quotation"));
 
-        LocalDateTime requestedDate = r.requestedDeliveryDate() != null ? r.requestedDeliveryDate() : q.getValidTo().atTime(23, 59, 59);
         SalesOrder order = SalesOrder.builder()
                 .orderNumber(nextNumber("SO"))
                 .customerCode(q.getCustomer().getCustomerNumber())
-                .salesOrganization(salesArea.getSalesOrganization().getCode())
-                .distributionChannel(salesArea.getDistributionChannel().getCode())
-                .division(salesArea.getDivision().getCode())
+                .salesOrganization((String) salesArea[0])
+                .distributionChannel((String) salesArea[1])
+                .division((String) salesArea[2])
                 .orderDate(LocalDateTime.now())
                 .status(SalesOrderStatus.DRAFT)
                 .totalAmount(q.getTotalAmount())
