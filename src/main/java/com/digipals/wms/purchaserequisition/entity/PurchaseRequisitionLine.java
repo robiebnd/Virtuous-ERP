@@ -9,6 +9,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "purchase_requisition_lines")
@@ -41,6 +42,29 @@ public class PurchaseRequisitionLine extends BaseEntity {
     @JoinColumn(name = "purchasing_info_record_id")
     private PurchasingInfoRecord purchasingInfoRecord;
 
+    @Column(name = "item_category", length = 30)
+    private String itemCategory;
+
+    @Column(name = "account_assignment_category", length = 5)
+    private String accountAssignmentCategory;
+
+    @Column(name = "unit_of_measure", length = 20)
+    private String unitOfMeasure;
+
+    @Column(name = "requested_delivery_date")
+    private LocalDateTime requestedDeliveryDate;
+
+    @Column(name = "valuation_price", precision = 18, scale = 2)
+    private BigDecimal valuationPrice;
+
     @Column(length = 500)
     private String remarks;
+
+    @PrePersist
+    protected void prePersist() {
+        if (itemCategory == null || itemCategory.isBlank()) itemCategory = "STANDARD";
+        if (accountAssignmentCategory == null) accountAssignmentCategory = "";
+        if (unitOfMeasure == null || unitOfMeasure.isBlank()) unitOfMeasure = "EA";
+        if (valuationPrice == null) valuationPrice = estimatedUnitCost;
+    }
 }
