@@ -47,6 +47,30 @@ public class PurchaseOrder extends BaseEntity {
     @Column(name = "currency", length = 3)
     private String currency;
 
+    @Column(name = "document_type", length = 20)
+    private String documentType;
+
+    @Column(name = "purchasing_organization", length = 40)
+    private String purchasingOrganization;
+
+    @Column(name = "purchasing_group", length = 40)
+    private String purchasingGroup;
+
+    @Column(name = "company_code", length = 40)
+    private String companyCode;
+
+    @Column(name = "payment_terms", length = 40)
+    private String paymentTerms;
+
+    @Column(name = "incoterms", length = 40)
+    private String incoterms;
+
+    @Column(name = "confirmation_control", length = 40)
+    private String confirmationControl;
+
+    @Column(name = "output_status", length = 30)
+    private String outputStatus;
+
     @Column(name = "order_date", nullable = false)
     private LocalDateTime orderDate;
 
@@ -75,17 +99,11 @@ public class PurchaseOrder extends BaseEntity {
 
     @PrePersist
     public void prePersist() {
-        if (status == null) {
-            status = PurchaseOrderStatus.DRAFT;
-        }
-        if (orderDate == null) {
-            orderDate = LocalDateTime.now();
-        }
-        if (source == null) {
-            source = ProcurementSource.DIRECT;
-        }
-        if (currency != null) {
-            currency = currency.trim().toUpperCase();
-        }
+        if (status == null) status = PurchaseOrderStatus.DRAFT;
+        if (orderDate == null) orderDate = LocalDateTime.now();
+        if (source == null) source = ProcurementSource.DIRECT;
+        if (documentType == null || documentType.isBlank()) documentType = "NB";
+        if (outputStatus == null || outputStatus.isBlank()) outputStatus = "NOT_SENT";
+        if (currency != null) currency = currency.trim().toUpperCase();
     }
 }
