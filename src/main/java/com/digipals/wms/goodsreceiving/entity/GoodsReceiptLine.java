@@ -49,6 +49,18 @@ public class GoodsReceiptLine extends BaseEntity {
     @Column(name = "unit_cost", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitCost;
 
+    @Column(name = "batch_number", length = 100)
+    private String batchNumber;
+
+    @Column(name = "serial_number", length = 100)
+    private String serialNumber;
+
+    @Column(name = "storage_location", length = 40)
+    private String storageLocation;
+
+    @Column(name = "inspection_status", length = 30)
+    private String inspectionStatus;
+
     @Column(length = 500)
     private String remarks;
 
@@ -59,5 +71,6 @@ public class GoodsReceiptLine extends BaseEntity {
                     ? BigDecimal.ZERO
                     : purchaseOrderLine.getReceivedQuantity();
         }
+        if (inspectionStatus == null || inspectionStatus.isBlank()) inspectionStatus = "NOT_REQUIRED";
     }
 }
