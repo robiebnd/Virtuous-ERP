@@ -47,6 +47,15 @@ public class GoodsReceipt extends BaseEntity {
     @Column(name = "supplier_delivery_note")
     private String supplierDeliveryNote;
 
+    @Column(name = "movement_type", length = 10)
+    private String movementType;
+
+    @Column(name = "inspection_required", nullable = false)
+    private Boolean inspectionRequired;
+
+    @Column(name = "supplier_delivery_date")
+    private LocalDateTime supplierDeliveryDate;
+
     @Column(length = 1000)
     private String remarks;
 
@@ -59,4 +68,12 @@ public class GoodsReceipt extends BaseEntity {
     @OneToMany(mappedBy = "goodsReceipt", fetch = FetchType.LAZY)
     @Builder.Default
     private List<GoodsReceiptLine> lines = new ArrayList<>();
+
+    @PrePersist
+    protected void prePersist() {
+        if (status == null) status = ReceiptStatus.DRAFT;
+        if (movementType == null || movementType.isBlank()) movementType = "101";
+        if (inspectionRequired == null) inspectionRequired = Boolean.FALSE;
+        if (receivedDate == null) receivedDate = LocalDateTime.now();
+    }
 }
