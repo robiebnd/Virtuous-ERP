@@ -4,15 +4,7 @@ import com.digipals.wms.common.entity.BaseEntity;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.users.entity.User;
 import com.digipals.wms.warehouse.entity.Warehouse;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -63,6 +55,33 @@ public class PurchaseRequisition extends BaseEntity {
     @Column(name = "currency", length = 3)
     private String currency;
 
+    @Column(name = "document_type", length = 20)
+    private String documentType;
+
+    @Column(name = "purchasing_group", length = 40)
+    private String purchasingGroup;
+
+    @Column(name = "plant_code", length = 40)
+    private String plantCode;
+
+    @Column(name = "storage_location", length = 40)
+    private String storageLocation;
+
+    @Column(name = "item_category", length = 30)
+    private String itemCategory;
+
+    @Column(name = "account_assignment_category", length = 5)
+    private String accountAssignmentCategory;
+
+    @Column(name = "requested_delivery_date")
+    private LocalDateTime requestedDeliveryDate;
+
+    @Column(name = "valuation_price", precision = 18, scale = 2)
+    private java.math.BigDecimal valuationPrice;
+
+    @Column(name = "approval_level", nullable = false)
+    private Integer approvalLevel;
+
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
 
@@ -87,11 +106,11 @@ public class PurchaseRequisition extends BaseEntity {
 
     @PrePersist
     protected void prePersist() {
-        if (status == null) {
-            status = PurchaseRequisitionStatus.DRAFT;
-        }
-        if (currency != null) {
-            currency = currency.trim().toUpperCase();
-        }
+        if (status == null) status = PurchaseRequisitionStatus.DRAFT;
+        if (documentType == null || documentType.isBlank()) documentType = "NB";
+        if (itemCategory == null || itemCategory.isBlank()) itemCategory = "STANDARD";
+        if (accountAssignmentCategory == null) accountAssignmentCategory = "";
+        if (approvalLevel == null) approvalLevel = 0;
+        if (currency != null) currency = currency.trim().toUpperCase();
     }
 }
