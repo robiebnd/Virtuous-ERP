@@ -5,20 +5,25 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 public class UpdatePurchaseRequisitionRequest {
-
     @NotNull(message = "Supplier is required")
     private UUID supplierId;
-
     @NotBlank(message = "Department is required")
     private String department;
-
     @NotBlank(message = "Currency is required")
     @Pattern(regexp = "[A-Za-z]{3}", message = "Currency must be a 3-letter ISO currency code, e.g. USD")
     private String currency;
-
+    private String documentType = "NB";
+    private String purchasingGroup;
+    private String plantCode;
+    private String storageLocation;
+    private String itemCategory = "STANDARD";
+    private String accountAssignmentCategory;
+    private LocalDateTime requestedDeliveryDate;
+    private java.math.BigDecimal valuationPrice;
     private String remarks;
 }
