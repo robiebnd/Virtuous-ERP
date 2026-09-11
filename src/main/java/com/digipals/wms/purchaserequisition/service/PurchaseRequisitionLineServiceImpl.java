@@ -17,7 +17,7 @@ import com.digipals.wms.purchasinginforecord.repository.PurchasingInfoRecordRepo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,144 +25,67 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class PurchaseRequisitionLineServiceImpl implements PurchaseRequisitionLineService {
-
     private final PurchaseRequisitionLineRepository repository;
     private final PurchaseRequisitionRepository purchaseRequisitionRepository;
     private final ProductRepository productRepository;
     private final PurchasingInfoRecordRepository purchasingInfoRecordRepository;
     private final PurchaseRequisitionValidator validator;
 
-    private PurchaseRequisition getPurchaseRequisition(UUID id) {
-        return purchaseRequisitionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase Requisition not found."));
-    }
-
-    private PurchaseRequisitionLine getLine(UUID id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase Requisition Line not found."));
-    }
-
-    private Product getProduct(UUID id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found."));
-    }
+    private PurchaseRequisition getPurchaseRequisition(UUID id) { return purchaseRequisitionRepository.findById(id).orElseThrow(() -> new RuntimeException("Purchase Requisition not found.")); }
+    private PurchaseRequisitionLine getLine(UUID id) { return repository.findById(id).orElseThrow(() -> new RuntimeException("Purchase Requisition Line not found.")); }
+    private Product getProduct(UUID id) { return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found.")); }
 
     @Override
-    public PurchaseRequisitionLineResponse create(
-            UUID purchaseRequisitionId,
-            CreatePurchaseRequisitionLineRequest request) {
-
+    public PurchaseRequisitionLineResponse create(UUID purchaseRequisitionId, CreatePurchaseRequisitionLineRequest request) {
         PurchaseRequisition requisition = getPurchaseRequisition(purchaseRequisitionId);
         validator.validateDraft(requisition);
-
         Product product = getProduct(request.getProductId());
-
-        if (repository.existsByPurchaseRequisitionIdAndProductId(
-                requisition.getId(), product.getId())) {
-            throw new RuntimeException("Product already exists on this Purchase Requisition.");
-        }
-
+        if (repository.existsByPurchaseRequisitionIdAndProductId(requisition.getId(), product.getId())) throw new RuntimeException("Product already exists on this Purchase Requisition.");
+        BigDecimal valuationPrice = request.getValuationPrice() != null ? request.getValuationPrice() : request.getEstimatedUnitCost();
         PurchaseRequisitionLine line = PurchaseRequisitionLine.builder()
-                .purchaseRequisition(requisition)
-                .product(product)
-                .quantity(request.getQuantity())
-                .estimatedUnitCost(request.getEstimatedUnitCost())
-                .remarks(request.getRemarks())
-                .build();
-
+                .purchaseRequisition(requisition).product(product).quantity(request.getQuantity())
+                .estimatedUnitCost(request.getEstimatedUnitCost()).itemCategory(request.getItemCategory())
+                .accountAssignmentCategory(request.getAccountAssignmentCategory()).unitOfMeasure(request.getUnitOfMeasure())
+                .requestedDeliveryDate(request.getRequestedDeliveryDate()).valuationPrice(valuationPrice)
+                .remarks(request.getRemarks()).build();
         return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
 
     @Override
-    public PurchaseRequisitionLineResponse update(
-            UUID id,
-            UpdatePurchaseRequisitionLineRequest request) {
-
+    public PurchaseRequisitionLineResponse update(UUID id, UpdatePurchaseRequisitionLineRequest request) {
         PurchaseRequisitionLine line = getLine(id);
         validator.validateDraft(line.getPurchaseRequisition());
-
         line.setQuantity(request.getQuantity());
         line.setEstimatedUnitCost(request.getEstimatedUnitCost());
+        line.setItemCategory(request.getItemCategory());
+        line.setAccountAssignmentCategory(request.getAccountAssignmentCategory());
+        line.setUnitOfMeasure(request.getUnitOfMeasure());
+        line.setRequestedDeliveryDate(request.getRequestedDeliveryDate());
+        line.setValuationPrice(request.getValuationPrice() != null ? request.getValuationPrice() : request.getEstimatedUnitCost());
         line.setRemarks(request.getRemarks());
-
         return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
 
     @Override
-    public PurchaseRequisitionLineResponse setSourceOfSupply(
-            UUID id,
-            SetPurchaseRequisitionLineSourceRequest request) {
-
+    public PurchaseRequisitionLineResponse setSourceOfSupply(UUID id, SetPurchaseRequisitionLineSourceRequest request) {
         PurchaseRequisitionLine line = getLine(id);
         PurchaseRequisition requisition = line.getPurchaseRequisition();
         validator.validateDraft(requisition);
-
-        PurchasingInfoRecord pir = purchasingInfoRecordRepository.findById(
-                        request.getPurchasingInfoRecordId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Purchasing Info Record not found."));
-
-        if (pir.getSupplierProduct() == null
-                || pir.getSupplierProduct().getProduct() == null
-                || !pir.getSupplierProduct().getProduct().getId().equals(line.getProduct().getId())) {
-            throw new RuntimeException(
-                    "Purchasing Info Record does not belong to the Product on this requisition line.");
-        }
-
-        if (pir.getWarehouse() == null
-                || requisition.getWarehouse() == null
-                || !pir.getWarehouse().getId().equals(requisition.getWarehouse().getId())) {
-            throw new RuntimeException(
-                    "Purchasing Info Record does not belong to the Purchase Requisition warehouse.");
-        }
-
-        if (pir.getSupplierProduct().getSupplier() == null) {
-            throw new RuntimeException(
-                    "Purchasing Info Record has no supplier assigned.");
-        }
-
+        PurchasingInfoRecord pir = purchasingInfoRecordRepository.findById(request.getPurchasingInfoRecordId()).orElseThrow(() -> new RuntimeException("Purchasing Info Record not found."));
+        if (pir.getSupplierProduct() == null || pir.getSupplierProduct().getProduct() == null || !pir.getSupplierProduct().getProduct().getId().equals(line.getProduct().getId())) throw new RuntimeException("Purchasing Info Record does not belong to the Product on this requisition line.");
+        if (pir.getWarehouse() == null || requisition.getWarehouse() == null || !pir.getWarehouse().getId().equals(requisition.getWarehouse().getId())) throw new RuntimeException("Purchasing Info Record does not belong to the Purchase Requisition warehouse.");
+        if (pir.getSupplierProduct().getSupplier() == null) throw new RuntimeException("Purchasing Info Record has no supplier assigned.");
         line.setPurchasingInfoRecord(pir);
         line.setSourceSupplier(pir.getSupplierProduct().getSupplier());
-
-        if (pir.getLastPurchasePrice() != null) {
-            line.setEstimatedUnitCost(pir.getLastPurchasePrice());
-        }
-
+        if (pir.getLastPurchasePrice() != null) { line.setEstimatedUnitCost(pir.getLastPurchasePrice()); line.setValuationPrice(pir.getLastPurchasePrice()); }
         return PurchaseRequisitionLineMapper.toResponse(repository.save(line));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PurchaseRequisitionLineResponse> findAll() {
-        return repository.findAll()
-                .stream()
-                .map(PurchaseRequisitionLineMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PurchaseRequisitionLineResponse findById(UUID id) {
-        return PurchaseRequisitionLineMapper.toResponse(getLine(id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
-            UUID purchaseRequisitionId) {
-
-        getPurchaseRequisition(purchaseRequisitionId);
-
-        return repository.findByPurchaseRequisitionId(purchaseRequisitionId)
-                .stream()
-                .map(PurchaseRequisitionLineMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    public void delete(UUID id) {
-        PurchaseRequisitionLine line = getLine(id);
-        validator.validateDraft(line.getPurchaseRequisition());
-        repository.delete(line);
-    }
+    @Override @Transactional(readOnly = true)
+    public List<PurchaseRequisitionLineResponse> findAll() { return repository.findAll().stream().map(PurchaseRequisitionLineMapper::toResponse).toList(); }
+    @Override @Transactional(readOnly = true)
+    public PurchaseRequisitionLineResponse findById(UUID id) { return PurchaseRequisitionLineMapper.toResponse(getLine(id)); }
+    @Override @Transactional(readOnly = true)
+    public List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(UUID purchaseRequisitionId) { getPurchaseRequisition(purchaseRequisitionId); return repository.findByPurchaseRequisitionId(purchaseRequisitionId).stream().map(PurchaseRequisitionLineMapper::toResponse).toList(); }
+    @Override public void delete(UUID id) { PurchaseRequisitionLine line = getLine(id); validator.validateDraft(line.getPurchaseRequisition()); repository.delete(line); }
 }
