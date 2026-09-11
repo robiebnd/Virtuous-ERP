@@ -1,58 +1,7 @@
 package com.digipals.wms.common.mapper;
-
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionResponse;
 import com.digipals.wms.purchaserequisition.entity.PurchaseRequisition;
-
 public final class PurchaseRequisitionMapper {
-
-    private PurchaseRequisitionMapper() {
-    }
-
-    public static PurchaseRequisitionResponse toResponse(PurchaseRequisition requisition) {
-        if (requisition == null) {
-            return null;
-        }
-
-        return PurchaseRequisitionResponse.builder()
-                .id(requisition.getId())
-                .requisitionNumber(requisition.getRequisitionNumber())
-                .warehouseCode(requisition.getWarehouse() != null
-                        ? requisition.getWarehouse().getCode()
-                        : null)
-                .warehouseName(requisition.getWarehouse() != null
-                        ? requisition.getWarehouse().getName()
-                        : null)
-                .supplierId(requisition.getSupplier() != null
-                        ? requisition.getSupplier().getId()
-                        : null)
-                .supplierCode(requisition.getSupplier() != null
-                        ? requisition.getSupplier().getCode()
-                        : null)
-                .supplierName(requisition.getSupplier() != null
-                        ? requisition.getSupplier().getName()
-                        : null)
-                .status(requisition.getStatus())
-                .department(requisition.getDepartment())
-                .currency(requisition.getCurrency())
-                .remarks(requisition.getRemarks())
-                .rejectionReason(requisition.getRejectionReason())
-                .requestedById(requisition.getRequestedBy() != null
-                        ? requisition.getRequestedBy().getId()
-                        : null)
-                .approvedById(requisition.getApprovedBy() != null
-                        ? requisition.getApprovedBy().getId()
-                        : null)
-                .rejectedById(requisition.getRejectedBy() != null
-                        ? requisition.getRejectedBy().getId()
-                        : null)
-                .cancelledById(requisition.getCancelledBy() != null
-                        ? requisition.getCancelledBy().getId()
-                        : null)
-                .submittedAt(requisition.getSubmittedAt())
-                .approvedAt(requisition.getApprovedAt())
-                .rejectedAt(requisition.getRejectedAt())
-                .cancelledAt(requisition.getCancelledAt())
-                .createdAt(requisition.getCreatedAt())
-                .build();
-    }
+ private PurchaseRequisitionMapper() {}
+ public static PurchaseRequisitionResponse toResponse(PurchaseRequisition r) { if(r==null)return null; return PurchaseRequisitionResponse.builder().id(r.getId()).requisitionNumber(r.getRequisitionNumber()).warehouseCode(r.getWarehouse()==null?null:r.getWarehouse().getCode()).warehouseName(r.getWarehouse()==null?null:r.getWarehouse().getName()).supplierId(r.getSupplier()==null?null:r.getSupplier().getId()).supplierCode(r.getSupplier()==null?null:r.getSupplier().getCode()).supplierName(r.getSupplier()==null?null:r.getSupplier().getName()).status(r.getStatus()).department(r.getDepartment()).currency(r.getCurrency()).documentType(r.getDocumentType()).purchasingGroup(r.getPurchasingGroup()).plantCode(r.getPlantCode()).storageLocation(r.getStorageLocation()).itemCategory(r.getItemCategory()).accountAssignmentCategory(r.getAccountAssignmentCategory()).requestedDeliveryDate(r.getRequestedDeliveryDate()).valuationPrice(r.getValuationPrice()).approvalLevel(r.getApprovalLevel()).remarks(r.getRemarks()).rejectionReason(r.getRejectionReason()).requestedById(r.getRequestedBy()==null?null:r.getRequestedBy().getId()).approvedById(r.getApprovedBy()==null?null:r.getApprovedBy().getId()).rejectedById(r.getRejectedBy()==null?null:r.getRejectedBy().getId()).cancelledById(r.getCancelledBy()==null?null:r.getCancelledBy().getId()).submittedAt(r.getSubmittedAt()).approvedAt(r.getApprovedAt()).rejectedAt(r.getRejectedAt()).cancelledAt(r.getCancelledAt()).createdAt(r.getCreatedAt()).build(); }
 }
