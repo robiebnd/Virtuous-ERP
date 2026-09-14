@@ -15,4 +15,5 @@ public interface VendorInvoiceRepository extends JpaRepository<VendorInvoice, UU
     Optional<VendorInvoice> findWithLinesById(UUID id);
     @EntityGraph(attributePaths={"lines","supplier","purchaseOrder","goodsReceipt"})
     List<VendorInvoice> findAllByOrderByInvoiceDateDesc();
+    List<VendorInvoice> findAllByPurchaseOrderId(UUID purchaseOrderId);
 }
