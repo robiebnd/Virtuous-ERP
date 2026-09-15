@@ -6,6 +6,7 @@ public enum DocumentType {
     PURCHASE_REQUISITION("PR"),
     PURCHASE_ORDER("PO"),
     GOODS_RECEIPT("GRN"),
+    VENDOR_INVOICE("VINV"),
 
     // Inventory Control
     STOCK_ADJUSTMENT("SA"),

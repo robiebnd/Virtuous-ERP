@@ -16,7 +16,6 @@ public class ProcurementController {
 
     @PostMapping("/generate-purchase-order")
     public PurchaseOrderResponse generatePurchaseOrder(
-
             @Valid
             @RequestBody
             GeneratePurchaseOrderRequest request) {

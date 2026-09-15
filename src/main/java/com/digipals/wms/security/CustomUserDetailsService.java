@@ -23,50 +23,45 @@ import java.util.Set;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
-
     private final UserRoleRepository userRoleRepository;
-
     private final RolePermissionRepository rolePermissionRepository;
 
     @Override
-public UserDetails loadUserByUsername(String username)
-        throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String identifier)
+            throws UsernameNotFoundException {
 
-    User user = userRepository.findByUsername(username)
-            .orElseThrow(() ->
-                    new UsernameNotFoundException(
-                            "User '" + username + "' not found."));
+        User user = userRepository.findByUsername(identifier)
+                .orElseGet(() -> userRepository.findByEmail(identifier)
+                        .orElseThrow(() ->
+                                new UsernameNotFoundException(
+                                        "User not found.")));
 
-    Set<GrantedAuthority> authorities = new HashSet<>();
+        Set<GrantedAuthority> authorities = new HashSet<>();
 
-    for (UserRole userRole :
-            userRoleRepository.findByUserId(user.getId())) {
-
-        // Role authority
-        authorities.add(
-                new SimpleGrantedAuthority(
-                        "ROLE_" + userRole.getRole().getName()));
-
-        // Permission authorities
-        for (RolePermission rolePermission :
-                rolePermissionRepository.findByRole(userRole.getRole())) {
-
-            Permission permission =
-                    rolePermission.getPermission();
+        for (UserRole userRole : userRoleRepository.findByUserId(user.getId())) {
 
             authorities.add(
                     new SimpleGrantedAuthority(
-                            permission.getCode()));
-        }
-    }
+                            "ROLE_" + userRole.getRole().getName()));
 
-    return org.springframework.security.core.userdetails.User
-            .builder()
-            .username(user.getUsername())
-            .password(user.getPassword())
-            .disabled(!Boolean.TRUE.equals(user.getEnabled()))
-            .accountLocked(Boolean.TRUE.equals(user.getAccountLocked()))
-            .authorities(authorities)
-            .build();
-}
+            for (RolePermission rolePermission :
+                    rolePermissionRepository.findByRole(userRole.getRole())) {
+
+                Permission permission = rolePermission.getPermission();
+
+                authorities.add(
+                        new SimpleGrantedAuthority(
+                                permission.getCode()));
+            }
+        }
+
+        return org.springframework.security.core.userdetails.User
+                .builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .disabled(!Boolean.TRUE.equals(user.getEnabled()))
+                .accountLocked(Boolean.TRUE.equals(user.getAccountLocked()))
+                .authorities(authorities)
+                .build();
+    }
 }

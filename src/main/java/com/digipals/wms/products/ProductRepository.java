@@ -15,6 +15,8 @@ public interface ProductRepository
 
     Optional<Product> findBySku(String sku);
 
+    Optional<Product> findBySkuIgnoreCase(String sku);
+
     List<Product> findByActiveTrue();
 
     List<Product> findByCategoryId(UUID categoryId);

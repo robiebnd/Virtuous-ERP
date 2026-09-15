@@ -38,17 +38,13 @@ public class AuthService {
     public void register(RegisterRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException(
-                    "Username already exists.");
+            throw new DuplicateResourceException("Username already exists.");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException(
-                    "Email already exists.");
+            throw new DuplicateResourceException("Email already exists.");
         }
 
-        // First user becomes SYSTEM_ADMIN.
-        // All subsequent users receive the default role.
         String roleName = userRepository.count() == 0
                 ? SYSTEM_ADMIN
                 : DEFAULT_ROLE;
@@ -61,7 +57,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .enabled(true)
                 .accountLocked(false)
-                .defaultWarehouse(null) // assigned later
+                .defaultWarehouse(null)
                 .build();
 
         user = userRepository.save(user);
@@ -76,24 +72,25 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
 
+        String identifier = request.getUsername();
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        identifier,
                         request.getPassword()));
 
-        User user = userRepository.findByUsername(
-                        request.getUsername())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found."));
+        User user = userRepository.findByUsername(identifier)
+                .orElseGet(() -> userRepository.findByEmail(identifier)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "User not found.")));
 
-        // JwtService should generate claims from the User object.
         String token = jwtService.generateToken(user);
 
         return AuthResponse.builder()
-        .token(token)
-        .user(UserMapper.toResponse(user))
-        .build();
+                .token(token)
+                .user(UserMapper.toResponse(user))
+                .build();
     }
 
     private Role getRole(String roleName) {

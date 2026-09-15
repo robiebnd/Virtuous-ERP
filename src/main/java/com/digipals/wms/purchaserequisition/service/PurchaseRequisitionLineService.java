@@ -2,6 +2,7 @@ package com.digipals.wms.purchaserequisition.service;
 
 import com.digipals.wms.purchaserequisition.dto.CreatePurchaseRequisitionLineRequest;
 import com.digipals.wms.purchaserequisition.dto.PurchaseRequisitionLineResponse;
+import com.digipals.wms.purchaserequisition.dto.SetPurchaseRequisitionLineSourceRequest;
 import com.digipals.wms.purchaserequisition.dto.UpdatePurchaseRequisitionLineRequest;
 
 import java.util.List;
@@ -17,14 +18,16 @@ public interface PurchaseRequisitionLineService {
             UUID id,
             UpdatePurchaseRequisitionLineRequest request);
 
-    PurchaseRequisitionLineResponse findById(
-            UUID id);
+    PurchaseRequisitionLineResponse setSourceOfSupply(
+            UUID id,
+            SetPurchaseRequisitionLineSourceRequest request);
+
+    PurchaseRequisitionLineResponse findById(UUID id);
 
     List<PurchaseRequisitionLineResponse> findAll();
 
     List<PurchaseRequisitionLineResponse> findByPurchaseRequisition(
             UUID purchaseRequisitionId);
 
-    void delete(
-            UUID id);
+    void delete(UUID id);
 }

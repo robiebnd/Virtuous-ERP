@@ -2,6 +2,7 @@ package com.digipals.wms.supplierquotation.controller;
 
 import com.digipals.wms.supplierquotation.dto.SupplierQuotationResponse;
 import com.digipals.wms.supplierquotation.service.QuotationAiService;
+import com.digipals.wms.supplierquotation.service.QuotationResolutionService;
 import com.digipals.wms.supplierquotation.service.SupplierQuotationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,14 +20,7 @@ public class SupplierQuotationController {
 
     private final SupplierQuotationService service;
     private final QuotationAiService quotationAiService;
-
-    @PostMapping(value = "/ai/extract-lines", consumes = "multipart/form-data")
-    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
-    public Map<String, Object> extractLines(
-            @RequestParam UUID supplierId,
-            @RequestPart MultipartFile file) {
-        return quotationAiService.extractLines(supplierId, file);
-    }
+    private final QuotationResolutionService quotationResolutionService;
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
@@ -38,10 +32,31 @@ public class SupplierQuotationController {
         return service.upload(purchaseRequisitionId, supplierId, quotationNumber, file);
     }
 
+    @PostMapping(value = "/ai/extract-lines", consumes = "multipart/form-data")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
+    public Map<String, Object> extractLines(
+            @RequestParam UUID supplierId,
+            @RequestPart MultipartFile file) {
+        return quotationAiService.extractLines(supplierId, file);
+    }
+
+    @GetMapping("/{quotationId}/resolution")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
+    public Map<String, Object> resolveQuotation(@PathVariable UUID quotationId) {
+        return quotationResolutionService.resolve(quotationId);
+    }
+
     @GetMapping("/requisition/{purchaseRequisitionId}")
     @PreAuthorize("hasAuthority('PURCHASE_ORDER_VIEW')")
     public List<SupplierQuotationResponse> findByPurchaseRequisition(
             @PathVariable UUID purchaseRequisitionId) {
         return service.findByPurchaseRequisition(purchaseRequisitionId);
+    }
+
+    @PostMapping("/requisition/{purchaseRequisitionId}/recommendation")
+    @PreAuthorize("hasAuthority('PURCHASE_ORDER_CREATE')")
+    public Map<String, Object> recommend(
+            @PathVariable UUID purchaseRequisitionId) {
+        return quotationAiService.recommend(purchaseRequisitionId);
     }
 }

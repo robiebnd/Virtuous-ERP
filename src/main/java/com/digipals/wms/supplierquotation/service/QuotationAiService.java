@@ -7,5 +7,9 @@ import java.util.UUID;
 
 public interface QuotationAiService {
 
+    Map<String, Object> recommend(UUID purchaseRequisitionId);
+
     Map<String, Object> extractLines(UUID supplierId, MultipartFile file);
+
+    Map<String, Object> extractLinesFromQuotation(UUID quotationId);
 }
