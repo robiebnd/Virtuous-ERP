@@ -11,6 +11,7 @@ public record CreateSalesOrderRequest(
         @NotBlank String salesOrganization,
         @NotBlank String distributionChannel,
         @NotBlank String division,
+        String currency,
         String remarks,
         @NotEmpty List<@Valid CreateSalesOrderItemRequest> items
 ) {
