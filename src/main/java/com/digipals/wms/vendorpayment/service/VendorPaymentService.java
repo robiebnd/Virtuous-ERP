@@ -8,5 +8,7 @@ import java.util.UUID;
 public interface VendorPaymentService {
     VendorPayment create(CreateVendorPaymentRequest request);
     VendorPayment approve(UUID id);
+    VendorPayment pay(UUID id);
+    List<VendorPayment> findAll();
     List<VendorPayment> findByInvoice(UUID invoiceId);
 }
