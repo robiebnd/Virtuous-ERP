@@ -14,6 +14,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 export type PurchaseRequisition = { id:string; requisitionNumber?:string; status?:string; documentType?:string; purchasingGroup?:string; plantCode?:string; storageLocation?:string; accountAssignmentCategory?:string; itemCategory?:string; warehouseId?:string; supplierId?:string; currency?:string; remarks?:string; requestedDeliveryDate?:string; valuationPrice?:number; totalValue?:number; createdAt?:string; createdBy?:any; lines?:PurchaseRequisitionLine[] };
 export type PurchaseRequisitionLine = { id?:string; productId?:string; product?:any; quantity?:number; estimatedUnitCost?:number; valuationPrice?:number; unitOfMeasure?:string; requestedDeliveryDate?:string; itemCategory?:string; accountAssignmentCategory?:string; remarks?:string };
 const list = <T,>(path:string) => api<any>(path).then(r => Array.isArray(r) ? r : (r?.content ?? r?.data ?? [])) as Promise<T[]>;
+
 export const procurementApi = {
  requisitions:()=>list<PurchaseRequisition>("/api/purchase-requisitions"),
  requisition:(id:string)=>api<PurchaseRequisition>(`/api/purchase-requisitions/${id}`),
@@ -30,5 +31,29 @@ export const procurementApi = {
  loadPoLines:(id:string)=>api<any>(`/api/goods-receipts/${id}/load-po-lines`,{method:"POST"}),
  updateGoodsReceipt:(id:string,body:any)=>api<any>(`/api/goods-receipts/${id}`,{method:"PUT",body:JSON.stringify(body)}),
  approveGoodsReceipt:(id:string)=>api<any>(`/api/goods-receipts/${id}/approve`,{method:"PUT"}),
- vendorInvoices:()=>list<any>("/api/vendor-invoices")
+ vendorInvoices:()=>list<any>("/api/vendor-invoices"),
+ vendorPayments:()=>list<any>("/api/procurement/vendor-payments"),
+ createVendorPayment:(body:any)=>api<any>("/api/procurement/vendor-payments",{method:"POST",body:JSON.stringify(body)}),
+ approveVendorPayment:(id:string)=>api<any>(`/api/procurement/vendor-payments/${id}/approve`,{method:"PUT"}),
+ payVendorPayment:(id:string)=>api<any>(`/api/procurement/vendor-payments/${id}/pay`,{method:"PUT"}),
+ vendorEvaluations:(supplierId:string)=>list<any>(`/api/procurement/vendor-evaluations/supplier/${supplierId}`),
+ grIr:(purchaseOrderId:string)=>api<any>(`/api/procurement/gr-ir/purchase-order/${purchaseOrderId}`),
+ closeGrIr:(purchaseOrderId:string)=>api<any>(`/api/procurement/gr-ir/purchase-order/${purchaseOrderId}/close`,{method:"POST"})
+};
+
+export const orderToCashApi = {
+ salesOrders:()=>list<any>("/api/sales-orders"),
+ salesOrder:(id:string)=>api<any>(`/api/sales-orders/${id}`),
+ createSalesOrder:(body:any)=>api<any>("/api/sales-orders",{method:"POST",body:JSON.stringify(body)}),
+ deliveries:()=>list<any>("/api/outbound-deliveries"),
+ delivery:(id:string)=>api<any>(`/api/outbound-deliveries/${id}`),
+ createDelivery:(body:any)=>api<any>("/api/outbound-deliveries",{method:"POST",body:JSON.stringify(body)}),
+ startPicking:(id:string)=>api<any>(`/api/outbound-deliveries/${id}/start-picking`,{method:"POST"}),
+ confirmPicking:(id:string)=>api<any>(`/api/outbound-deliveries/${id}/confirm-picking`,{method:"POST"}),
+ confirmPacking:(id:string)=>api<any>(`/api/outbound-deliveries/${id}/confirm-packing`,{method:"POST"}),
+ postGoodsIssue:(id:string)=>api<any>(`/api/outbound-deliveries/${id}/post-goods-issue`,{method:"POST"}),
+ billingDocuments:()=>list<any>("/api/billing-documents"),
+ billingDocument:(id:string)=>api<any>(`/api/billing-documents/${id}`),
+ createBillingDocument:(body:any)=>api<any>("/api/billing-documents",{method:"POST",body:JSON.stringify(body)}),
+ postBillingDocument:(id:string)=>api<any>(`/api/billing-documents/${id}/post`,{method:"POST"})
 };
