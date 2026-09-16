@@ -12,6 +12,8 @@ import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryItem;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryStatus;
 import com.digipals.wms.outbounddelivery.repository.OutboundDeliveryRepository;
+import com.digipals.wms.products.Product;
+import com.digipals.wms.products.ProductRepository;
 import com.digipals.wms.salesorder.entity.SalesOrderItem;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.UUID;
 public class BillingDocumentServiceImpl implements BillingDocumentService {
     private final BillingDocumentRepository billingDocumentRepository;
     private final OutboundDeliveryRepository outboundDeliveryRepository;
+    private final ProductRepository productRepository;
     private final FinancePostingService financePostingService;
 
     @Override @Transactional
@@ -62,8 +65,21 @@ public class BillingDocumentServiceImpl implements BillingDocumentService {
         if (billing.getItems().isEmpty()) throw new InvalidWorkflowException("Billing document must contain at least one item.");
         if (billing.getTotalAmount() == null || billing.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) throw new InvalidWorkflowException("Billing total must be greater than zero.");
         if (billing.getDueDate() == null || billing.getDueDate().isBefore(billing.getBillingDate())) throw new InvalidWorkflowException("Billing due date is invalid.");
-        billing.setStatus(BillingStatus.POSTED); BillingDocument saved = billingDocumentRepository.save(billing);
-        financePostingService.postCustomerInvoice(saved.getId(), saved.getBillingNumber(), saved.getCurrency(), saved.getTotalAmount());
+
+        BigDecimal cogs = BigDecimal.ZERO;
+        for (BillingDocumentItem item : billing.getItems()) {
+            Product product = productRepository.findBySkuIgnoreCase(item.getMaterialCode())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found for billing item: " + item.getMaterialCode()));
+            BigDecimal unitCost = product.getCostPrice();
+            if (unitCost == null || unitCost.compareTo(BigDecimal.ZERO) < 0) {
+                throw new InvalidWorkflowException("A valid product cost price is required before posting billing item: " + item.getMaterialCode());
+            }
+            cogs = cogs.add(unitCost.multiply(item.getQuantity()));
+        }
+
+        billing.setStatus(BillingStatus.POSTED);
+        BillingDocument saved = billingDocumentRepository.save(billing);
+        financePostingService.postCustomerInvoiceWithCogs(saved.getId(), saved.getBillingNumber(), saved.getCurrency(), saved.getTotalAmount(), cogs);
         return saved;
     }
 
