@@ -7,6 +7,7 @@ import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.common.mapper.GoodsReceiptMapper;
+import com.digipals.wms.finance.service.FinancePostingService;
 import com.digipals.wms.goodsreceiving.dto.CreateGoodsReceiptRequest;
 import com.digipals.wms.goodsreceiving.dto.GoodsReceiptResponse;
 import com.digipals.wms.goodsreceiving.dto.UpdateGoodsReceiptRequest;
@@ -48,6 +49,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final GoodsMovementService goodsMovementService;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
+    private final FinancePostingService financePostingService;
 
     private GoodsReceipt getGoodsReceipt(UUID id) { return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
     private GoodsReceipt getGoodsReceiptWithLines(UUID id) { return repository.findWithLinesById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
@@ -121,6 +123,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         if (receiptLines.isEmpty()) throw new InvalidWorkflowException("Cannot approve a Goods Receipt without any receipt lines.");
         User currentUser = currentUserService.getCurrentUser();
         Bin receivingBin = getReceivingBin(goodsReceipt.getWarehouse().getId());
+        BigDecimal receiptValue = BigDecimal.ZERO;
         for (GoodsReceiptLine receiptLine : receiptLines) {
             validateReceiptLine(receiptLine);
             BigDecimal acceptedQuantity = nullSafe(receiptLine.getAcceptedQuantity());
@@ -132,6 +135,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
                 CreateGoodsMovementRequest movementRequest = CreateGoodsMovementRequest.builder().movementType(GoodsMovementType.GOODS_RECEIPT).warehouseId(goodsReceipt.getWarehouse().getId()).referenceNumber(goodsReceipt.getGrnNumber()).referenceType("GRN").remarks(goodsReceipt.getRemarks()).lines(List.of(CreateGoodsMovementLineRequest.builder().productId(receiptLine.getProduct().getId()).toBinId(receivingBin.getId()).quantity(acceptedQuantity).unitCost(receiptLine.getUnitCost()).remarks(receiptLine.getRemarks()).build())).build();
                 GoodsMovementResponse movement = goodsMovementService.create(movementRequest);
                 goodsMovementService.post(movement.getId());
+                receiptValue = receiptValue.add(acceptedQuantity.multiply(nullSafe(receiptLine.getUnitCost())));
             }
             purchaseOrderLine.setReceivedQuantity(newReceivedQuantity);
             purchaseOrderLine.setOutstandingQuantity(purchaseOrderLine.getQuantity().subtract(newReceivedQuantity).max(BigDecimal.ZERO));
@@ -141,7 +145,11 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         goodsReceipt.setStatus(ReceiptStatus.APPROVED);
         goodsReceipt.setApprovedBy(currentUser);
         goodsReceipt.setApprovedAt(LocalDateTime.now());
-        return GoodsReceiptMapper.toResponse(repository.save(goodsReceipt));
+        GoodsReceipt saved = repository.save(goodsReceipt);
+        if (receiptValue.compareTo(BigDecimal.ZERO) > 0) {
+            financePostingService.postGoodsReceipt(saved.getId(), saved.getGrnNumber(), goodsReceipt.getPurchaseOrder().getCurrency(), receiptValue);
+        }
+        return GoodsReceiptMapper.toResponse(saved);
     }
 
     private void validateReceiptLine(GoodsReceiptLine receiptLine) {
