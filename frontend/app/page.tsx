@@ -10,8 +10,9 @@ const activities = [
 const statusClass = (status: string) => {
   const value = status.toLowerCase();
   if (value.includes("approved")) return "approved";
-  if (value.includes("matched")) return "ready";
+  if (value.includes("matched")) return "matched";
   if (value.includes("pending")) return "pending";
+  if (value.includes("ready")) return "ready";
   return "draft";
 };
 
