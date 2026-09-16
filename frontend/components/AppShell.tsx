@@ -27,12 +27,24 @@ function Icon({ name }: { name: IconName }) {
 
 const groups = [
   { title: "Workspace", items: [{ label: "Dashboard", href: "/", icon: "home" as IconName }] },
+  { title: "Order to Cash", items: [
+    { label: "O2C Overview", href: "/order-to-cash", icon: "refresh" as IconName },
+    { label: "Sales Orders", href: "/order-to-cash/sales-orders", icon: "list" as IconName },
+    { label: "Deliveries", href: "/order-to-cash/deliveries", icon: "refresh" as IconName },
+    { label: "Customer Invoices", href: "/order-to-cash/customer-invoices", icon: "document" as IconName },
+    { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "money" as IconName },
+    { label: "Customers", href: "/order-to-cash/customers", icon: "users" as IconName },
+  ] },
   { title: "Procurement", items: [
     { label: "Purchase Requisitions", href: "/procurement/purchase-requisitions", icon: "document" as IconName },
     { label: "Purchase Orders", href: "/procurement/purchase-orders", icon: "bag" as IconName },
     { label: "Goods Receipts", href: "/procurement/goods-receipts", icon: "refresh" as IconName },
+    { label: "Cycle Closure", href: "/procurement/cycle-closure", icon: "refresh" as IconName },
+    { label: "Goods Issues", href: "/procurement/goods-issues", icon: "refresh" as IconName },
+    { label: "GR/IR Reconciliation", href: "/procurement/gr-ir-reconciliation", icon: "hierarchy" as IconName },
     { label: "Vendor Invoices", href: "/procurement/vendor-invoices", icon: "money" as IconName },
     { label: "Vendor Payments", href: "/procurement/vendor-payments", icon: "money" as IconName },
+    { label: "Vendor Evaluation", href: "/procurement/vendor-evaluation", icon: "star" as IconName },
   ] },
   { title: "Warehouse", items: [
     { label: "Warehouse Monitor", href: "/warehouse/monitor", icon: "warehouse" as IconName },
@@ -67,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </div>)}
       </nav>
-      <div className="sidebar-footer"><span>Virtuous ERP</span><small>Warehouse & Procurement</small></div>
+      <div className="sidebar-footer"><span>Virtuous ERP</span><small>Warehouse, Procurement & Order to Cash</small></div>
     </aside>
 
     <main className="main">
