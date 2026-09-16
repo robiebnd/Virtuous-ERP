@@ -2,9 +2,9 @@ package com.digipals.wms.outbounddelivery.service;
 
 import com.digipals.wms.bin.entity.Bin;
 import com.digipals.wms.bin.entity.BinStatus;
-import com.digipals.wms.bin.repository.BinRepository;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
+import com.digipals.wms.finance.service.FinancePostingService;
 import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.outbounddelivery.dto.CreateOutboundDeliveryRequest;
 import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
@@ -34,10 +34,10 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
 
     private final OutboundDeliveryRepository deliveryRepository;
     private final SalesOrderRepository salesOrderRepository;
-    private final BinRepository binRepository;
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final CurrentUserService currentUserService;
+    private final FinancePostingService financePostingService;
 
     @Override
     @Transactional
@@ -109,6 +109,7 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
 
         User currentUser = currentUserService.getCurrentUser();
         validateInventoryAvailability(delivery);
+        BigDecimal cogs = BigDecimal.ZERO;
 
         for (OutboundDeliveryItem item : delivery.getItems()) {
             BigDecimal packed = nvl(item.getPackedQuantity());
@@ -118,8 +119,11 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
 
             Product product = productRepository.findBySkuIgnoreCase(item.getMaterialCode())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found for delivery item: " + item.getMaterialCode()));
-            Bin sourceBin = determineSourceBin(delivery, product, packed);
+            BigDecimal unitCost = product.getCostPrice();
+            if (unitCost == null || unitCost.compareTo(BigDecimal.ZERO) < 0) throw new InvalidWorkflowException("A valid product cost price is required before goods issue: " + item.getMaterialCode());
+            cogs = cogs.add(unitCost.multiply(packed));
 
+            Bin sourceBin = determineSourceBin(delivery, product, packed);
             inventoryService.issueStock(
                     delivery.getSalesOrder().getWarehouse(),
                     sourceBin,
@@ -132,6 +136,9 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
             item.setDeliveredQuantity(packed);
         }
 
+        if (cogs.compareTo(BigDecimal.ZERO) > 0) {
+            financePostingService.postGoodsIssueWithCogs(delivery.getId(), delivery.getDeliveryNumber(), "USD", cogs);
+        }
         delivery.setGoodsIssueAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.POSTED_GOODS_ISSUE);
         return deliveryRepository.save(delivery);
