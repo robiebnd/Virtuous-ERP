@@ -2,12 +2,14 @@ package com.digipals.wms.finance.controller;
 
 import com.digipals.wms.finance.dto.AccountingDocumentResponse;
 import com.digipals.wms.finance.dto.GlAccountResponse;
+import com.digipals.wms.finance.dto.InventoryGlReconciliationResponse;
 import com.digipals.wms.finance.dto.InventoryValuationResponse;
 import com.digipals.wms.finance.dto.OpenItemResponse;
 import com.digipals.wms.finance.dto.TrialBalanceLine;
 import com.digipals.wms.finance.repository.AccountingDocumentRepository;
 import com.digipals.wms.finance.repository.GlAccountRepository;
 import com.digipals.wms.finance.service.FinanceQueryService;
+import com.digipals.wms.finance.service.InventoryGlReconciliationService;
 import com.digipals.wms.finance.service.InventoryValuationService;
 import com.digipals.wms.finance.service.OpenItemService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class FinanceController {
     private final FinanceQueryService financeQueryService;
     private final OpenItemService openItemService;
     private final InventoryValuationService inventoryValuationService;
+    private final InventoryGlReconciliationService inventoryGlReconciliationService;
 
     @GetMapping("/gl-accounts")
     public List<GlAccountResponse> accounts() { return glAccountRepository.findAllByActiveTrueOrderByAccountCode().stream().map(GlAccountResponse::from).toList(); }
@@ -52,5 +55,10 @@ public class FinanceController {
         return warehouseId == null
                 ? inventoryValuationService.valuation()
                 : inventoryValuationService.valuationByWarehouse(warehouseId);
+    }
+
+    @GetMapping("/inventory-reconciliation")
+    public InventoryGlReconciliationResponse inventoryReconciliation() {
+        return inventoryGlReconciliationService.reconcile();
     }
 }
