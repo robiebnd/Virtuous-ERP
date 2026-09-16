@@ -6,5 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface VendorPaymentRepository extends JpaRepository<VendorPayment, UUID> {
+    List<VendorPayment> findAllByOrderByPaymentDateDesc();
     List<VendorPayment> findAllByVendorInvoiceIdOrderByPaymentDateDesc(UUID vendorInvoiceId);
 }
