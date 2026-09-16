@@ -2,11 +2,13 @@ package com.digipals.wms.finance.controller;
 
 import com.digipals.wms.finance.dto.AccountingDocumentResponse;
 import com.digipals.wms.finance.dto.GlAccountResponse;
+import com.digipals.wms.finance.dto.InventoryValuationResponse;
 import com.digipals.wms.finance.dto.OpenItemResponse;
 import com.digipals.wms.finance.dto.TrialBalanceLine;
 import com.digipals.wms.finance.repository.AccountingDocumentRepository;
 import com.digipals.wms.finance.repository.GlAccountRepository;
 import com.digipals.wms.finance.service.FinanceQueryService;
+import com.digipals.wms.finance.service.InventoryValuationService;
 import com.digipals.wms.finance.service.OpenItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,7 @@ public class FinanceController {
     private final AccountingDocumentRepository accountingDocumentRepository;
     private final FinanceQueryService financeQueryService;
     private final OpenItemService openItemService;
+    private final InventoryValuationService inventoryValuationService;
 
     @GetMapping("/gl-accounts")
     public List<GlAccountResponse> accounts() { return glAccountRepository.findAllByActiveTrueOrderByAccountCode().stream().map(GlAccountResponse::from).toList(); }
@@ -43,4 +46,11 @@ public class FinanceController {
 
     @GetMapping("/ageing")
     public OpenItemService.AgeingSummary ageing(@RequestParam(defaultValue = "AR") String type) { return openItemService.ageing(type); }
+
+    @GetMapping("/inventory-valuation")
+    public List<InventoryValuationResponse> inventoryValuation(@RequestParam(required = false) UUID warehouseId) {
+        return warehouseId == null
+                ? inventoryValuationService.valuation()
+                : inventoryValuationService.valuationByWarehouse(warehouseId);
+    }
 }
