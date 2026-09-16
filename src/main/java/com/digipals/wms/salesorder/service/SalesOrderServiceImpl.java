@@ -1,5 +1,6 @@
 package com.digipals.wms.salesorder.service;
 
+import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.salesorder.dto.CreateSalesOrderRequest;
 import com.digipals.wms.salesorder.dto.CreateSalesOrderItemRequest;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -33,12 +35,18 @@ public class SalesOrderServiceImpl implements SalesOrderService {
     @Override
     @Transactional(noRollbackFor = RuntimeException.class)
     public SalesOrder create(CreateSalesOrderRequest request) {
+        String currency = request.currency() == null || request.currency().isBlank()
+                ? "USD"
+                : request.currency().trim().toUpperCase(Locale.ROOT);
+        if (!currency.matches("[A-Z]{3}")) throw new InvalidWorkflowException("Sales order currency must be a 3-letter ISO code.");
+
         SalesOrder order = SalesOrder.builder()
                 .orderNumber(generateOrderNumber())
                 .customerCode(request.customerCode().trim())
                 .salesOrganization(request.salesOrganization().trim())
                 .distributionChannel(request.distributionChannel().trim())
                 .division(request.division().trim())
+                .currency(currency)
                 .remarks(request.remarks())
                 .status(sapIntegrationEnabled ? SalesOrderStatus.PENDING_SAP : SalesOrderStatus.DRAFT)
                 .totalAmount(BigDecimal.ZERO)
@@ -48,11 +56,8 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (CreateSalesOrderItemRequest itemRequest : request.items()) {
-            BigDecimal unitPrice = itemRequest.unitPrice() == null
-                    ? BigDecimal.ZERO
-                    : itemRequest.unitPrice();
+            BigDecimal unitPrice = itemRequest.unitPrice() == null ? BigDecimal.ZERO : itemRequest.unitPrice();
             BigDecimal netValue = unitPrice.multiply(itemRequest.quantity());
-
             SalesOrderItem item = SalesOrderItem.builder()
                     .itemNumber(itemNumber)
                     .materialCode(itemRequest.materialCode().trim())
@@ -60,7 +65,6 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                     .unitPrice(unitPrice)
                     .netValue(netValue)
                     .build();
-
             order.addItem(item);
             total = total.add(netValue);
             itemNumber += 10;
@@ -69,9 +73,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         order.setTotalAmount(total);
         SalesOrder saved = salesOrderRepository.save(order);
 
-        if (!sapIntegrationEnabled) {
-            return saved;
-        }
+        if (!sapIntegrationEnabled) return saved;
 
         try {
             SapSalesOrderRequest sapRequest = new SapSalesOrderRequest(
@@ -79,13 +81,7 @@ public class SalesOrderServiceImpl implements SalesOrderService {
                     saved.getSalesOrganization(),
                     saved.getDistributionChannel(),
                     saved.getDivision(),
-                    saved.getItems().stream()
-                            .map(item -> new SapSalesOrderItem(
-                                    item.getMaterialCode(),
-                                    item.getQuantity(),
-                                    item.getUnitPrice()))
-                            .toList());
-
+                    saved.getItems().stream().map(item -> new SapSalesOrderItem(item.getMaterialCode(), item.getQuantity(), item.getUnitPrice())).toList());
             SapSalesOrderResponse sapResponse = sapSalesOrderClient.createSalesOrder(sapRequest);
             saved.setSapOrderNumber(sapResponse.resolvedSalesOrderNumber());
             saved.setStatus(SalesOrderStatus.CREATED);
@@ -97,33 +93,9 @@ public class SalesOrderServiceImpl implements SalesOrderService {
         }
     }
 
-    @Override
-    @Transactional
-    public SalesOrder findById(UUID id) {
-        return salesOrderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + id));
-    }
-
-    @Override
-    @Transactional
-    public SalesOrder findByOrderNumber(String orderNumber) {
-        return salesOrderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + orderNumber));
-    }
-
-    @Override
-    @Transactional
-    public List<SalesOrder> findAll() {
-        return salesOrderRepository.findAll();
-    }
-
-    @Override
-    @Transactional
-    public List<SalesOrder> findByCustomerCode(String customerCode) {
-        return salesOrderRepository.findByCustomerCodeOrderByOrderDateDesc(customerCode);
-    }
-
-    private String generateOrderNumber() {
-        return "SO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
+    @Override @Transactional public SalesOrder findById(UUID id) { return salesOrderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + id)); }
+    @Override @Transactional public SalesOrder findByOrderNumber(String orderNumber) { return salesOrderRepository.findByOrderNumber(orderNumber).orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + orderNumber)); }
+    @Override @Transactional public List<SalesOrder> findAll() { return salesOrderRepository.findAll(); }
+    @Override @Transactional public List<SalesOrder> findByCustomerCode(String customerCode) { return salesOrderRepository.findByCustomerCodeOrderByOrderDateDesc(customerCode); }
+    private String generateOrderNumber() { return "SO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(); }
 }
