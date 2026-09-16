@@ -1,0 +1,5 @@
+ALTER TABLE vendor_payments
+    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE vendor_payments
+    ALTER COLUMN payment_method SET DEFAULT 'BANK_TRANSFER';
