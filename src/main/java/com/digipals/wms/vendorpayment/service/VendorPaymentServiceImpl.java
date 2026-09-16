@@ -15,7 +15,6 @@ import com.digipals.wms.vendorpayment.repository.VendorPaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -42,10 +41,17 @@ public class VendorPaymentServiceImpl implements VendorPaymentService {
         Supplier supplier = invoice.getSupplier();
         return paymentRepository.save(VendorPayment.builder()
                 .paymentNumber("VP-" + System.currentTimeMillis())
-                .supplier(supplier).vendorInvoice(invoice).amount(request.getAmount())
+                .supplier(supplier)
+                .vendorInvoice(invoice)
+                .amount(request.getAmount())
                 .currency(request.getCurrency() == null ? invoice.getCurrency() : request.getCurrency())
-                .paymentDate(LocalDateTime.now()).reference(request.getReference())
-                .remarks(request.getRemarks()).processedBy(user).status(VendorPaymentStatus.DRAFT).build());
+                .paymentDate(LocalDateTime.now())
+                .paymentMethod(request.getPaymentMethod())
+                .referenceNumber(request.getReference())
+                .remarks(request.getRemarks())
+                .createdBy(user)
+                .status(VendorPaymentStatus.DRAFT)
+                .build());
     }
 
     @Override
@@ -55,15 +61,37 @@ public class VendorPaymentServiceImpl implements VendorPaymentService {
         if (payment.getStatus() != VendorPaymentStatus.DRAFT) {
             throw new InvalidWorkflowException("Only DRAFT vendor payments can be approved.");
         }
+        if (payment.getVendorInvoice().getStatus() != VendorInvoiceStatus.MATCHED
+                && payment.getVendorInvoice().getStatus() != VendorInvoiceStatus.POSTED) {
+            throw new InvalidWorkflowException("Vendor invoice is not payable.");
+        }
+        payment.setStatus(VendorPaymentStatus.APPROVED);
+        payment.setApprovedBy(currentUserService.getCurrentUser());
+        payment.setApprovedAt(LocalDateTime.now());
+        return paymentRepository.save(payment);
+    }
+
+    @Override
+    public VendorPayment pay(UUID id) {
+        VendorPayment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Vendor Payment not found."));
+        if (payment.getStatus() != VendorPaymentStatus.APPROVED) {
+            throw new InvalidWorkflowException("Only APPROVED vendor payments can be paid.");
+        }
         VendorInvoice invoice = payment.getVendorInvoice();
         if (invoice.getStatus() != VendorInvoiceStatus.MATCHED && invoice.getStatus() != VendorInvoiceStatus.POSTED) {
             throw new InvalidWorkflowException("Vendor invoice is not payable.");
         }
         payment.setStatus(VendorPaymentStatus.PAID);
-        payment.setProcessedBy(currentUserService.getCurrentUser());
         invoice.setStatus(VendorInvoiceStatus.PAID);
         invoiceRepository.save(invoice);
         return paymentRepository.save(payment);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<VendorPayment> findAll() {
+        return paymentRepository.findAllByOrderByPaymentDateDesc();
     }
 
     @Override
