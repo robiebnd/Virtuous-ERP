@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <aside className="sidebar">
       <div className="brand">
         <Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home">
-          <img src="/virtuous-logo.png.png" alt="Virtuous ERP" className="brand-logo" />
+          <img src="https://raw.githubusercontent.com/robiebnd/Virtuous-ERP/main/frontend/public/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" />
         </Link>
       </div>
       <nav className="nav" aria-label="Main navigation">
