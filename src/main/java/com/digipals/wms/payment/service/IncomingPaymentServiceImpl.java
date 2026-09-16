@@ -48,10 +48,9 @@ public class IncomingPaymentServiceImpl implements IncomingPaymentService {
         if (appliedAmount.compareTo(BigDecimal.ZERO) > 0) payment.addAllocation(PaymentAllocation.builder().billingDocument(billing).amount(appliedAmount).build());
         if (unappliedAmount.compareTo(BigDecimal.ZERO) > 0) payment.setStatus(PaymentStatus.PARTIALLY_APPLIED);
         IncomingPayment saved = paymentRepository.save(payment);
-        if (appliedAmount.compareTo(BigDecimal.ZERO) > 0) financePostingService.postIncomingPayment(saved.getId(), saved.getPaymentNumber(), saved.getCurrency(), appliedAmount);
+        if (appliedAmount.compareTo(BigDecimal.ZERO) > 0) financePostingService.postIncomingPayment(saved.getId(), saved.getPaymentNumber(), saved.getCurrency(), saved.getAmount(), appliedAmount);
         return saved;
     }
-
     @Override
     public IncomingPayment cancel(UUID id) {
         IncomingPayment payment = paymentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Incoming payment not found: " + id));
