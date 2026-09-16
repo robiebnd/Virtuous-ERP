@@ -49,15 +49,36 @@ public class FinancePostingService {
     public AccountingDocument postGoodsReceipt(UUID id, String grnNumber, String currency, BigDecimal amount) {
         return postBalanced("GOODS_RECEIPT", "GRN", id, grnNumber, currency, "Goods receipt " + grnNumber, List.of(new PostingLine("110000", amount, BigDecimal.ZERO, null, null, null, null, "Inventory receipt"), new PostingLine("210000", BigDecimal.ZERO, amount, null, null, null, null, "GR/IR liability")));
     }
+
     public AccountingDocument postVendorInvoice(UUID id, String invoiceNumber, String currency, BigDecimal amount) {
         return postBalanced("VENDOR_INVOICE", "VENDOR_INVOICE", id, invoiceNumber, currency, "Vendor invoice " + invoiceNumber, List.of(new PostingLine("210000", amount, BigDecimal.ZERO, null, null, null, null, "Clear GR/IR"), new PostingLine("200000", BigDecimal.ZERO, amount, null, null, null, null, "Vendor payable")));
     }
+
     public AccountingDocument postVendorPayment(UUID id, String paymentNumber, String currency, BigDecimal amount) {
         return postBalanced("VENDOR_PAYMENT", "VENDOR_PAYMENT", id, paymentNumber, currency, "Vendor payment " + paymentNumber, List.of(new PostingLine("200000", amount, BigDecimal.ZERO, null, null, null, null, "Clear vendor payable"), new PostingLine("100000", BigDecimal.ZERO, amount, null, null, null, null, "Bank payment")));
     }
+
     public AccountingDocument postCustomerInvoice(UUID id, String billingNumber, String currency, BigDecimal amount) {
         return postBalanced("CUSTOMER_INVOICE", "BILLING_DOCUMENT", id, billingNumber, currency, "Customer invoice " + billingNumber, List.of(new PostingLine("120000", amount, BigDecimal.ZERO, null, null, null, null, "Customer receivable"), new PostingLine("400000", BigDecimal.ZERO, amount, null, null, null, null, "Sales revenue")));
     }
+
+    public AccountingDocument postCustomerInvoiceWithCogs(UUID id, String billingNumber, String currency, BigDecimal revenueAmount, BigDecimal cogsAmount) {
+        BigDecimal revenue = nvl(revenueAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal cogs = nvl(cogsAmount).setScale(2, RoundingMode.HALF_UP);
+        if (revenue.compareTo(BigDecimal.ZERO) <= 0) throw new InvalidWorkflowException("Customer invoice revenue must be greater than zero.");
+        if (cogs.compareTo(BigDecimal.ZERO) < 0) throw new InvalidWorkflowException("COGS cannot be negative.");
+
+        java.util.ArrayList<PostingLine> lines = new java.util.ArrayList<>(List.of(
+                new PostingLine("120000", revenue, BigDecimal.ZERO, null, null, null, null, "Customer receivable"),
+                new PostingLine("400000", BigDecimal.ZERO, revenue, null, null, null, null, "Sales revenue")
+        ));
+        if (cogs.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine("500000", cogs, BigDecimal.ZERO, null, null, null, null, "Cost of goods sold"));
+            lines.add(new PostingLine("110000", BigDecimal.ZERO, cogs, null, null, null, null, "Inventory consumption"));
+        }
+        return postBalanced("CUSTOMER_INVOICE", "BILLING_DOCUMENT", id, billingNumber, currency, "Customer invoice and COGS " + billingNumber, lines);
+    }
+
     public AccountingDocument postIncomingPayment(UUID id, String paymentNumber, String currency, BigDecimal paymentAmount, BigDecimal appliedAmount) {
         BigDecimal payment = nvl(paymentAmount); BigDecimal applied = nvl(appliedAmount); BigDecimal unapplied = payment.subtract(applied);
         if (payment.compareTo(BigDecimal.ZERO) <= 0 || applied.compareTo(BigDecimal.ZERO) <= 0 || unapplied.compareTo(BigDecimal.ZERO) < 0) throw new InvalidWorkflowException("Invalid incoming payment clearing amounts.");
@@ -65,6 +86,7 @@ public class FinancePostingService {
         if (unapplied.compareTo(BigDecimal.ZERO) > 0) lines.add(new PostingLine("220000", BigDecimal.ZERO, unapplied, null, null, null, null, "Customer advance / unapplied cash"));
         return postBalanced("INCOMING_PAYMENT", "INCOMING_PAYMENT", id, paymentNumber, currency, "Incoming payment " + paymentNumber, lines);
     }
+
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String nextDocumentNumber() { return "FI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT); }
     public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText) {}
