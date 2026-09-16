@@ -1,10 +1,13 @@
-import { ModuleWorkspace } from "@/components/ModuleWorkspace";
+"use client";
+import {useEffect,useState} from "react";
+import Link from "next/link";
+import {orderToCashApi} from "@/lib/api";
 
-export default function CustomerInvoices() {
-  const rows = [
-    { Document: "CINV-000184", Customer: "Farmgate Foods", SalesOrder: "SO-000238", Amount: "USD 5,680.00", Status: "POSTED", Due: "17 Oct 2026" },
-    { Document: "CINV-000183", Customer: "Sunrise Poultry", SalesOrder: "SO-000235", Amount: "USD 14,210.00", Status: "PAID", Due: "10 Sep 2026" },
-    { Document: "CINV-000181", Customer: "Mbare Retail", SalesOrder: "SO-000230", Amount: "USD 8,340.00", Status: "OVERDUE", Due: "05 Sep 2026" },
-  ];
-  return <ModuleWorkspace eyebrow="ORDER TO CASH / BILLING" title="Customer Invoices" description="Generate customer billing from completed deliveries, manage invoice status and hand off open items to accounts receivable." createHref="/order-to-cash/customer-invoices/new" createLabel="Create Invoice" stats={[{label:"Open Invoices",value:"22",foot:"USD 64,820 outstanding"},{label:"Posted Today",value:"8",foot:"USD 21,440 billed"},{label:"Overdue",value:"5",foot:"Requires collection",tone:"warning"},{label:"Paid",value:"47",foot:"Current period",tone:"success"}]} process={[{label:"Delivery",detail:"Completed fulfilment",status:"Complete",tone:"approved"},{label:"Billing",detail:"Create invoice",status:"Complete",tone:"approved"},{label:"Post",detail:"Customer open item",status:"Posted",tone:"ready"},{label:"Collect",detail:"Receive payment",status:"Open",tone:"pending"},{label:"Clear",detail:"Close receivable",status:"Pending",tone:"draft"}]} columns={["Document","Customer","SalesOrder","Amount","Status","Due"]} rows={rows} searchPlaceholder="Search invoice, customer or sales order..." />;
+const statusClass=(s:string)=>{const v=s.toLowerCase();if(v.includes("paid"))return"approved";if(v.includes("posted"))return"ready";if(v.includes("cancel"))return"blocked";return"pending"};
+export default function CustomerInvoices(){
+ const [rows,setRows]=useState<any[]>([]);const [loading,setLoading]=useState(true);const [busy,setBusy]=useState("");const [message,setMessage]=useState("");
+ const load=()=>{setLoading(true);orderToCashApi.billingDocuments().then(setRows).catch(()=>setRows([])).finally(()=>setLoading(false));};useEffect(load,[]);
+ const post=async(id:string)=>{setBusy(id);try{await orderToCashApi.postBillingDocument(id);load();}catch(e){setMessage(e instanceof Error?e.message:"Unable to post invoice.");}finally{setBusy("");}};
+ return <div className="content"><div className="page-head"><div><div className="eyebrow">ORDER TO CASH / BILLING</div><h1>Customer Invoices</h1><p>Generate billing from outbound deliveries and post customer receivables.</p></div><Link className="btn primary" href="/order-to-cash/customer-invoices/new">Create Invoice</Link></div>{message&&<div className="alert error">{message}</div>}
+ <section className="card"><div className="table-caption"><strong>Billing Documents ({rows.length})</strong><span>{loading?"Loading live billing documents":"Live backend records"}</span></div><div className="table-wrap"><table className="table"><thead><tr><th>Invoice</th><th>Customer</th><th>Delivery</th><th>Type</th><th>Amount</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>{rows.map(r=>{const s=String(r.status||"");return <tr key={r.id}><td className="link">{r.billingNumber||r.id}</td><td>{r.customerCode||"—"}</td><td>{r.outboundDeliveryId||"—"}</td><td>{r.billingType||"—"}</td><td>{r.currency||"USD"} {Number(r.totalAmount||0).toFixed(2)}</td><td>{r.billingDate?new Date(r.billingDate).toLocaleDateString():"—"}</td><td><span className={`status ${statusClass(s)}`}>{s.replaceAll("_"," ")}</span></td><td>{s==="DRAFT"?<button className="btn" disabled={!!busy} onClick={()=>post(r.id)}>{busy===r.id?"Posting…":"Post"}</button>:<span className="muted">—</span>}</td></tr>})}{!rows.length&&!loading&&<tr><td colSpan={8} className="empty">No customer invoices found.</td></tr>}</tbody></table></div></section></div>;
 }
