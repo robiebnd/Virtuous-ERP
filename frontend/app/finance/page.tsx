@@ -14,18 +14,19 @@ export default function FinancePage() {
   const [billing, setBilling] = useState<any[]>([]);
   const [incoming, setIncoming] = useState<any[]>([]);
   const [inventoryValuation, setInventoryValuation] = useState<any[]>([]);
+  const [inventoryReconciliation, setInventoryReconciliation] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   async function load() {
     setLoading(true); setError("");
     try {
-      const [a, d, tb, vi, vp, b, ip, iv] = await Promise.all([
+      const [a, d, tb, vi, vp, b, ip, iv, ir] = await Promise.all([
         financeApi.glAccounts(), financeApi.accountingDocuments(), financeApi.trialBalance(),
         procurementApi.vendorInvoices(), procurementApi.vendorPayments(), orderToCashApi.billingDocuments(), orderToCashApi.incomingPayments(),
-        financeApi.inventoryValuation()
+        financeApi.inventoryValuation(), financeApi.inventoryReconciliation()
       ]);
-      setAccounts(a); setDocuments(d); setTrialBalance(tb); setVendorInvoices(vi); setVendorPayments(vp); setBilling(b); setIncoming(ip); setInventoryValuation(iv);
+      setAccounts(a); setDocuments(d); setTrialBalance(tb); setVendorInvoices(vi); setVendorPayments(vp); setBilling(b); setIncoming(ip); setInventoryValuation(iv); setInventoryReconciliation(ir);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load finance workspace."); }
     finally { setLoading(false); }
   }
@@ -52,8 +53,13 @@ export default function FinancePage() {
       <Link className="module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
-      <div className="module-card"><b>Inventory Accounting</b><span>Inventory valuation and COGS postings from customer billing</span></div>
+      <div className="module-card"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></div>
     </div>
+
+    {inventoryReconciliation && <div className="module-card" style={{ marginBottom: 24 }}>
+      <b>Inventory to GL Reconciliation</b>
+      <span>Inventory valuation: {Number(inventoryReconciliation.inventoryValuation || 0).toFixed(2)} · GL 110000: {Number(inventoryReconciliation.inventoryGlBalance || 0).toFixed(2)} · Variance: {Number(inventoryReconciliation.variance || 0).toFixed(2)} · {inventoryReconciliation.balanced ? "BALANCED" : "VARIANCE REQUIRES REVIEW"}</span>
+    </div>}
 
     <ModuleWorkspace title="Chart of Accounts" subtitle={`${accounts.length} configured GL accounts`} searchPlaceholder="Search accounts..." columns={[{key:"accountCode",label:"Account"},{key:"accountName",label:"Name"},{key:"accountType",label:"Type"},{key:"controlAccount",label:"Control"}]} rows={accounts} loading={loading} />
     <ModuleWorkspace title="Inventory Valuation" subtitle={`${inventoryValuation.length} warehouse/product balances`} searchPlaceholder="Search product or warehouse..." columns={[{key:"warehouseCode",label:"Warehouse"},{key:"sku",label:"SKU"},{key:"productName",label:"Product"},{key:"quantityOnHand",label:"Qty On Hand"},{key:"unitCost",label:"Unit Cost"},{key:"inventoryValue",label:"Inventory Value"}]} rows={inventoryValuation} loading={loading} />
