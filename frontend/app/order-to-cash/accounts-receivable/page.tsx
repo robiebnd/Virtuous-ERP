@@ -1,10 +1,14 @@
-import { ModuleWorkspace } from "@/components/ModuleWorkspace";
+"use client";
+import Link from "next/link";
+import {useEffect,useState} from "react";
+import {orderToCashApi} from "@/lib/api";
 
-export default function AccountsReceivable() {
-  const rows = [
-    { Account: "AR-000184", Customer: "Farmgate Foods", Invoice: "CINV-000184", Amount: "USD 5,680.00", Status: "OPEN", Due: "17 Oct 2026" },
-    { Account: "AR-000181", Customer: "Mbare Retail", Invoice: "CINV-000181", Amount: "USD 8,340.00", Status: "OVERDUE", Due: "05 Sep 2026" },
-    { Account: "AR-000176", Customer: "Sunrise Poultry", Invoice: "CINV-000176", Amount: "USD 4,120.00", Status: "PAID", Due: "01 Sep 2026" },
-  ];
-  return <ModuleWorkspace eyebrow="ORDER TO CASH / RECEIVABLES" title="Accounts Receivable" description="Manage customer open items, ageing, collection actions, incoming payments and account clearing." stats={[{label:"Open Receivables",value:"USD 86,420",foot:"31 customer accounts"},{label:"Current",value:"USD 62,140",foot:"Within payment terms"},{label:"Overdue",value:"USD 24,280",foot:"Collection queue",tone:"warning"},{label:"Collected",value:"USD 118K",foot:"Current period",tone:"success"}]} process={[{label:"Invoice",detail:"Posted billing",status:"Posted",tone:"ready"},{label:"Open Item",detail:"Customer balance",status:"Open",tone:"pending"},{label:"Collection",detail:"Follow up",status:"In progress",tone:"pending"},{label:"Payment",detail:"Incoming funds",status:"Pending",tone:"draft"},{label:"Clear",detail:"Match & close",status:"Pending",tone:"draft"}]} columns={["Account","Customer","Invoice","Amount","Status","Due"]} rows={rows} searchPlaceholder="Search customer, invoice or account..." />;
+export default function AccountsReceivable(){
+ const [invoices,setInvoices]=useState<any[]>([]);const [payments,setPayments]=useState<any[]>([]);const [loading,setLoading]=useState(true);
+ useEffect(()=>{Promise.all([orderToCashApi.billingDocuments(),orderToCashApi.incomingPayments()]).then(([i,p])=>{setInvoices(i);setPayments(p);}).catch(()=>{}).finally(()=>setLoading(false));},[]);
+ const open=invoices.filter(i=>!String(i.status||"").includes("PAID")).reduce((s,i)=>s+Number(i.totalAmount||0),0);const collected=payments.reduce((s,p)=>s+Number(p.amount||0),0);
+ const rows=invoices.map(i=>({Account:i.id,Customer:i.customerCode||"—",Invoice:i.billingNumber||i.id,Amount:`${i.currency||"USD"} ${Number(i.totalAmount||0).toFixed(2)}`,Status:i.status||"OPEN",Due:i.billingDate?new Date(i.billingDate).toLocaleDateString():"—"}));
+ return <div className="content"><div className="page-head"><div><div className="eyebrow">ORDER TO CASH / RECEIVABLES</div><h1>Accounts Receivable</h1><p>Manage customer open items, incoming payments and receivable closure.</p></div><Link className="btn primary" href="/order-to-cash/accounts-receivable/new-payment">Receive Payment</Link></div>
+ <div className="grid stats"><div className="card stat"><div className="stat-label">Open Receivables</div><div className="stat-value">USD {open.toFixed(2)}</div><div className="stat-foot">Live billing balance</div></div><div className="card stat"><div className="stat-label">Open Invoices</div><div className="stat-value">{invoices.filter(i=>!String(i.status||"").includes("PAID")).length}</div><div className="stat-foot">Awaiting settlement</div></div><div className="card stat"><div className="stat-label">Incoming Payments</div><div className="stat-value">{payments.length}</div><div className="stat-foot">Cash receipts</div></div><div className="card stat"><div className="stat-label">Collected</div><div className="stat-value">USD {collected.toFixed(2)}</div><div className="stat-foot success-text">Recorded receipts</div></div></div>
+ <section className="card"><div className="table-caption"><strong>Customer Open Items ({rows.length})</strong><span>{loading?"Loading live receivables":"Live backend records"}</span></div><div className="table-wrap"><table className="table"><thead><tr><th>Account</th><th>Customer</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead><tbody>{rows.map(r=><tr key={r.Account}><td>{r.Account}</td><td>{r.Customer}</td><td className="link">{r.Invoice}</td><td>{r.Amount}</td><td>{r.Status}</td><td>{r.Due}</td></tr>)}{!rows.length&&!loading&&<tr><td colSpan={6} className="empty">No receivables found.</td></tr>}</tbody></table></div></section></div>;
 }
