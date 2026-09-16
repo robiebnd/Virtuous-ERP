@@ -57,7 +57,7 @@ export const orderToCashApi = {
  createBillingDocument:(body:any)=>api<any>("/api/billing-documents",{method:"POST",body:JSON.stringify(body)}),
  postBillingDocument:(id:string)=>api<any>(`/api/billing-documents/${id}/post`,{method:"POST"}),
  incomingPayments:()=>list<any>("/api/incoming-payments"),
- receiveIncomingPayment:(body:any)=>api<any>("/api/incoming-payments",{method:"POST",body:JSON.stringify(body}),
+ receiveIncomingPayment:(body:any)=>api<any>("/api/incoming-payments",{method:"POST",body:JSON.stringify(body)}),
  documentFlow:(salesOrderId:string)=>api<any>(`/api/document-flow/sales-orders/${salesOrderId}`)
 };
 
