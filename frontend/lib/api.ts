@@ -60,3 +60,10 @@ export const orderToCashApi = {
  receiveIncomingPayment:(body:any)=>api<any>("/api/incoming-payments",{method:"POST",body:JSON.stringify(body)}),
  documentFlow:(salesOrderId:string)=>api<any>(`/api/document-flow/sales-orders/${salesOrderId}`)
 };
+
+export const financeApi = {
+ glAccounts:()=>list<any>("/api/finance/gl-accounts"),
+ accountingDocuments:()=>list<any>("/api/finance/accounting-documents"),
+ accountingDocument:(id:string)=>api<any>(`/api/finance/accounting-documents/${id}`),
+ trialBalance:()=>list<any>("/api/finance/trial-balance")
+};
