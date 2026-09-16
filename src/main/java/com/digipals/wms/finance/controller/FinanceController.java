@@ -2,10 +2,12 @@ package com.digipals.wms.finance.controller;
 
 import com.digipals.wms.finance.dto.AccountingDocumentResponse;
 import com.digipals.wms.finance.dto.GlAccountResponse;
+import com.digipals.wms.finance.dto.OpenItemResponse;
 import com.digipals.wms.finance.dto.TrialBalanceLine;
 import com.digipals.wms.finance.repository.AccountingDocumentRepository;
 import com.digipals.wms.finance.repository.GlAccountRepository;
 import com.digipals.wms.finance.service.FinanceQueryService;
+import com.digipals.wms.finance.service.OpenItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +21,7 @@ public class FinanceController {
     private final GlAccountRepository glAccountRepository;
     private final AccountingDocumentRepository accountingDocumentRepository;
     private final FinanceQueryService financeQueryService;
+    private final OpenItemService openItemService;
 
     @GetMapping("/gl-accounts")
     public List<GlAccountResponse> accounts() { return glAccountRepository.findAllByActiveTrueOrderByAccountCode().stream().map(GlAccountResponse::from).toList(); }
@@ -31,4 +34,13 @@ public class FinanceController {
 
     @GetMapping("/trial-balance")
     public List<TrialBalanceLine> trialBalance() { return financeQueryService.trialBalance(); }
+
+    @GetMapping("/open-items/ap")
+    public List<OpenItemResponse> accountsPayableOpenItems() { return openItemService.accountsPayable(); }
+
+    @GetMapping("/open-items/ar")
+    public List<OpenItemResponse> accountsReceivableOpenItems() { return openItemService.accountsReceivable(); }
+
+    @GetMapping("/ageing")
+    public OpenItemService.AgeingSummary ageing(@RequestParam(defaultValue = "AR") String type) { return openItemService.ageing(type); }
 }
