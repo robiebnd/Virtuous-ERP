@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS gl_accounts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     account_code VARCHAR(20) NOT NULL UNIQUE,
     account_name VARCHAR(150) NOT NULL,
     account_type VARCHAR(30) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS gl_accounts (
 );
 
 CREATE TABLE IF NOT EXISTS accounting_documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     document_number VARCHAR(60) NOT NULL UNIQUE,
     document_type VARCHAR(40) NOT NULL,
     document_date TIMESTAMP NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS accounting_documents (
 );
 
 CREATE TABLE IF NOT EXISTS accounting_lines (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     accounting_document_id UUID NOT NULL REFERENCES accounting_documents(id),
     gl_account_id UUID NOT NULL REFERENCES gl_accounts(id),
     line_number INTEGER NOT NULL,
@@ -52,14 +52,14 @@ CREATE INDEX IF NOT EXISTS idx_accounting_documents_status ON accounting_documen
 CREATE INDEX IF NOT EXISTS idx_accounting_lines_account ON accounting_lines(gl_account_id);
 CREATE INDEX IF NOT EXISTS idx_accounting_lines_company ON accounting_lines(company_code);
 
-INSERT INTO gl_accounts (account_code, account_name, account_type, control_account)
+INSERT INTO gl_accounts (id, account_code, account_name, account_type, control_account)
 VALUES
- ('110000','Inventory','ASSET',FALSE),
- ('120000','Accounts Receivable','ASSET',TRUE),
- ('100000','Bank','ASSET',TRUE),
- ('210000','Goods Received / Invoice Received','LIABILITY',FALSE),
- ('200000','Accounts Payable','LIABILITY',TRUE),
- ('400000','Sales Revenue','REVENUE',FALSE),
- ('500000','Cost of Goods Sold','EXPENSE',FALSE),
- ('610000','Operating Expense','EXPENSE',FALSE)
+ ('10000000-0000-0000-0000-000000000001','110000','Inventory','ASSET',FALSE),
+ ('10000000-0000-0000-0000-000000000002','120000','Accounts Receivable','ASSET',TRUE),
+ ('10000000-0000-0000-0000-000000000003','100000','Bank','ASSET',TRUE),
+ ('10000000-0000-0000-0000-000000000004','210000','Goods Received / Invoice Received','LIABILITY',FALSE),
+ ('10000000-0000-0000-0000-000000000005','200000','Accounts Payable','LIABILITY',TRUE),
+ ('10000000-0000-0000-0000-000000000006','400000','Sales Revenue','REVENUE',FALSE),
+ ('10000000-0000-0000-0000-000000000007','500000','Cost of Goods Sold','EXPENSE',FALSE),
+ ('10000000-0000-0000-0000-000000000008','610000','Operating Expense','EXPENSE',FALSE)
 ON CONFLICT (account_code) DO NOTHING;
