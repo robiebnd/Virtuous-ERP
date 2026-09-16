@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -124,20 +125,12 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
             cogs = cogs.add(unitCost.multiply(packed));
 
             Bin sourceBin = determineSourceBin(delivery, product, packed);
-            inventoryService.issueStock(
-                    delivery.getSalesOrder().getWarehouse(),
-                    sourceBin,
-                    product,
-                    packed,
-                    delivery.getDeliveryNumber(),
-                    "OUTBOUND_DELIVERY",
-                    "Goods issue for customer delivery " + delivery.getDeliveryNumber(),
-                    currentUser);
+            inventoryService.issueStock(delivery.getSalesOrder().getWarehouse(), sourceBin, product, packed, delivery.getDeliveryNumber(), "OUTBOUND_DELIVERY", "Goods issue for customer delivery " + delivery.getDeliveryNumber(), currentUser);
             item.setDeliveredQuantity(packed);
         }
 
         if (cogs.compareTo(BigDecimal.ZERO) > 0) {
-            financePostingService.postGoodsIssueWithCogs(delivery.getId(), delivery.getDeliveryNumber(), "USD", cogs);
+            financePostingService.postGoodsIssueWithCogs(delivery.getId(), delivery.getDeliveryNumber(), normalizeCurrency(delivery.getSalesOrder().getCurrency()), cogs);
         }
         delivery.setGoodsIssueAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.POSTED_GOODS_ISSUE);
@@ -147,8 +140,7 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
     private void validateInventoryAvailability(OutboundDelivery delivery) {
         if (delivery.getSalesOrder().getWarehouse() == null) throw new InvalidWorkflowException("Sales order warehouse is required for goods issue.");
         for (OutboundDeliveryItem item : delivery.getItems()) {
-            Product product = productRepository.findBySkuIgnoreCase(item.getMaterialCode())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found for delivery item: " + item.getMaterialCode()));
+            Product product = productRepository.findBySkuIgnoreCase(item.getMaterialCode()).orElseThrow(() -> new ResourceNotFoundException("Product not found for delivery item: " + item.getMaterialCode()));
             BigDecimal quantity = nvl(item.getPackedQuantity());
             if (quantity.signum() <= 0) quantity = nvl(item.getOrderedQuantity());
             determineSourceBin(delivery, product, quantity);
@@ -156,15 +148,14 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
     }
 
     private Bin determineSourceBin(OutboundDelivery delivery, Product product, BigDecimal quantity) {
-        List<com.digipals.wms.inventorybin.entity.InventoryBin> stocks =
-                inventoryService.findByWarehouse(delivery.getSalesOrder().getWarehouse().getId()).stream()
-                        .filter(i -> i.getProduct() != null && i.getProduct().getId().equals(product.getId()))
-                        .filter(i -> i.getBin() != null && Boolean.TRUE.equals(i.getBin().getActive()))
-                        .filter(i -> i.getBin().getStatus() == BinStatus.AVAILABLE)
-                        .filter(i -> !Boolean.TRUE.equals(i.getBin().getReceivingBin()))
-                        .filter(i -> nvl(i.getQuantityOnHand()).subtract(nvl(i.getQuantityReserved())).compareTo(quantity) >= 0)
-                        .sorted((a, b) -> nvl(b.getQuantityOnHand()).compareTo(nvl(a.getQuantityOnHand())))
-                        .toList();
+        List<com.digipals.wms.inventorybin.entity.InventoryBin> stocks = inventoryService.findByWarehouse(delivery.getSalesOrder().getWarehouse().getId()).stream()
+                .filter(i -> i.getProduct() != null && i.getProduct().getId().equals(product.getId()))
+                .filter(i -> i.getBin() != null && Boolean.TRUE.equals(i.getBin().getActive()))
+                .filter(i -> i.getBin().getStatus() == BinStatus.AVAILABLE)
+                .filter(i -> !Boolean.TRUE.equals(i.getBin().getReceivingBin()))
+                .filter(i -> nvl(i.getQuantityOnHand()).subtract(nvl(i.getQuantityReserved())).compareTo(quantity) >= 0)
+                .sorted((a, b) -> nvl(b.getQuantityOnHand()).compareTo(nvl(a.getQuantityOnHand())))
+                .toList();
         if (stocks.isEmpty()) throw new InvalidWorkflowException("Insufficient available stock for " + product.getSku() + ": required " + quantity + ". No eligible source bin has enough stock.");
         return stocks.get(0).getBin();
     }
@@ -172,9 +163,9 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
     @Override @Transactional public OutboundDelivery findById(UUID id) { return get(id); }
     @Override @Transactional public List<OutboundDelivery> findAll() { return deliveryRepository.findAll(); }
     @Override @Transactional public List<OutboundDelivery> findBySalesOrder(UUID salesOrderId) { return deliveryRepository.findBySalesOrderIdOrderByCreatedAtDesc(salesOrderId); }
-
     private OutboundDelivery get(UUID id) { return deliveryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Outbound delivery not found: " + id)); }
     private void requireStatus(OutboundDelivery delivery, OutboundDeliveryStatus expected) { if (delivery.getStatus() != expected) throw new InvalidWorkflowException("Delivery " + delivery.getDeliveryNumber() + " must be in " + expected + " status. Current status: " + delivery.getStatus()); }
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
+    private String normalizeCurrency(String currency) { return currency == null || currency.isBlank() ? "USD" : currency.trim().toUpperCase(Locale.ROOT); }
     private String generateDeliveryNumber() { return "OD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(); }
 }
