@@ -20,13 +20,19 @@ public class VendorPayment extends BaseEntity {
     @Column(nullable=false, precision=19, scale=2) private BigDecimal amount;
     @Column(nullable=false, length=3) private String currency;
     @Column(name="payment_date", nullable=false) private LocalDateTime paymentDate;
-    @Column(name="reference", length=100) private String reference;
+    @Column(name="payment_method", nullable=false, length=30) private String paymentMethod;
+    @Column(name="reference_number", length=100) private String referenceNumber;
     @Enumerated(EnumType.STRING) @Column(nullable=false, length=20) @Builder.Default private VendorPaymentStatus status=VendorPaymentStatus.DRAFT;
-    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="processed_by") private User processedBy;
+    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="created_by") private User createdBy;
+    @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="approved_by") private User approvedBy;
+    @Column(name="approved_at") private LocalDateTime approvedAt;
     @Column(length=1000) private String remarks;
-    @PrePersist protected void prePersistPayment() {
+
+    @PrePersist
+    protected void prePersistPayment() {
         if(paymentDate==null) paymentDate=LocalDateTime.now();
         if(currency!=null) currency=currency.trim().toUpperCase();
+        if(paymentMethod==null || paymentMethod.isBlank()) paymentMethod="BANK_TRANSFER";
         if(status==null) status=VendorPaymentStatus.DRAFT;
     }
 }
