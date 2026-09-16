@@ -5,12 +5,24 @@ import { usePathname } from "next/navigation";
 
 const groups = [
   { title: "Workspace", items: [{ label: "Dashboard", href: "/", icon: "⌂" }] },
+  { title: "Order to Cash", items: [
+    { label: "O2C Overview", href: "/order-to-cash", icon: "↗" },
+    { label: "Sales Orders", href: "/order-to-cash/sales-orders", icon: "▥" },
+    { label: "Deliveries", href: "/order-to-cash/deliveries", icon: "⇧" },
+    { label: "Customer Invoices", href: "/order-to-cash/customer-invoices", icon: "▣" },
+    { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "$" },
+    { label: "Customers", href: "/order-to-cash/customers", icon: "♙" },
+  ] },
   { title: "Procurement", items: [
     { label: "Purchase Requisitions", href: "/procurement/purchase-requisitions", icon: "▤" },
     { label: "Purchase Orders", href: "/procurement/purchase-orders", icon: "▥" },
     { label: "Goods Receipts", href: "/procurement/goods-receipts", icon: "⇩" },
+    { label: "Cycle Closure", href: "/procurement/cycle-closure", icon: "↻" },
+    { label: "Goods Issues", href: "/procurement/goods-issues", icon: "⇧" },
+    { label: "GR/IR Reconciliation", href: "/procurement/gr-ir-reconciliation", icon: "≡" },
     { label: "Vendor Invoices", href: "/procurement/vendor-invoices", icon: "▣" },
     { label: "Vendor Payments", href: "/procurement/vendor-payments", icon: "$" },
+    { label: "Vendor Evaluation", href: "/procurement/vendor-evaluation", icon: "★" },
   ] },
   { title: "Warehouse", items: [
     { label: "Warehouse Monitor", href: "/warehouse/monitor", icon: "⌘" },
@@ -33,7 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <aside className="sidebar">
       <div className="brand">
         <Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home">
-          <img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" />
+          <img src="/virtuous-logo.png.png" alt="Virtuous ERP" className="brand-logo" />
         </Link>
       </div>
       <nav className="nav" aria-label="Main navigation">
@@ -47,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </div>)}
       </nav>
-      <div className="sidebar-footer"><span>Virtuous ERP</span><small>Warehouse & Procurement</small></div>
+      <div className="sidebar-footer"><span>Virtuous ERP</span><small>Warehouse, Procurement & Order to Cash</small></div>
     </aside>
 
     <main className="main">
