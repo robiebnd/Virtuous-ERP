@@ -27,6 +27,12 @@ function Icon({ name }: { name: IconName }) {
 
 const groups = [
   { title: "Workspace", items: [{ label: "Dashboard", href: "/", icon: "home" as IconName }] },
+  { title: "Finance", items: [
+    { label: "Finance Overview", href: "/finance", icon: "money" as IconName },
+    { label: "Chart of Accounts", href: "/finance#chart-of-accounts", icon: "list" as IconName },
+    { label: "Accounting Documents", href: "/finance#accounting-documents", icon: "document" as IconName },
+    { label: "Trial Balance", href: "/finance#trial-balance", icon: "hierarchy" as IconName },
+  ] },
   { title: "Order to Cash", items: [
     { label: "O2C Overview", href: "/order-to-cash", icon: "refresh" as IconName },
     { label: "Sales Orders", href: "/order-to-cash/sales-orders", icon: "list" as IconName },
@@ -61,40 +67,5 @@ const groups = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const crumbs = pathname === "/" ? "Dashboard" : pathname.split("/").filter(Boolean).map((x) => x.replaceAll("-", " ")).join(" / ");
-
-  return <div className="app">
-    <aside className="sidebar">
-      <div className="brand">
-        <Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home">
-          <img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" />
-        </Link>
-      </div>
-      <nav className="nav" aria-label="Main navigation">
-        {groups.map((group) => <div className="nav-group" key={group.title}>
-          <div className="nav-section">{group.title}</div>
-          {group.items.map((item) => {
-            const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            return <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}>
-              <span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span>
-            </Link>;
-          })}
-        </div>)}
-      </nav>
-      <div className="sidebar-footer"><span>Virtuous ERP</span><small>Warehouse, Procurement & Order to Cash</small></div>
-    </aside>
-
-    <main className="main">
-      <header className="topbar">
-        <button className="mobile-menu" aria-label="Open navigation">☰</button>
-        <div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div>
-        <div className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Search" placeholder="Search in Virtuous ERP" /><kbd>Ctrl K</kbd></div>
-        <div className="top-actions">
-          <button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button>
-          <button className="icon-btn" aria-label="Help">?</button>
-          <button className="avatar" aria-label="User profile">RB</button>
-        </div>
-      </header>
-      {children}
-    </main>
-  </div>;
+  return <div className="app"><aside className="sidebar"><div className="brand"><Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home"><img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" /></Link></div><nav className="nav" aria-label="Main navigation">{groups.map((group) => <div className="nav-group" key={group.title}><div className="nav-section">{group.title}</div>{group.items.map((item) => { const active = pathname === item.href || (item.href !== "/" && item.href.indexOf("#") === -1 && pathname.startsWith(item.href)); return <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}><span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span></Link>; })}</div>)}</nav><div className="sidebar-footer"><span>Virtuous ERP</span><small>Finance, Warehouse, Procurement & Order to Cash</small></div></aside><main className="main"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation">☰</button><div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div><div className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Search" placeholder="Search in Virtuous ERP" /><kbd>Ctrl K</kbd></div><div className="top-actions"><button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button><button className="icon-btn" aria-label="Help">?</button><button className="avatar" aria-label="User profile">RB</button></div></header>{children}</main></div>;
 }
