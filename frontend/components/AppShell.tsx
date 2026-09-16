@@ -33,6 +33,7 @@ const groups = [
     { label: "Deliveries", href: "/order-to-cash/deliveries", icon: "refresh" as IconName },
     { label: "Customer Invoices", href: "/order-to-cash/customer-invoices", icon: "document" as IconName },
     { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "money" as IconName },
+    { label: "Document Flow", href: "/order-to-cash/document-flow", icon: "hierarchy" as IconName },
     { label: "Customers", href: "/order-to-cash/customers", icon: "users" as IconName },
   ] },
   { title: "Procurement", items: [
