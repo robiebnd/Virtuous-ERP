@@ -21,9 +21,19 @@ public class VendorPaymentController {
         return ResponseEntity.ok(service.create(request));
     }
 
+    @GetMapping
+    public ResponseEntity<List<VendorPayment>> findAll() {
+        return ResponseEntity.ok(service.findAll());
+    }
+
     @PutMapping("/{id}/approve")
     public ResponseEntity<VendorPayment> approve(@PathVariable UUID id) {
         return ResponseEntity.ok(service.approve(id));
+    }
+
+    @PutMapping("/{id}/pay")
+    public ResponseEntity<VendorPayment> pay(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.pay(id));
     }
 
     @GetMapping("/invoice/{invoiceId}")
