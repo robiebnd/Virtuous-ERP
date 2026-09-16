@@ -50,6 +50,15 @@ public class FinancePostingService {
         return postBalanced("GOODS_RECEIPT", "GRN", id, grnNumber, currency, "Goods receipt " + grnNumber, List.of(new PostingLine("110000", amount, BigDecimal.ZERO, null, null, null, null, "Inventory receipt"), new PostingLine("210000", BigDecimal.ZERO, amount, null, null, null, null, "GR/IR liability")));
     }
 
+    public AccountingDocument postGoodsIssueWithCogs(UUID deliveryId, String deliveryNumber, String currency, BigDecimal cogsAmount) {
+        BigDecimal cogs = nvl(cogsAmount).setScale(2, RoundingMode.HALF_UP);
+        if (cogs.compareTo(BigDecimal.ZERO) <= 0) throw new InvalidWorkflowException("Goods issue COGS must be greater than zero.");
+        return postBalanced("GOODS_ISSUE", "OUTBOUND_DELIVERY", deliveryId, deliveryNumber, currency, "Goods issue and inventory consumption " + deliveryNumber, List.of(
+                new PostingLine("500000", cogs, BigDecimal.ZERO, null, null, null, null, "Cost of goods sold"),
+                new PostingLine("110000", BigDecimal.ZERO, cogs, null, null, null, null, "Inventory consumption at PGI")
+        ));
+    }
+
     public AccountingDocument postVendorInvoice(UUID id, String invoiceNumber, String currency, BigDecimal amount) {
         return postBalanced("VENDOR_INVOICE", "VENDOR_INVOICE", id, invoiceNumber, currency, "Vendor invoice " + invoiceNumber, List.of(new PostingLine("210000", amount, BigDecimal.ZERO, null, null, null, null, "Clear GR/IR"), new PostingLine("200000", BigDecimal.ZERO, amount, null, null, null, null, "Vendor payable")));
     }
@@ -67,11 +76,7 @@ public class FinancePostingService {
         BigDecimal cogs = nvl(cogsAmount).setScale(2, RoundingMode.HALF_UP);
         if (revenue.compareTo(BigDecimal.ZERO) <= 0) throw new InvalidWorkflowException("Customer invoice revenue must be greater than zero.");
         if (cogs.compareTo(BigDecimal.ZERO) < 0) throw new InvalidWorkflowException("COGS cannot be negative.");
-
-        java.util.ArrayList<PostingLine> lines = new java.util.ArrayList<>(List.of(
-                new PostingLine("120000", revenue, BigDecimal.ZERO, null, null, null, null, "Customer receivable"),
-                new PostingLine("400000", BigDecimal.ZERO, revenue, null, null, null, null, "Sales revenue")
-        ));
+        java.util.ArrayList<PostingLine> lines = new java.util.ArrayList<>(List.of(new PostingLine("120000", revenue, BigDecimal.ZERO, null, null, null, null, "Customer receivable"), new PostingLine("400000", BigDecimal.ZERO, revenue, null, null, null, null, "Sales revenue")));
         if (cogs.compareTo(BigDecimal.ZERO) > 0) {
             lines.add(new PostingLine("500000", cogs, BigDecimal.ZERO, null, null, null, null, "Cost of goods sold"));
             lines.add(new PostingLine("110000", BigDecimal.ZERO, cogs, null, null, null, null, "Inventory consumption"));
