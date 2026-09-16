@@ -34,6 +34,10 @@ public class SalesOrder extends BaseDocument {
     @Column(name = "division", nullable = false, length = 20)
     private String division;
 
+    @Column(name = "currency", nullable = false, length = 3)
+    @Builder.Default
+    private String currency = "USD";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
@@ -55,15 +59,11 @@ public class SalesOrder extends BaseDocument {
 
     @PrePersist
     protected void prePersistSalesOrder() {
-        if (orderDate == null) {
-            orderDate = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = SalesOrderStatus.DRAFT;
-        }
-        if (totalAmount == null) {
-            totalAmount = BigDecimal.ZERO;
-        }
+        if (orderDate == null) orderDate = LocalDateTime.now();
+        if (status == null) status = SalesOrderStatus.DRAFT;
+        if (currency == null || currency.isBlank()) currency = "USD";
+        else currency = currency.trim().toUpperCase();
+        if (totalAmount == null) totalAmount = BigDecimal.ZERO;
     }
 
     public void addItem(SalesOrderItem item) {
