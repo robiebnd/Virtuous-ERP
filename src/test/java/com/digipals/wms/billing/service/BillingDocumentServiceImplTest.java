@@ -5,6 +5,7 @@ import com.digipals.wms.billing.entity.BillingDocument;
 import com.digipals.wms.billing.entity.BillingStatus;
 import com.digipals.wms.billing.repository.BillingDocumentRepository;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
+import com.digipals.wms.finance.service.FinancePostingService;
 import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryItem;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryStatus;
@@ -36,11 +37,14 @@ class BillingDocumentServiceImplTest {
     @Mock
     private OutboundDeliveryRepository deliveryRepository;
 
+    @Mock
+    private FinancePostingService financePostingService;
+
     private BillingDocumentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new BillingDocumentServiceImpl(billingRepository, deliveryRepository);
+        service = new BillingDocumentServiceImpl(billingRepository, deliveryRepository, financePostingService);
     }
 
     @Test
@@ -117,7 +121,7 @@ class BillingDocumentServiceImplTest {
     }
 
     @Test
-    void postMovesDraftBillingToPosted() {
+    void postMovesDraftBillingToPostedAndPostsFinanceDocument() {
         UUID billingId = UUID.randomUUID();
         LocalDateTime billingDate = LocalDateTime.now();
 
@@ -146,6 +150,8 @@ class BillingDocumentServiceImplTest {
         BillingDocument result = service.post(billingId);
 
         assertEquals(BillingStatus.POSTED, result.getStatus());
+        verify(financePostingService).postCustomerInvoice(
+                billingId, "INV-1001", "USD", new BigDecimal("100.00"));
     }
 
     @Test
@@ -163,5 +169,6 @@ class BillingDocumentServiceImplTest {
 
         assertThrows(InvalidWorkflowException.class, () -> service.post(billingId));
         verify(billingRepository, never()).save(any());
+        verifyNoInteractions(financePostingService);
     }
 }
