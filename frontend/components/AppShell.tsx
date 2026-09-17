@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type IconName = "home" | "refresh" | "users" | "bag" | "money" | "list" | "document" | "hierarchy" | "clock" | "flag" | "star" | "tag" | "warehouse";
+type IconName = "home" | "refresh" | "users" | "bag" | "money" | "list" | "document" | "hierarchy" | "clock" | "flag" | "star" | "tag" | "warehouse" | "cycleClosure" | "goodsIssue";
 
 function Icon({ name }: { name: IconName }) {
   const common = { width: 19, height: 19, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
   const paths: Record<IconName, React.ReactNode> = {
     home: <><path d="m3 10 9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></>,
     refresh: <><path d="M20 11a8 8 0 0 0-14.8-3L3 10"/><path d="M3 5v5h5"/><path d="M4 13a8 8 0 0 0 14.8 3L21 14"/><path d="M21 19v-5h-5"/></>,
+    cycleClosure: <><path d="M20 11a8 8 0 0 0-14.8-3L3 10"/><path d="M3 5v5h5"/><path d="M4 13a8 8 0 0 0 14.8 3L21 14"/><path d="M21 19v-5h-5"/><path d="m8.5 12 2.1 2.1 4.9-5"/></>,
+    goodsIssue: <><path d="M3 17h13V7H8l-2 4H3z"/><path d="M16 11h3l2 3v3h-5z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M9 18h7"/><path d="M8 7v4h4"/></>,
     users: <><circle cx="9" cy="8" r="3"/><path d="M3 20c.6-3.3 2.5-5 6-5s5.4 1.7 6 5"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M18 15c1.8.7 2.8 2.3 3 5"/></>,
     bag: <><path d="M4 8h16v12H4z"/><path d="M8 8V5h8v3"/><path d="M4 12h16"/></>,
     money: <><circle cx="12" cy="12" r="8"/><path d="M12 7v10M15 9.5c-.8-1-4-1.2-4.3.5-.3 1.7 4.5 1.3 4.3 3.2-.2 1.8-3.7 1.9-4.7.6"/></>,
@@ -46,8 +48,8 @@ const groups = [
     { label: "Purchase Requisitions", href: "/procurement/purchase-requisitions", icon: "document" as IconName },
     { label: "Purchase Orders", href: "/procurement/purchase-orders", icon: "bag" as IconName },
     { label: "Goods Receipts", href: "/procurement/goods-receipts", icon: "refresh" as IconName },
-    { label: "Cycle Closure", href: "/procurement/cycle-closure", icon: "refresh" as IconName },
-    { label: "Goods Issues", href: "/procurement/goods-issues", icon: "refresh" as IconName },
+    { label: "Cycle Closure", href: "/procurement/cycle-closure", icon: "cycleClosure" as IconName },
+    { label: "Goods Issues", href: "/procurement/goods-issues", icon: "goodsIssue" as IconName },
     { label: "GR/IR Reconciliation", href: "/procurement/gr-ir-reconciliation", icon: "hierarchy" as IconName },
     { label: "Vendor Invoices", href: "/procurement/vendor-invoices", icon: "money" as IconName },
     { label: "Vendor Payments", href: "/procurement/vendor-payments", icon: "money" as IconName },
