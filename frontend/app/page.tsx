@@ -23,7 +23,7 @@ export default function Dashboard() {
       <div className="page-head">
         <div>
           <div className="eyebrow">WORKSPACE / OVERVIEW</div>
-          <h1>Warehouse, Procurement &amp; Order to Cash</h1>
+          <h1>General Overview</h1>
           <p>Operational overview across purchasing, inventory, customer fulfilment and financial document flow.</p>
         </div>
         <div className="actions"><Link className="btn primary" href="/procurement/purchase-requisitions/new">Create Purchase Requisition</Link><Link className="btn" href="/order-to-cash/sales-orders/new">Create Sales Order</Link></div>
