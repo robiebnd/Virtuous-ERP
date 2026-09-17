@@ -26,7 +26,6 @@ export default function Dashboard() {
           <h1>General Overview</h1>
           <p>Operational overview across purchasing, inventory, customer fulfilment and financial document flow.</p>
         </div>
-        <div className="actions"><Link className="btn primary" href="/procurement/purchase-requisitions/new">Create Purchase Requisition</Link><Link className="btn" href="/order-to-cash/sales-orders/new">Create Sales Order</Link></div>
       </div>
 
       <div className="grid stats">
