@@ -40,7 +40,7 @@ public class ProcurementClosureService {
     private final SupplierInvoiceRepository invoices;
     private final SupplierInvoiceLineRepository invoiceLines;
     private final SupplierPaymentRepository payments;
-    private final VendorEvaluationRepository evaluations;
+    private final com.digipals.wms.vendorevaluation.repository.VendorEvaluationRepository evaluations;
     private final GoodsMovementService goodsMovements;
     private final WarehouseRepository warehouses;
     private final BinRepository bins;
@@ -112,7 +112,7 @@ public class ProcurementClosureService {
     public Map<String,Object> evaluate(VendorEvaluationRequest r){
         PurchaseOrder po=r.purchaseOrderNumber()==null||r.purchaseOrderNumber().isBlank()?null:po(r.purchaseOrderNumber()); Supplier supplier=po==null?null:po.getSupplier(); if(supplier==null) throw new InvalidWorkflowException("Purchase Order number is required for vendor evaluation.");
         validateScore(r.priceScore(),"priceScore");validateScore(r.qualityScore(),"qualityScore");validateScore(r.deliveryScore(),"deliveryScore");validateScore(r.serviceScore(),"serviceScore"); BigDecimal overall=nz(r.priceScore()).add(nz(r.qualityScore())).add(nz(r.deliveryScore())).add(nz(r.serviceScore())).divide(BigDecimal.valueOf(4),2,RoundingMode.HALF_UP);
-        VendorEvaluation e=evaluations.save(VendorEvaluation.builder().supplier(supplier).purchaseOrder(po).priceScore(r.priceScore()).qualityScore(r.qualityScore()).deliveryScore(r.deliveryScore()).serviceScore(r.serviceScore()).overallScore(overall).evaluationDate(LocalDateTime.now()).remarks(r.remarks()).build()); return Map.of("supplierCode",supplier.getCode(),"supplierName",supplier.getName(),"purchaseOrderNumber",po.getPoNumber(),"priceScore",e.getPriceScore(),"qualityScore",e.getQualityScore(),"deliveryScore",e.getDeliveryScore(),"serviceScore",e.getServiceScore(),"overallScore",e.getOverallScore());
+        com.digipals.wms.vendorevaluation.entity.VendorEvaluation e=evaluations.save(com.digipals.wms.vendorevaluation.entity.VendorEvaluation.builder().supplier(supplier).purchaseOrderId(po.getId()).purchaseOrderNumber(po.getPoNumber()).priceScore(r.priceScore()).qualityScore(r.qualityScore()).deliveryScore(r.deliveryScore()).serviceScore(r.serviceScore()).overallScore(overall).evaluationDate(LocalDateTime.now()).remarks(r.remarks()).build()); return Map.of("supplierCode",supplier.getCode(),"supplierName",supplier.getName(),"purchaseOrderNumber",po.getPoNumber(),"priceScore",e.getPriceScore(),"qualityScore",e.getQualityScore(),"deliveryScore",e.getDeliveryScore(),"serviceScore",e.getServiceScore(),"overallScore",e.getOverallScore());
     }
     private Map<UUID,BigDecimal> alreadyInvoiced(UUID poId){Map<UUID,BigDecimal> map=new HashMap<>();for(SupplierInvoice i:invoices.findByPurchaseOrderId(poId))for(SupplierInvoiceLine l:invoiceLines.findByInvoiceId(i.getId()))map.merge(l.getPurchaseOrderLine().getId(),nz(l.getQuantity()),BigDecimal::add);return map;}
     private Map<String,Object> invoiceResponse(SupplierInvoice i){return Map.of("invoiceNumber",i.getInvoiceNumber(),"purchaseOrderNumber",i.getPurchaseOrder().getPoNumber(),"supplierCode",i.getSupplier().getCode(),"status",i.getStatus().name(),"totalAmount",i.getTotalAmount(),"balanceDue",i.getBalanceDue());}
