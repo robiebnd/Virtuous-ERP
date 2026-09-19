@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-type IconName = "home" | "refresh" | "users" | "bag" | "money" | "list" | "document" | "hierarchy" | "clock" | "flag" | "star" | "tag" | "warehouse" | "cycleClosure" | "goodsIssue";
+type IconName = "home" | "refresh" | "users" | "bag" | "money" | "list" | "document" | "hierarchy" | "clock" | "flag" | "star" | "tag" | "warehouse" | "cycleClosure" | "goodsIssue" | "chart" | "calculator" | "shield" | "receipt" | "bank" | "coins" | "briefcase" | "layers" | "truck" | "package";
 
 function Icon({ name }: { name: IconName }) {
   const common = { width: 19, height: 19, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
@@ -24,6 +24,16 @@ function Icon({ name }: { name: IconName }) {
     star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>,
     tag: <><path d="M4 5v6l9 9 7-7-9-9z"/><circle cx="9" cy="9" r="1"/></>,
     warehouse: <><path d="m3 10 9-6 9 6v10H3z"/><path d="M7 20v-6h10v6M9 10h6"/></>,
+    chart: <><path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/></>,
+    calculator: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M14 11h2M8 15h2M14 15h2M8 18h2M14 18h2"/></>,
+    shield: <><path d="M12 3 20 6v5c0 5-3.2 8.5-8 10-4.8-1.5-8-5-8-10V6z"/><path d="m9 12 2 2 4-4"/></>,
+    receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h4"/></>,
+    bank: <><path d="M3 9h18L12 3z"/><path d="M5 9v8M9 9v8M15 9v8M19 9v8M3 20h18"/></>,
+    coins: <><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></>,
+    briefcase: <><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 7V5h6v2M4 12h16"/></>,
+    layers: <><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></>,
+    truck: <><path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></>,
+    package: <><path d="m4 7 8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7M12 11v10"/></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
@@ -33,41 +43,43 @@ const groups = [
   { title: "Finance", items: [
     { label: "Finance Overview", href: "/finance", icon: "money" as IconName },
     { label: "Chart of Accounts", href: "/finance/chart-of-accounts", icon: "list" as IconName },
-    { label: "Accounting Documents", href: "/finance/accounting-documents", icon: "document" as IconName },
-    { label: "Trial Balance", href: "/finance/trial-balance", icon: "hierarchy" as IconName },
-    { label: "Financial Statements", href: "/finance/financial-statements", icon: "document" as IconName },
-    { label: "Journal Entry", href: "/finance/journal-entry", icon: "document" as IconName },
-    { label: "Finance Controls", href: "/finance/controls", icon: "hierarchy" as IconName },
-    { label: "Management Accounting", href: "/finance/management-accounting", icon: "hierarchy" as IconName },
-    { label: "Treasury & Cash", href: "/finance/treasury", icon: "money" as IconName },
-    { label: "Advanced Finance", href: "/finance/advanced", icon: "hierarchy" as IconName },
+    { label: "Accounting Documents", href: "/finance/accounting-documents", icon: "receipt" as IconName },
+    { label: "Trial Balance", href: "/finance/trial-balance", icon: "chart" as IconName },
+    { label: "Treasury & Cash", href: "/finance/treasury", icon: "bank" as IconName },
+    { label: "Advanced Finance", href: "/finance/advanced", icon: "layers" as IconName },
     { label: "Period-End Close", href: "/finance/period-end-close", icon: "clock" as IconName },
-    { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
-    { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "money" as IconName },
+    { label: "More Finance", icon: "calculator" as IconName, children: [
+      { label: "Financial Statements", href: "/finance/financial-statements", icon: "document" as IconName },
+      { label: "Journal Entry", href: "/finance/journal-entry", icon: "receipt" as IconName },
+      { label: "Finance Controls", href: "/finance/controls", icon: "shield" as IconName },
+      { label: "Management Accounting", href: "/finance/management-accounting", icon: "calculator" as IconName },
+      { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "coins" as IconName },
+      { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "briefcase" as IconName },
+    ]}
   ] },
   { title: "Outbound Operations", items: [
     { label: "O2C Overview", href: "/order-to-cash", icon: "refresh" as IconName },
     { label: "Sales Orders", href: "/order-to-cash/sales-orders", icon: "list" as IconName },
-    { label: "Deliveries", href: "/order-to-cash/deliveries", icon: "refresh" as IconName },
-    { label: "Customer Invoices", href: "/order-to-cash/customer-invoices", icon: "document" as IconName },
-    { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "money" as IconName },
+    { label: "Deliveries", href: "/order-to-cash/deliveries", icon: "truck" as IconName },
+    { label: "Customer Invoices", href: "/order-to-cash/customer-invoices", icon: "receipt" as IconName },
+    { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "briefcase" as IconName },
     { label: "Document Flow", href: "/order-to-cash/document-flow", icon: "hierarchy" as IconName },
     { label: "Customers", href: "/order-to-cash/customers", icon: "users" as IconName },
   ] },
   { title: "Procurement", items: [
     { label: "Purchase Requisitions", href: "/procurement/purchase-requisitions", icon: "document" as IconName },
     { label: "Purchase Orders", href: "/procurement/purchase-orders", icon: "bag" as IconName },
-    { label: "Goods Receipts", href: "/procurement/goods-receipts", icon: "refresh" as IconName },
+    { label: "Goods Receipts", href: "/procurement/goods-receipts", icon: "package" as IconName },
     { label: "Cycle Closure", href: "/procurement/cycle-closure", icon: "cycleClosure" as IconName },
     { label: "Goods Issues", href: "/procurement/goods-issues", icon: "goodsIssue" as IconName },
     { label: "GR/IR Reconciliation", href: "/procurement/gr-ir-reconciliation", icon: "hierarchy" as IconName },
-    { label: "Vendor Invoices", href: "/procurement/vendor-invoices", icon: "money" as IconName },
+    { label: "Vendor Invoices", href: "/procurement/vendor-invoices", icon: "receipt" as IconName },
     { label: "Vendor Payments", href: "/procurement/vendor-payments", icon: "money" as IconName },
     { label: "Vendor Evaluation", href: "/procurement/vendor-evaluation", icon: "star" as IconName },
   ] },
   { title: "Warehouse", items: [
     { label: "Warehouse Monitor", href: "/warehouse/monitor", icon: "warehouse" as IconName },
-    { label: "Products", href: "/warehouse/products", icon: "list" as IconName },
+    { label: "Products", href: "/warehouse/products", icon: "package" as IconName },
     { label: "Stock & Bins", href: "/warehouse/stock", icon: "hierarchy" as IconName },
   ] },
   { title: "Master Data", items: [
@@ -75,38 +87,3 @@ const groups = [
     { label: "Warehouses", href: "/master-data/warehouses", icon: "warehouse" as IconName },
   ] },
 ];
-
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setProfileOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setProfileOpen(false);
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-  const crumbs = pathname === "/" ? "Dashboard" : pathname.split("/").filter(Boolean).map((x) => x.replaceAll("-", " ")).join(" / ");
-  return <div className="app"><aside className="sidebar"><div className="brand"><Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home"><img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" /></Link></div><nav className="nav" aria-label="Main navigation">{groups.map((group) => <div className="nav-group" key={group.title}><div className="nav-section">{group.title}</div>{group.items.map((item) => { const active = pathname === item.href || (item.href !== "/" && item.href.indexOf("#") === -1 && pathname.startsWith(item.href)); return <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}><span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span></Link>; })}</div>)}</nav><div className="sidebar-footer"><span>Virtuous ERP</span><small>Finance, Warehouse, Procurement & Outbound Operations</small></div></aside><main className="main"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation">☰</button><div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div><div className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Search" placeholder="Search in Virtuous ERP" /><kbd>Ctrl K</kbd></div><div className="top-actions"><button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button><button className="icon-btn" aria-label="Help">?</button><div className="profile-wrap" ref={profileRef}>
-  <button className={`avatar ${profileOpen ? "avatar-open" : ""}`} aria-label="User profile" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((open) => !open)}>RB</button>
-  {profileOpen && <div className="profile-menu" role="menu" aria-label="User profile menu">
-    <div className="profile-header"><div className="profile-avatar">RB</div><div className="profile-identity"><strong>RB</strong><span>Virtuous ERP User</span></div></div>
-    <div className="profile-divider" />
-    <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">◉</span><span>My Profile</span></button>
-    <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">⚙</span><span>Settings</span></button>
-    <div className="profile-divider" />
-    <button className="profile-menu-item profile-signout" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">↪</span><span>Sign out</span></button>
-  </div>}
-</div></div></header>{children}</main></div>;
-}
