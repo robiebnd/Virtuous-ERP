@@ -33,7 +33,7 @@ public class FiscalPeriodController {
     public FiscalPeriodResponse close(
         @PathVariable int year,
         @PathVariable int period,
-        @RequestParam(defaultValue = "SYSTEM") String companyCode,
+        @RequestParam(defaultValue = "ZW01") String companyCode,
         @RequestBody(required = false) FiscalPeriodStatusRequest request
     ) {
         String closedBy = request == null ? "SYSTEM" : request.closedBy();
