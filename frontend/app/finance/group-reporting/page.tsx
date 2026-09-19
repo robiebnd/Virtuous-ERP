@@ -1,0 +1,39 @@
+"use client";
+import {useEffect,useState} from "react";
+import {financeApi} from "@/lib/api";
+
+export default function GroupReportingPage(){
+ const [companies,setCompanies]=useState<any[]>([]),[groups,setGroups]=useState<any[]>([]),[units,setUnits]=useState<any[]>([]),[runs,setRuns]=useState<any[]>([]),[balances,setBalances]=useState<any[]>([]);
+ const [groupId,setGroupId]=useState(""),[runId,setRunId]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);
+ const [companyForm,setCompanyForm]=useState({companyCode:"",companyName:"",countryCode:"ZWE",functionalCurrency:"USD",reportingCurrency:"USD"});
+ const [unitForm,setUnitForm]=useState({unitCode:"",unitName:"",companyCode:"ZW01",localCurrency:"USD",ownershipPercent:"100"});
+ const [groupForm,setGroupForm]=useState({groupCode:"",groupName:"",reportingCurrency:"USD"});
+ const [runForm,setRunForm]=useState({fiscalYear:String(new Date().getFullYear()),periodNumber:"1"});
+ const load=async()=>{setBusy(true);try{const [c,g,u]=await Promise.all([financeApi.companyCodes(),financeApi.consolidationGroups(),financeApi.consolidationUnits()]);setCompanies(c);setGroups(g);setUnits(u);setError("")}catch(e){setError(e instanceof Error?e.message:"Unable to load group reporting.")}finally{setBusy(false)}};
+ useEffect(()=>{load()},[]);
+ const loadRuns=async(id:string)=>{setGroupId(id);setRunId("");setBalances([]);if(id)setRuns(await financeApi.groupReportingRuns(id));};
+ const run=async()=>{if(!groupId)return;setBusy(true);try{const r=await financeApi.runGroupReporting(groupId,{fiscalYear:Number(runForm.fiscalYear),periodNumber:Number(runForm.periodNumber)});setRuns(x=>[r,...x]);setError("")}catch(e){setError(e instanceof Error?e.message:"Unable to run consolidation.")}finally{setBusy(false)}};
+ const showBalances=async(id:string)=>{setRunId(id);setBalances(await financeApi.groupReportingBalances(id))};
+ const create=async(kind:"company"|"unit"|"group")=>{setBusy(true);try{if(kind==="company")await financeApi.createCompanyCode(companyForm);if(kind==="unit")await financeApi.saveConsolidationUnit({...unitForm,ownershipPercent:Number(unitForm.ownershipPercent)});if(kind==="group")await financeApi.saveConsolidationGroup(groupForm);await load();setError("")}catch(e){setError(e instanceof Error?e.message:"Save failed")}finally{setBusy(false)}};
+ return <main className="content">
+  <div className="page-head"><div><div className="eyebrow">FINANCE / GROUP REPORTING</div><h1>Multi-Company & Group Reporting</h1><p>Legal entities, consolidation scope, intercompany postings, currency translation and consolidated balances.</p></div><div className="actions"><button className="btn primary" onClick={load}>{busy?"Working…":"Refresh"}</button></div></div>
+  {error&&<div className="alert error">{error}</div>}
+  <div className="grid" style={{gridTemplateColumns:"repeat(3,minmax(0,1fr))",marginBottom:18}}>
+   <section className="card form-card"><div className="section-title">Company Code</div><div className="form-grid" style={{gridTemplateColumns:"1fr"}}>
+    {Object.entries(companyForm).map(([k,v])=><div className="form-field" key={k}><label>{k}</label><input className="form-input" value={v as string} onChange={e=>setCompanyForm({...companyForm,[k]:e.target.value})}/></div>)}<button className="btn primary" onClick={()=>create("company")}>Create Company</button>
+   </div></section>
+   <section className="card form-card"><div className="section-title">Consolidation Unit</div><div className="form-grid" style={{gridTemplateColumns:"1fr"}}>
+    {Object.entries(unitForm).map(([k,v])=><div className="form-field" key={k}><label>{k}</label><input className="form-input" value={v as string} onChange={e=>setUnitForm({...unitForm,[k]:e.target.value})}/></div>)}<button className="btn primary" onClick={()=>create("unit")}>Create Unit</button>
+   </div></section>
+   <section className="card form-card"><div className="section-title">Consolidation Group</div><div className="form-grid" style={{gridTemplateColumns:"1fr"}}>
+    {Object.entries(groupForm).map(([k,v])=><div className="form-field" key={k}><label>{k}</label><input className="form-input" value={v as string} onChange={e=>setGroupForm({...groupForm,[k]:e.target.value})}/></div>)}<button className="btn primary" onClick={()=>create("group")}>Create Group</button>
+   </div></section>
+  </div>
+  <section className="card" style={{marginBottom:18}}><div className="table-caption"><strong>Company Codes</strong><span>{companies.length} active legal entities</span></div><div className="table-wrap"><table className="table"><thead><tr><th>Code</th><th>Name</th><th>Country</th><th>Functional Currency</th><th>Reporting Currency</th></tr></thead><tbody>{companies.map(x=><tr key={x.id}><td>{x.companyCode}</td><td>{x.companyName}</td><td>{x.countryCode}</td><td>{x.functionalCurrency}</td><td>{x.reportingCurrency}</td></tr>)}</tbody></table></div></section>
+  <section className="card" style={{marginBottom:18}}><div className="table-caption"><strong>Consolidation Structure</strong><span>{groups.length} groups · {units.length} units</span></div><div className="table-wrap"><table className="table"><thead><tr><th>Group</th><th>Reporting Currency</th><th>Run</th></tr></thead><tbody>{groups.map(g=><tr key={g.id}><td><strong>{g.groupCode}</strong> — {g.groupName}</td><td>{g.reportingCurrency}</td><td><button className="btn" onClick={()=>loadRuns(g.id)}>Select</button></td></tr>)}</tbody></table></div></section>
+  {groupId&&<section className="card" style={{marginBottom:18}}><div className="section-title">Run Consolidation</div><div className="form-grid"><div className="form-field"><label>Fiscal Year</label><input className="form-input" value={runForm.fiscalYear} onChange={e=>setRunForm({...runForm,fiscalYear:e.target.value})}/></div><div className="form-field"><label>Period</label><select className="form-input" value={runForm.periodNumber} onChange={e=>setRunForm({...runForm,periodNumber:e.target.value})}>{Array.from({length:12},(_,i)=><option key={i+1}>{i+1}</option>)}</select></div><div className="form-field"><label>&nbsp;</label><button className="btn primary" onClick={run} disabled={busy}>Run Group Reporting</button></div></div>
+   <div className="table-wrap"><table className="table"><thead><tr><th>Year</th><th>Period</th><th>Currency</th><th>Status</th><th>Debit</th><th>Credit</th><th></th></tr></thead><tbody>{runs.map(x=><tr key={x.id}><td>{x.fiscalYear}</td><td>{x.periodNumber}</td><td>{x.reportingCurrency}</td><td>{x.status}</td><td>{Number(x.totalDebit||0).toFixed(2)}</td><td>{Number(x.totalCredit||0).toFixed(2)}</td><td><button className="btn" onClick={()=>showBalances(x.id)}>View balances</button></td></tr>)}</tbody></table></div>
+  </section>}
+  {runId&&<section className="card"><div className="table-caption"><strong>Consolidated Trial Balance</strong><span>Eliminations included</span></div><div className="table-wrap"><table className="table"><thead><tr><th>Company</th><th>Account</th><th>Type</th><th>FX</th><th>Translated Debit</th><th>Translated Credit</th><th>Elim Debit</th><th>Elim Credit</th><th>Final Debit</th><th>Final Credit</th></tr></thead><tbody>{balances.map(x=><tr key={x.id}><td>{x.companyCode}</td><td>{x.accountCode} — {x.accountName}</td><td>{x.accountType}</td><td>{Number(x.fxRate||1).toFixed(6)}</td><td>{Number(x.translatedDebit||0).toFixed(2)}</td><td>{Number(x.translatedCredit||0).toFixed(2)}</td><td>{Number(x.eliminationDebit||0).toFixed(2)}</td><td>{Number(x.eliminationCredit||0).toFixed(2)}</td><td>{Number(x.finalDebit||0).toFixed(2)}</td><td>{Number(x.finalCredit||0).toFixed(2)}</td></tr>)}</tbody></table></div></section>}
+ </main>
+}
