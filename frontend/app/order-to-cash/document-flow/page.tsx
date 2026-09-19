@@ -9,16 +9,16 @@ type FlowEntry = { documentType?: string; documentNumber?: string; status?: stri
 type FlowResponse = { rootDocumentNumber?: string; customerCode?: string; flow?: FlowEntry[] };
 
 export default function DocumentFlowPage() {
-  const [salesOrderId, setSalesOrderId] = useState("");
+  const [salesOrderNumber, setSalesOrderNumber] = useState("");
   const [data, setData] = useState<FlowResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function lookup() {
-    if (!salesOrderId.trim()) return;
+    if (!salesOrderNumber.trim()) return;
     setLoading(true); setError("");
     try {
-      setData(await orderToCashApi.documentFlow(salesOrderId.trim()));
+      setData(await orderToCashApi.documentFlow(salesOrderNumber.trim()));
     } catch (e) {
       setData(null);
       setError(e instanceof Error ? e.message : "Unable to load document flow");
@@ -39,7 +39,7 @@ export default function DocumentFlowPage() {
     <section className="panel" style={{ marginBottom: 18 }}>
       <div className="panel-title">Document Flow Explorer</div>
       <div className="form-grid">
-        <label>Sales Order ID<input value={salesOrderId} onChange={e => setSalesOrderId(e.target.value)} placeholder="UUID of the sales order" /></label>
+        <label>Sales Order Number<input value={salesOrderNumber} onChange={e => setSalesOrderNumber(e.target.value)} placeholder="e.g. SO-000123" /></label>
         <div className="form-actions"><button className="btn primary" onClick={lookup} disabled={loading}>{loading ? "Loading..." : "Display Flow"}</button></div>
       </div>
       {error && <div className="alert error">{error}</div>}
