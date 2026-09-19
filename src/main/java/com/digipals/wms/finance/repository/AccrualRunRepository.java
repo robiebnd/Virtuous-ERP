@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.repository; import com.digipals.wms.finance.entity.*; import org.springframework.data.jpa.repository.JpaRepository; import java.time.LocalDate; import java.util.*; public interface AccrualRunRepository extends JpaRepository<AccrualRun,UUID>{ boolean existsByTemplateIdAndPeriodStart(UUID templateId,LocalDate periodStart); }
