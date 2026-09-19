@@ -38,6 +38,7 @@ public class AdvancedFinanceController {
  @GetMapping("/product-costing/{productCode}") public List<ProductCostEstimate> productCosts(@PathVariable String productCode){return costs.findByProductCodeOrderByCostingDateDesc(productCode);}
  @PostMapping("/accrual-templates") public ResponseEntity<AccrualTemplate> accrual(@Valid @RequestBody AccrualTemplateRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createAccrual(r));}
  @GetMapping("/accrual-templates") public List<AccrualTemplate> accruals(){return accruals.findAll();}
+ @PostMapping("/accrual-templates/{id}/run") public AccrualRun runAccrual(@PathVariable UUID id){return service.runAccrual(id);}
  @PostMapping("/material-ledger") public MaterialLedgerPeriod materialLedger(@Valid @RequestBody MaterialLedgerRequest r){return service.saveMaterialLedger(r);}
  @GetMapping("/material-ledger/{productCode}") public List<MaterialLedgerPeriod> materialLedger(@PathVariable String productCode){return materialLedger.findAll().stream().filter(x->x.getProductCode().equals(productCode)).toList();}
 }
