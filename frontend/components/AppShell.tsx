@@ -31,9 +31,9 @@ const groups = [
   { title: "Workspace", items: [{ label: "Dashboard", href: "/", icon: "home" as IconName }] },
   { title: "Finance", items: [
     { label: "Finance Overview", href: "/finance", icon: "money" as IconName },
-    { label: "Chart of Accounts", href: "/finance#chart-of-accounts", icon: "list" as IconName },
-    { label: "Accounting Documents", href: "/finance#accounting-documents", icon: "document" as IconName },
-    { label: "Trial Balance", href: "/finance#trial-balance", icon: "hierarchy" as IconName },
+    { label: "Chart of Accounts", href: "/finance/chart-of-accounts", icon: "list" as IconName },
+    { label: "Accounting Documents", href: "/finance/accounting-documents", icon: "document" as IconName },
+    { label: "Trial Balance", href: "/finance/trial-balance", icon: "hierarchy" as IconName },
     { label: "Journal Entry", href: "/finance/journal-entry", icon: "document" as IconName },
     { label: "Finance Controls", href: "/finance/controls", icon: "hierarchy" as IconName },
     { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
