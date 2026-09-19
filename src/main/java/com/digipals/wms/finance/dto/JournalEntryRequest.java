@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotEmpty;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.LocalDate;
 
 public record JournalEntryRequest(
         @NotBlank String documentType,
