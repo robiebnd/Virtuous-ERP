@@ -48,12 +48,12 @@ export default function FinancePage() {
   const debitTotal = trialBalance.reduce((s, x) => s + Number(x.debitBalance || 0), 0);
   const creditTotal = trialBalance.reduce((s, x) => s + Number(x.creditBalance || 0), 0);
 
-  return <main className="page">
+  return <main className="content">
     <div className="page-head"><div><div className="eyebrow">FINANCE / FI</div><h1>Finance & Accounting</h1><p>AP, AR, GR/IR, clearing, inventory valuation and accounting documents.</p></div><button className="btn" onClick={load}>Refresh</button></div>
     {error && <div className="alert error">{error}</div>}
     <div className="grid stats">
       <div className="card stat"><div className="stat-label">Accounts Payable</div><div className="stat-value">{apOpen.toFixed(2)}</div><div className="stat-foot">Open vendor exposure</div></div>
-      <div className="stat-card"><div className="stat-label">Accounts Receivable</div><div className="stat-value">{arOpen.toFixed(2)}</div><div className="stat-foot">Open customer exposure</div></div>
+      <div className="card stat"><div className="stat-label">Accounts Receivable</div><div className="stat-value">{arOpen.toFixed(2)}</div><div className="stat-foot">Open customer exposure</div></div>
       <div className="stat-card"><div className="stat-label">Inventory Value</div><div className="stat-value">{inventoryValue.toFixed(2)}</div><div className="stat-foot">On-hand quantity × standard cost</div></div>
       <div className="stat-card"><div className="stat-label">Posted FI Documents</div><div className="stat-value">{posted.length}</div><div className="stat-foot">Accounting documents</div></div>
     </div>
@@ -68,10 +68,10 @@ export default function FinancePage() {
     </section>
 
     <div className="grid stats" style={{marginBottom:18}}>
-      <Link className="module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
+      <Link className="card module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
-      <div className="module-card"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></div>
+      <div className="card module-card"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></div>
     </div>
 
     {inventoryReconciliation && <div className="card" style={{ marginBottom: 24, padding: 18 }}>
