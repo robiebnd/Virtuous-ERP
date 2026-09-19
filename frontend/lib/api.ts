@@ -63,7 +63,7 @@ export const orderToCashApi = {
  postBillingDocument:(id:string)=>api<any>(`/api/billing-documents/${id}/post`,{method:"POST"}),
  incomingPayments:()=>list<any>("/api/incoming-payments"),
  receiveIncomingPayment:(body:any)=>api<any>("/api/incoming-payments",{method:"POST",body:JSON.stringify(body)}),
- documentFlow:(salesOrderId:string)=>api<any>(`/api/document-flow/sales-orders/${salesOrderId}`)
+ documentFlow:(orderNumber:string)=>api<any>(`/api/document-flow/sales-orders/number/${encodeURIComponent(orderNumber)}`)
 };
 
 export const financeApi = {
