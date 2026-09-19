@@ -23,6 +23,7 @@ public class GroupReportingService {
  private final IntercompanyTransactionRepository intercompany;
  private final FxRateRepository fxRates;
  private final FiscalPeriodService fiscalPeriods;
+ private final ConsolidationAdjustmentRepository adjustments;
 
  public GroupReportingRun run(UUID groupId, GroupReportingRunRequest request){
    ConsolidationGroup group=groups.findById(groupId).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
@@ -56,6 +57,12 @@ public class GroupReportingService {
      eliminate(byKey,tx.getSourceCompanyCode(),tx.getSourceCreditAccountCode(),amount,false);
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetDebitAccountCode(),amount,true);
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetCreditAccountCode(),amount,false);
+   }
+   for(ConsolidationAdjustment a:adjustments.findByGroupIdAndPeriodStartAndStatus(groupId,start,"POSTED")){
+     BigDecimal debit=a.getDebit()==null?BigDecimal.ZERO:a.getDebit(), credit=a.getCredit()==null?BigDecimal.ZERO:a.getCredit();
+     String key="GROUP|"+a.getAccountCode(); GroupReportingBalance b=byKey.get(key);
+     if(b==null){b=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode(a.getAccountCode()).accountName("Consolidation adjustment").accountType("ADJUSTMENT").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(BigDecimal.ZERO).translatedCredit(BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(BigDecimal.ZERO).finalCredit(BigDecimal.ZERO).build(); byKey.put(key,b); balances.save(b);}
+     b.setFinalDebit(b.getFinalDebit().add(debit)); b.setFinalCredit(b.getFinalCredit().add(credit)); balances.save(b);
    }
    BigDecimal totalD=BigDecimal.ZERO,totalC=BigDecimal.ZERO;
    for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(BigDecimal.ZERO));b.setFinalCredit(b.getTranslatedCredit().subtract(b.getEliminationCredit()).max(BigDecimal.ZERO));balances.save(b);totalD=totalD.add(b.getFinalDebit());totalC=totalC.add(b.getFinalCredit());}
