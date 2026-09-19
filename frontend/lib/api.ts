@@ -75,5 +75,6 @@ export const financeApi = {
  openItemsAr:()=>list<any>("/api/finance/open-items/ar"),
  ageing:(type:"AP"|"AR"="AR")=>api<any>(`/api/finance/ageing?type=${type}`),
  inventoryValuation:(warehouseId?:string)=>list<any>(warehouseId ? `/api/finance/inventory-valuation?warehouseId=${encodeURIComponent(warehouseId)}` : "/api/finance/inventory-valuation"),
- inventoryReconciliation:()=>api<any>("/api/finance/inventory-reconciliation")
+ inventoryReconciliation:()=>api<any>("/api/finance/inventory-reconciliation"),
+ postJournalEntry:(body:any)=>api<any>("/api/finance/journal-entries",{method:"POST",body:JSON.stringify(body)})
 };
