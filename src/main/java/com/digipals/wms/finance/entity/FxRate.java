@@ -1,4 +1,4 @@
 package com.digipals.wms.finance.entity;
 import jakarta.persistence.*; import lombok.*; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
 @Entity @Table(name="fx_rates",uniqueConstraints=@UniqueConstraint(columnNames={"rate_date","from_currency","to_currency"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class FxRate { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; @Column(name="rate_date") LocalDate rateDate; String fromCurrency; String toCurrency; BigDecimal rate; String source; }
+public class FxRate { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; @Column(name="rate_date") LocalDate rateDate; String fromCurrency; String toCurrency; BigDecimal rate; String source; @Column(name="rate_type",nullable=false,length=20) String rateType; }
