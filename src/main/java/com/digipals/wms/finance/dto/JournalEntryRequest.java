@@ -13,6 +13,8 @@ public record JournalEntryRequest(
         @NotBlank String documentType,
         String referenceNumber,
         @NotBlank String currency,
+        String companyCode,
+        LocalDate postingDate,
         @NotBlank String description,
         @NotEmpty List<@Valid Line> lines
 ) {
