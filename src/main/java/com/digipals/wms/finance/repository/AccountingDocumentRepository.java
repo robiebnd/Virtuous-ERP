@@ -13,4 +13,5 @@ public interface AccountingDocumentRepository extends JpaRepository<AccountingDo
     Optional<AccountingDocument> findFirstByReferenceTypeAndReferenceIdAndStatus(String referenceType, UUID referenceId, String status);
     List<AccountingDocument> findAllByOrderByPostingDateDesc();
     List<AccountingDocument> findByPostingDateBetweenOrderByPostingDateDesc(LocalDateTime from, LocalDateTime to);
+    Optional<AccountingDocument> findFirstByReferenceTypeAndReferenceNumberAndStatus(String referenceType, String referenceNumber, String status);
 }
