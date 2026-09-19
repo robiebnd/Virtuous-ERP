@@ -15,6 +15,11 @@ export type PurchaseRequisition = { id:string; requisitionNumber?:string; status
 export type PurchaseRequisitionLine = { id?:string; productId?:string; product?:any; quantity?:number; estimatedUnitCost?:number; valuationPrice?:number; unitOfMeasure?:string; requestedDeliveryDate?:string; itemCategory?:string; accountAssignmentCategory?:string; remarks?:string };
 const list = <T,>(path:string) => api<any>(path).then(r => Array.isArray(r) ? r : (r?.content ?? r?.data ?? [])) as Promise<T[]>;
 
+export const masterDataApi = {
+ suppliers:()=>list<any>("/api/suppliers/active"),
+ warehouses:()=>list<any>("/api/warehouses")
+};
+
 export const procurementApi = {
  requisitions:()=>list<PurchaseRequisition>("/api/purchase-requisitions"),
  requisition:(id:string)=>api<PurchaseRequisition>(`/api/purchase-requisitions/${id}`),
