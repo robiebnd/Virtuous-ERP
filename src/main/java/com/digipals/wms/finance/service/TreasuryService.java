@@ -74,8 +74,7 @@ public class TreasuryService {
     public Map<String,Object> cashPosition() {
         Map<String,Map<String,Object>> byCode=new LinkedHashMap<>();
         Map<String, BigDecimal> balances=new HashMap<>();
-        financeQueryService.trialBalance().forEach(x -> balances.put(x.accountCode(), x.debitBalance().subtract(x.creditBalance()));
-        );
+        financeQueryService.trialBalance().forEach(x -> balances.put(x.accountCode(), x.debitBalance().subtract(x.creditBalance())));
         BigDecimal total=BigDecimal.ZERO;
         for(BankAccount b:bankAccounts.findByActiveTrueOrderByBankNameAsc()){
             BigDecimal balance=balances.getOrDefault(b.getGlAccountCode(),BigDecimal.ZERO);
