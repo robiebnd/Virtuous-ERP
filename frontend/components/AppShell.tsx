@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const groups = [
   { title: "Workspace", items: [{ label: "Dashboard", href: "/", icon: "⌂" }] },
@@ -37,6 +38,29 @@ const groups = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProfileOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
   const crumbs = pathname === "/"
     ? "Dashboard"
     : pathname.split("/").filter(Boolean).map((x) => x.replaceAll("-", " ")).join(" / ");
@@ -70,7 +94,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="top-actions">
           <button className="icon-btn" aria-label="Notifications">♢</button>
           <button className="icon-btn" aria-label="Help">?</button>
-          <button className="avatar" aria-label="User profile">RB</button>
+
+          <div className="profile-wrap" ref={profileRef}>
+            <button
+              className={`avatar ${profileOpen ? "avatar-open" : ""}`}
+              aria-label="User profile"
+              aria-haspopup="menu"
+              aria-expanded={profileOpen}
+              onClick={() => setProfileOpen((open) => !open)}
+            >
+              RB
+            </button>
+
+            {profileOpen && (
+              <div className="profile-menu" role="menu" aria-label="User profile menu">
+                <div className="profile-header">
+                  <div className="profile-avatar">RB</div>
+                  <div className="profile-identity">
+                    <strong>RB</strong>
+                    <span>Virtuous ERP User</span>
+                  </div>
+                </div>
+
+                <div className="profile-divider" />
+
+                <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}>
+                  <span className="profile-menu-icon">◉</span>
+                  <span>My Profile</span>
+                </button>
+                <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}>
+                  <span className="profile-menu-icon">⚙</span>
+                  <span>Settings</span>
+                </button>
+
+                <div className="profile-divider" />
+
+                <button className="profile-menu-item profile-signout" role="menuitem" onClick={() => setProfileOpen(false)}>
+                  <span className="profile-menu-icon">↪</span>
+                  <span>Sign out</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       {children}
