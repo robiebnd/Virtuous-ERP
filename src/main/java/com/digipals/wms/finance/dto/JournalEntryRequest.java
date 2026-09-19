@@ -28,6 +28,7 @@ public record JournalEntryRequest(
             String segment,
             String lineText,
             String internalOrderCode,
-            String wbsElement
+            String wbsElement,
+            java.util.UUID profitabilitySegmentId
     ) {}
 }
