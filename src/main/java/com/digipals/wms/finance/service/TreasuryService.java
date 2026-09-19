@@ -99,5 +99,6 @@ public class TreasuryService {
         return forecasts.findByForecastDateBetweenAndStatusNotOrderByForecastDateAsc(start,end,"CANCELLED");
     }
 
+    private String currency(String x){String c=x==null||x.isBlank()?"USD":x.trim().toUpperCase(Locale.ROOT);if(!c.matches("[A-Z]{3}"))throw new InvalidWorkflowException("Currency must be a 3-letter ISO code.");return c;}
     private BigDecimal money(BigDecimal v){if(v==null||v.compareTo(BigDecimal.ZERO)<0)throw new InvalidWorkflowException("Amount must be zero or greater.");return v.setScale(2,RoundingMode.HALF_UP);}
 }
