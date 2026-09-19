@@ -16,6 +16,9 @@ import java.util.*;
 public class TreasuryController {
     private final TreasuryService service;
 
+    @GetMapping("/risk-limits") public List<TreasuryRiskLimit> riskLimits(){return service.riskLimits();}
+    @PostMapping("/risk-limits") public ResponseEntity<TreasuryRiskLimit> riskLimit(@Valid @RequestBody TreasuryRiskLimitRequest request){return ResponseEntity.status(HttpStatus.CREATED).body(service.saveRiskLimit(request));}
+
     @GetMapping("/instruments") public List<TreasuryInstrument> instruments(){return service.instruments();}
 
     @PostMapping("/instruments") public ResponseEntity<TreasuryInstrument> createInstrument(@Valid @RequestBody TreasuryInstrumentRequest request){return ResponseEntity.status(HttpStatus.CREATED).body(service.createInstrument(request));}
