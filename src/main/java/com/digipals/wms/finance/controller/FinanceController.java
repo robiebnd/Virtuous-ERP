@@ -79,16 +79,23 @@ public class FinanceController {
                         line.segment(),
                         line.lineText(),
                         line.internalOrderCode(),
-                        line.wbsElement()))
+                        line.wbsElement(),
+                        null,
+                        null,
+                        java.math.BigDecimal.ZERO,
+                        java.math.BigDecimal.ZERO,
+                        line.profitabilitySegmentId()))
                 .toList();
-        var document = financePostingService.postBalanced(
+        var document = financePostingService.postBalancedAtDate(
+                request.companyCode() == null || request.companyCode().isBlank() ? "ZW01" : request.companyCode(),
                 request.documentType(),
                 "MANUAL_JOURNAL",
                 null,
                 request.referenceNumber(),
                 request.currency(),
                 request.description(),
-                postings);
+                postings,
+                request.postingDate() == null ? LocalDateTime.now() : request.postingDate().atStartOfDay());
         return AccountingDocumentResponse.from(document);
     }
 
