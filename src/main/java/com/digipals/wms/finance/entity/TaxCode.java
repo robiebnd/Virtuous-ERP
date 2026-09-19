@@ -1,4 +1,4 @@
 package com.digipals.wms.finance.entity;
 import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal;
 @Entity @Table(name="tax_codes") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
-public class TaxCode extends BaseEntity { @Column(name="tax_code",nullable=false,unique=true) String taxCode; String description; BigDecimal rate; String inputAccountCode; String outputAccountCode; boolean withholding; boolean active; }
+public class TaxCode extends BaseEntity { @Column(name="tax_code",nullable=false) String taxCode; @Column(name="company_code",nullable=false,length=20) String companyCode; String description; BigDecimal rate; String inputAccountCode; String outputAccountCode; boolean withholding; boolean active; @Column(name="tax_type",nullable=false,length=30) String taxType; String jurisdiction; java.time.LocalDate effectiveFrom; java.time.LocalDate effectiveTo; BigDecimal recoverablePercent; String taxAccountCode; }
