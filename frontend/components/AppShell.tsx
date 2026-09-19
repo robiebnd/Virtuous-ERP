@@ -34,6 +34,9 @@ const groups = [
     { label: "Chart of Accounts", href: "/finance#chart-of-accounts", icon: "list" as IconName },
     { label: "Accounting Documents", href: "/finance#accounting-documents", icon: "document" as IconName },
     { label: "Trial Balance", href: "/finance#trial-balance", icon: "hierarchy" as IconName },
+    { label: "Journal Entry", href: "/finance/journal-entry", icon: "document" as IconName },
+    { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
+    { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "money" as IconName },
   ] },
   { title: "Outbound Operations", items: [
     { label: "O2C Overview", href: "/order-to-cash", icon: "refresh" as IconName },
