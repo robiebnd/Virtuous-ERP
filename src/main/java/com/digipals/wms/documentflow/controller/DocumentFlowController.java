@@ -20,6 +20,11 @@ public class DocumentFlowController {
         return ResponseEntity.ok(documentFlowService.getBySalesOrderId(salesOrderId));
     }
 
+    @GetMapping("/sales-orders/number/{orderNumber}")
+    public ResponseEntity<DocumentFlowResponse> bySalesOrderNumber(@PathVariable String orderNumber) {
+        return ResponseEntity.ok(documentFlowService.getBySalesOrderNumber(orderNumber));
+    }
+
     @GetMapping("/deliveries/{deliveryId}")
     public ResponseEntity<DocumentFlowResponse> byDelivery(@PathVariable UUID deliveryId) {
         return ResponseEntity.ok(documentFlowService.getByDeliveryId(deliveryId));
