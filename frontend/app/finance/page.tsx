@@ -21,6 +21,8 @@ export default function FinancePage() {
   const [apAgeing, setApAgeing] = useState<any | null>(null);
   const [arAgeing, setArAgeing] = useState<any | null>(null);
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [companyCodes, setCompanyCodes] = useState<any[]>([]);
+  const [companyCode, setCompanyCode] = useState("ZW01");
   const [warehouseId, setWarehouseId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,7 +31,7 @@ export default function FinancePage() {
     setLoading(true); setError("");
     try {
       const [a, d, tb, vi, vp, b, ip, iv, ir, ap, ar, apa, ara] = await Promise.all([
-        financeApi.glAccounts(), financeApi.accountingDocuments(), financeApi.trialBalance(),
+        financeApi.glAccounts(), financeApi.accountingDocuments(), financeApi.trialBalance(companyCode),
         procurementApi.vendorInvoices(), procurementApi.vendorPayments(), orderToCashApi.billingDocuments(), orderToCashApi.incomingPayments(),
         financeApi.inventoryValuation(warehouseId || undefined), financeApi.inventoryReconciliation(),
         financeApi.openItemsAp(), financeApi.openItemsAr(), financeApi.ageing("AP"), financeApi.ageing("AR")
@@ -39,7 +41,7 @@ export default function FinancePage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load finance workspace."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); }, []);
+  useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); financeApi.companyCodes().then(setCompanyCodes).catch(()=>setCompanyCodes([])); }, []);
   useEffect(() => { load(); }, [warehouseId]);
 
   const apOpen = useMemo(() => vendorInvoices.filter(i => ["MATCHED", "POSTED"].includes(i.status)).reduce((s, i) => s + Number(i.totalAmount || 0), 0) - vendorPayments.filter(p => p.status === "PAID").reduce((s, p) => s + Number(p.amount || 0), 0), [vendorInvoices, vendorPayments]);
@@ -62,7 +64,7 @@ export default function FinancePage() {
     <section className="card form-card" style={{ marginBottom: 24 }}>
       <div className="section-title">Accounting Context</div>
       <div className="form-grid">
-        <div className="form-field"><label>Company Code</label><input className="form-input" value="ZW01" readOnly /></div>
+        <div className="form-field"><label>Company Code</label><select className="form-input" value={companyCode} onChange={e=>setCompanyCode(e.target.value)}>{companyCodes.map(x=><option key={x.id}>{x.companyCode}</option>)}</select></div>
         <div className="form-field"><label>Valuation Warehouse</label><select className="form-input" value={warehouseId} onChange={e=>setWarehouseId(e.target.value)}><option value="">All warehouses</option>{warehouses.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.code} — {x.name}</option>)}</select></div>
         <div className="form-field"><label>Ledger</label><input className="form-input" value="0L — Leading Ledger" readOnly /></div>
       </div>
