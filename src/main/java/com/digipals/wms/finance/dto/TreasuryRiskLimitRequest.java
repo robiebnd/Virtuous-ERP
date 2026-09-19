@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; public record TreasuryRiskLimitRequest(@NotBlank String limitCode,String counterparty,@Pattern(regexp="[A-Za-z]{3}") String currency,String instrumentType,@NotNull @DecimalMin("0.00") BigDecimal limitAmount){}
