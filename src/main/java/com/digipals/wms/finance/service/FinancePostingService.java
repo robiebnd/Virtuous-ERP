@@ -32,9 +32,17 @@ public class FinancePostingService {
     }
 
     public AccountingDocument postBalancedAtDate(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
+        return postBalancedAtDateInternal(documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, true);
+    }
+
+    public AccountingDocument postSystemBalancedAtDate(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
+        return postBalancedAtDateInternal(documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, false);
+    }
+
+    private AccountingDocument postBalancedAtDateInternal(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate, boolean enforceFiscalPeriod) {
         if (referenceId != null && documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus(referenceType, referenceId, POSTED).isPresent()) throw new InvalidWorkflowException("Accounting document already posted for " + referenceType + " " + referenceNumber + ".");
         if (postingDate == null) throw new InvalidWorkflowException("Posting date is required.");
-        fiscalPeriodService.ensurePostingAllowed(postingDate);
+        if (enforceFiscalPeriod) fiscalPeriodService.ensurePostingAllowed(postingDate);
         if (postings == null || postings.size() < 2) throw new InvalidWorkflowException("Accounting document requires at least two lines.");
         BigDecimal totalDebit = postings.stream().map(p -> nvl(p.debit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalCredit = postings.stream().map(p -> nvl(p.credit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
