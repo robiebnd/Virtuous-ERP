@@ -75,7 +75,7 @@ export default function WarehouseMonitor() {
 
   const inventory = data.inventory;
   const selectedInventory = inventory.find(x => x.id === selectedInventoryId);
-  const rows = useMemo(() => {
+  const rows: Array<Record<string, any>> = useMemo(() => {
     const d=data.deliveries, r=data.receipts, i=data.inventory, f=data.documents;
     if(selected==="Outbound") return d.map(x=>({id:x.id,Document:value(x,"deliveryNumber","number"),"Sales Order":value(x,"salesOrderNumber","salesOrder.orderNumber"),Customer:value(x,"customerCode"),Warehouse:value(x,"shippingPoint"),Status:value(x,"status"),Date:value(x,"createdAt")}));
     if(selected==="Inbound") return r.map(x=>({id:x.id,Document:value(x,"receiptNumber","grNumber","number"),"Purchase Order":value(x,"purchaseOrderNumber","purchaseOrder.orderNumber"),Supplier:value(x,"supplierName","supplierCode"),Status:value(x,"status"),Date:value(x,"createdAt")}));
