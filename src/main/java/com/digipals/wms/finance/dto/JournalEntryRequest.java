@@ -23,6 +23,8 @@ public record JournalEntryRequest(
             String profitCenter,
             String functionalArea,
             String segment,
-            String lineText
+            String lineText,
+            String internalOrderCode,
+            String wbsElement
     ) {}
 }
