@@ -91,7 +91,13 @@ export const financeApi = {
  createBankAccount:(body:any)=>api<any>("/api/finance/bank-accounts",{method:"POST",body:JSON.stringify(body)}),
  fixedAssets:()=>list<any>("/api/finance/fixed-assets"),
  createFixedAsset:(body:any)=>api<any>("/api/finance/fixed-assets",{method:"POST",body:JSON.stringify(body)}),
- depreciateAsset:(id:string,months=1)=>api<any>(`/api/finance/fixed-assets/${id}/depreciate?months=${months}`,{method:"POST"})
+ depreciateAsset:(id:string,months=1)=>api<any>(`/api/finance/fixed-assets/${id}/depreciate?months=${months}`,{method:"POST"}),
+  managementCostCenterActuals:(fiscalYear:number)=>list<any>(`/api/finance/management-accounting/cost-centers/actuals?fiscalYear=${fiscalYear}`),
+  saveCostCenterBudget:(body:any)=>api<any>("/api/finance/management-accounting/cost-center-budgets",{method:"POST",body:JSON.stringify(body)}),
+  internalOrders:()=>list<any>("/api/finance/management-accounting/internal-orders"),
+  internalOrderActuals:()=>list<any>("/api/finance/management-accounting/internal-orders/actuals"),
+  createInternalOrder:(body:any)=>api<any>("/api/finance/management-accounting/internal-orders",{method:"POST",body:JSON.stringify(body)}),
+  allocateCostCenter:(body:any)=>api<any>("/api/finance/management-accounting/allocations",{method:"POST",body:JSON.stringify(body)})
 };
 
 
