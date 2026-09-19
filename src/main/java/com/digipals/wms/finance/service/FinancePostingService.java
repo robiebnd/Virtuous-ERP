@@ -32,17 +32,22 @@ public class FinancePostingService {
     }
 
     public AccountingDocument postBalancedAtDate(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
-        return postBalancedAtDateInternal(documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, true);
+        return postBalancedAtDate(COMPANY_CODE, documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate);
+    }
+
+    public AccountingDocument postBalancedAtDate(String companyCode, String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
+        return postBalancedAtDateInternal(companyCode, documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, true);
     }
 
     public AccountingDocument postSystemBalancedAtDate(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
-        return postBalancedAtDateInternal(documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, false);
+        return postBalancedAtDateInternal(COMPANY_CODE, documentType, referenceType, referenceId, referenceNumber, currency, description, postings, postingDate, false);
     }
 
-    private AccountingDocument postBalancedAtDateInternal(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate, boolean enforceFiscalPeriod) {
+    private AccountingDocument postBalancedAtDateInternal(String companyCode, String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate, boolean enforceFiscalPeriod) {
         if (referenceId != null && documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus(referenceType, referenceId, POSTED).isPresent()) throw new InvalidWorkflowException("Accounting document already posted for " + referenceType + " " + referenceNumber + ".");
         if (postingDate == null) throw new InvalidWorkflowException("Posting date is required.");
-        if (enforceFiscalPeriod) fiscalPeriodService.ensurePostingAllowed(postingDate);
+        String normalizedCompanyCode = companyCode == null || companyCode.isBlank() ? COMPANY_CODE : companyCode.trim().toUpperCase(Locale.ROOT);
+        if (enforceFiscalPeriod) fiscalPeriodService.ensurePostingAllowed(normalizedCompanyCode, postingDate);
         if (postings == null || postings.size() < 2) throw new InvalidWorkflowException("Accounting document requires at least two lines.");
         BigDecimal totalDebit = postings.stream().map(p -> nvl(p.debit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalCredit = postings.stream().map(p -> nvl(p.credit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
@@ -50,13 +55,13 @@ public class FinancePostingService {
         String normalizedCurrency = currency == null ? "USD" : currency.trim().toUpperCase(Locale.ROOT);
         if (!normalizedCurrency.matches("[A-Z]{3}")) throw new InvalidWorkflowException("Accounting currency must be a 3-letter ISO code.");
         LocalDateTime now = LocalDateTime.now();
-        AccountingDocument document = AccountingDocument.builder().documentNumber(nextDocumentNumber()).documentType(documentType).documentDate(postingDate).postingDate(postingDate).companyCode(COMPANY_CODE).currency(normalizedCurrency).referenceType(referenceType).referenceId(referenceId).referenceNumber(referenceNumber).description(description).totalDebit(totalDebit).totalCredit(totalCredit).status(POSTED).build();
+        AccountingDocument document = AccountingDocument.builder().documentNumber(nextDocumentNumber()).documentType(documentType).documentDate(postingDate).postingDate(postingDate).companyCode(normalizedCompanyCode).currency(normalizedCurrency).referenceType(referenceType).referenceId(referenceId).referenceNumber(referenceNumber).description(description).totalDebit(totalDebit).totalCredit(totalCredit).status(POSTED).build();
         int lineNumber = 1;
         for (PostingLine posting : postings) {
             GlAccount account = accountRepository.findByAccountCode(posting.accountCode()).orElseThrow(() -> new InvalidWorkflowException("GL account not configured: " + posting.accountCode()));
             BigDecimal debit = nvl(posting.debit()).setScale(2, RoundingMode.HALF_UP); BigDecimal credit = nvl(posting.credit()).setScale(2, RoundingMode.HALF_UP);
             if (debit.compareTo(BigDecimal.ZERO) < 0 || credit.compareTo(BigDecimal.ZERO) < 0 || (debit.compareTo(BigDecimal.ZERO) > 0 && credit.compareTo(BigDecimal.ZERO) > 0)) throw new InvalidWorkflowException("Each accounting line must contain either a debit or a credit.");
-            document.addLine(AccountingLine.builder().glAccount(account).lineNumber(lineNumber++).debit(debit).credit(credit).companyCode(COMPANY_CODE).costCenter(posting.costCenter()).profitCenter(posting.profitCenter()).functionalArea(posting.functionalArea()).segment(posting.segment()).lineText(posting.lineText()).internalOrderCode(posting.internalOrderCode()).wbsElement(posting.wbsElement()).build());
+            document.addLine(AccountingLine.builder().glAccount(account).lineNumber(lineNumber++).debit(debit).credit(credit).companyCode(normalizedCompanyCode).partnerCompanyCode(posting.partnerCompanyCode()).taxCode(posting.taxCode()).taxBase(nvl(posting.taxBase())).taxAmount(nvl(posting.taxAmount())).profitabilitySegmentId(posting.profitabilitySegmentId()).costCenter(posting.costCenter()).profitCenter(posting.profitCenter()).functionalArea(posting.functionalArea()).segment(posting.segment()).lineText(posting.lineText()).internalOrderCode(posting.internalOrderCode()).wbsElement(posting.wbsElement()).build());
         }
         return documentRepository.save(document);
     }
@@ -109,9 +114,15 @@ public class FinancePostingService {
 
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String nextDocumentNumber() { return "FI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT); }
-    public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement) {
+    public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement, String partnerCompanyCode, String taxCode, BigDecimal taxBase, BigDecimal taxAmount, UUID profitabilitySegmentId) {
         public PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText) {
-            this(accountCode, debit, credit, costCenter, profitCenter, functionalArea, segment, lineText, null, null);
+            this(accountCode, debit, credit, costCenter, profitCenter, functionalArea, segment, lineText, null, null, null, null, BigDecimal.ZERO, BigDecimal.ZERO, null);
+        }
+        public PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement) {
+            this(accountCode, debit, credit, costCenter, profitCenter, functionalArea, segment, lineText, internalOrderCode, wbsElement, null, null, BigDecimal.ZERO, BigDecimal.ZERO, null);
+        }
+        public PostingLine withPartner(String partnerCompanyCode) {
+            return new PostingLine(accountCode, debit, credit, costCenter, profitCenter, functionalArea, segment, lineText, internalOrderCode, wbsElement, partnerCompanyCode, taxCode, taxBase, taxAmount, profitabilitySegmentId);
         }
     }
 }
