@@ -1,0 +1,3 @@
+package com.digipals.wms.finance.dto;
+import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.time.LocalDate;
+public record TaxPostingRequest(@NotBlank String companyCode,@NotBlank String documentType,@NotBlank String referenceNumber,@NotBlank String currency,@NotBlank String taxCode,@NotNull @DecimalMin("0.01") BigDecimal taxableAmount,@NotBlank String baseDebitAccount,@NotBlank String baseCreditAccount,@NotBlank String description,@NotNull LocalDate postingDate){}
