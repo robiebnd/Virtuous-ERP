@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 type IconName = "home" | "refresh" | "users" | "bag" | "money" | "list" | "document" | "hierarchy" | "clock" | "flag" | "star" | "tag" | "warehouse" | "cycleClosure" | "goodsIssue";
 
@@ -72,6 +73,35 @@ const groups = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
   const crumbs = pathname === "/" ? "Dashboard" : pathname.split("/").filter(Boolean).map((x) => x.replaceAll("-", " ")).join(" / ");
-  return <div className="app"><aside className="sidebar"><div className="brand"><Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home"><img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" /></Link></div><nav className="nav" aria-label="Main navigation">{groups.map((group) => <div className="nav-group" key={group.title}><div className="nav-section">{group.title}</div>{group.items.map((item) => { const active = pathname === item.href || (item.href !== "/" && item.href.indexOf("#") === -1 && pathname.startsWith(item.href)); return <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}><span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span></Link>; })}</div>)}</nav><div className="sidebar-footer"><span>Virtuous ERP</span><small>Finance, Warehouse, Procurement & Outbound Operations</small></div></aside><main className="main"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation">☰</button><div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div><div className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Search" placeholder="Search in Virtuous ERP" /><kbd>Ctrl K</kbd></div><div className="top-actions"><button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button><button className="icon-btn" aria-label="Help">?</button><button className="avatar" aria-label="User profile">RB</button></div></header>{children}</main></div>;
+  return <div className="app"><aside className="sidebar"><div className="brand"><Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home"><img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" /></Link></div><nav className="nav" aria-label="Main navigation">{groups.map((group) => <div className="nav-group" key={group.title}><div className="nav-section">{group.title}</div>{group.items.map((item) => { const active = pathname === item.href || (item.href !== "/" && item.href.indexOf("#") === -1 && pathname.startsWith(item.href)); return <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}><span className="nav-icon"><Icon name={item.icon} /></span><span>{item.label}</span></Link>; })}</div>)}</nav><div className="sidebar-footer"><span>Virtuous ERP</span><small>Finance, Warehouse, Procurement & Outbound Operations</small></div></aside><main className="main"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation">☰</button><div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div><div className="global-search"><span aria-hidden="true">⌕</span><input aria-label="Search" placeholder="Search in Virtuous ERP" /><kbd>Ctrl K</kbd></div><div className="top-actions"><button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button><button className="icon-btn" aria-label="Help">?</button><div className="profile-wrap" ref={profileRef}>
+  <button className={`avatar ${profileOpen ? "avatar-open" : ""}`} aria-label="User profile" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((open) => !open)}>RB</button>
+  {profileOpen && <div className="profile-menu" role="menu" aria-label="User profile menu">
+    <div className="profile-header"><div className="profile-avatar">RB</div><div className="profile-identity"><strong>RB</strong><span>Virtuous ERP User</span></div></div>
+    <div className="profile-divider" />
+    <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">◉</span><span>My Profile</span></button>
+    <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">⚙</span><span>Settings</span></button>
+    <div className="profile-divider" />
+    <button className="profile-menu-item profile-signout" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">↪</span><span>Sign out</span></button>
+  </div>}
+</div></div></header>{children}</main></div>;
 }
