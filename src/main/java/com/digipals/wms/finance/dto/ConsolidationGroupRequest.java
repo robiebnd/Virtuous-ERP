@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; public record ConsolidationGroupRequest(@NotBlank String groupCode,@NotBlank String groupName,@Pattern(regexp="[A-Za-z]{3}") String reportingCurrency){}
