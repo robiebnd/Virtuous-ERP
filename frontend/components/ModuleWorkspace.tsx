@@ -18,6 +18,7 @@ type ModuleWorkspaceProps = {
   rows?: Row[];
   searchPlaceholder?: string;
   emptyText?: string;
+  loading?: boolean;
   children?: React.ReactNode;
 };
 
@@ -30,7 +31,7 @@ const statusClass = (value: string) => {
   return "draft";
 };
 
-export function ModuleWorkspace({ eyebrow = "WORKSPACE", title, description, subtitle, createHref, createLabel = "Create", stats = [], process = [], columns, rows = [], searchPlaceholder = "Search...", emptyText = "No records found.", children }: ModuleWorkspaceProps) {
+export function ModuleWorkspace({ eyebrow = "WORKSPACE", title, description, subtitle, createHref, createLabel = "Create", stats = [], process = [], columns, rows = [], searchPlaceholder = "Search...", emptyText = "No records found.", loading = false, children }: ModuleWorkspaceProps) {
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState("ALL");
   const filtered = useMemo(() => rows.filter((row) => {
@@ -72,7 +73,7 @@ export function ModuleWorkspace({ eyebrow = "WORKSPACE", title, description, sub
           {statuses.map((s) => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}
         </select>
       </div>
-      <div className="table-caption"><strong>Records ({filtered.length})</strong><span>Operational workspace</span></div>
+      <div className="table-caption"><strong>Records ({filtered.length})</strong><span>{loading ? "Loading…" : "Operational workspace"}</span></div>
       <div className="table-wrap"><table className="table sap-table"><thead><tr>{columnDefs.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead><tbody>
         {filtered.map((row, index) => <tr key={`${String(row[columnDefs[0]?.key ?? ""] )}-${index}`}>{columnDefs.map(({ key: column }) => {
           const value = String(row[column] ?? "—");
