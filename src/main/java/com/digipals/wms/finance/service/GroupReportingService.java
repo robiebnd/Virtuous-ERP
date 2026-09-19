@@ -58,14 +58,14 @@ public class GroupReportingService {
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetDebitAccountCode(),amount,true);
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetCreditAccountCode(),amount,false);
    }
+   BigDecimal totalD=BigDecimal.ZERO,totalC=BigDecimal.ZERO;
+   for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(BigDecimal.ZERO));b.setFinalCredit(b.getTranslatedCredit().subtract(b.getEliminationCredit()).max(BigDecimal.ZERO));balances.save(b);totalD=totalD.add(b.getFinalDebit());totalC=totalC.add(b.getFinalCredit());}
    for(ConsolidationAdjustment a:adjustments.findByGroupIdAndPeriodStartAndStatus(groupId,start,"POSTED")){
      BigDecimal debit=a.getDebit()==null?BigDecimal.ZERO:a.getDebit(), credit=a.getCredit()==null?BigDecimal.ZERO:a.getCredit();
      String key="GROUP|"+a.getAccountCode(); GroupReportingBalance b=byKey.get(key);
      if(b==null){b=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode(a.getAccountCode()).accountName("Consolidation adjustment").accountType("ADJUSTMENT").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(BigDecimal.ZERO).translatedCredit(BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(BigDecimal.ZERO).finalCredit(BigDecimal.ZERO).build(); byKey.put(key,b); balances.save(b);}
      b.setFinalDebit(b.getFinalDebit().add(debit)); b.setFinalCredit(b.getFinalCredit().add(credit)); balances.save(b);
    }
-   BigDecimal totalD=BigDecimal.ZERO,totalC=BigDecimal.ZERO;
-   for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(BigDecimal.ZERO));b.setFinalCredit(b.getTranslatedCredit().subtract(b.getEliminationCredit()).max(BigDecimal.ZERO));balances.save(b);totalD=totalD.add(b.getFinalDebit());totalC=totalC.add(b.getFinalCredit());}
    BigDecimal imbalance=totalD.subtract(totalC).setScale(2,RoundingMode.HALF_UP);
    if(imbalance.compareTo(BigDecimal.ZERO)!=0){GroupReportingBalance fx=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode("3310").accountName("Foreign Currency Translation Reserve").accountType("EQUITY").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).translatedCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).finalCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).build();balances.save(fx);totalD=totalD.add(fx.getFinalDebit());totalC=totalC.add(fx.getFinalCredit());translationAdjustment=imbalance.negate();}
    run.setTotalDebit(totalD.setScale(2,RoundingMode.HALF_UP));run.setTotalCredit(totalC.setScale(2,RoundingMode.HALF_UP));run.setTranslationAdjustment(translationAdjustment.setScale(2,RoundingMode.HALF_UP));run.setStatus("COMPLETED");run.setCompletedAt(LocalDateTime.now());return runs.save(run);
