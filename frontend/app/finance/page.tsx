@@ -74,6 +74,7 @@ export default function FinancePage() {
       <Link className="card module-card" href="/finance/financial-statements"><b>Financial Statements</b><span>Balance Sheet and Profit & Loss from the general ledger.</span></Link>
       <Link className="card module-card" href="/finance/period-end-close"><b>Period-End Close</b><span>Run the finance close checklist and review outstanding controls.</span></Link>
       <Link className="card module-card" href="/finance/management-accounting"><b>Management Accounting</b><span>Cost centre budgets, actuals, internal orders and allocations.</span></Link>
+      <Link className="card module-card" href="/finance/treasury"><b>Treasury & Cash</b><span>Cash position, bank statements, reconciliation and liquidity forecasts.</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
       <Link className="card module-card" href="/finance/inventory-accounting"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></Link>
     </div>
