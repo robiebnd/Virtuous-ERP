@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.util.UUID; public record FundCommitmentRequest(@NotNull UUID fundId,@NotBlank String commitmentItem,@NotBlank String fundsCenter,String functionalArea,@NotBlank String referenceNumber,@NotNull @DecimalMin("0.01") BigDecimal committedAmount){}
