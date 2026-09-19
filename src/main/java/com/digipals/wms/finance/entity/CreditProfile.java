@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+@Entity @Table(name="credit_profiles") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class CreditProfile extends BaseEntity { @Column(name="customer_id",nullable=false,unique=true) UUID customerId; @Column(name="credit_limit",nullable=false,precision=19,scale=2) BigDecimal creditLimit; Integer creditScore; String riskClass; boolean blocked; LocalDate reviewDate; }
