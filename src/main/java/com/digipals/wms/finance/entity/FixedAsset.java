@@ -21,5 +21,6 @@ public class FixedAsset extends BaseEntity {
     @Column(name="accumulated_depreciation",nullable=false,precision=19,scale=2) @Builder.Default private BigDecimal accumulatedDepreciation=BigDecimal.ZERO;
     @Column(name="residual_value",nullable=false,precision=19,scale=2) @Builder.Default private BigDecimal residualValue=BigDecimal.ZERO;
     @Column(name="cost_center_code",length=30) private String costCenterCode;
+    @Column(name="last_depreciation_date") private LocalDate lastDepreciationDate;
     @Column(nullable=false,length=20) @Builder.Default private String status="ACTIVE";
 }
