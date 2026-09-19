@@ -46,6 +46,13 @@ public class TreasuryService {
         AccountingDocument document = documents.findByDocumentNumber(request.accountingDocumentNumber().trim())
                 .filter(x -> "POSTED".equals(x.getStatus()))
                 .orElseThrow(() -> new InvalidWorkflowException("Posted accounting document not found: " + request.accountingDocumentNumber()));
+        BigDecimal bankDebit = document.getLines().stream().filter(l -> l.getGlAccount().getAccountCode().equals(account.getGlAccountCode()))
+                .map(AccountingLine::getDebit).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal bankCredit = document.getLines().stream().filter(l -> l.getGlAccount().getAccountCode().equals(account.getGlAccountCode()))
+                .map(AccountingLine::getCredit).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal expected = "IN".equals(transaction.getDirection()) ? bankDebit : bankCredit;
+        if (expected.compareTo(transaction.getAmount()) != 0)
+            throw new InvalidWorkflowException("Bank transaction amount does not match the selected accounting document bank line.");
         transaction.setAccountingDocumentId(document.getId());
         transaction.setStatus("RECONCILED");
         return transactions.save(transaction);
