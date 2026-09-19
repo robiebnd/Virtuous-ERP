@@ -33,6 +33,7 @@ public class DocumentFlowServiceImpl implements DocumentFlowService {
     private final DunningCaseRepository dunningCaseRepository;
 
     @Override public DocumentFlowResponse getBySalesOrderId(UUID id) { return buildFlow(salesOrderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + id))); }
+    @Override public DocumentFlowResponse getBySalesOrderNumber(String orderNumber) { return buildFlow(salesOrderRepository.findByOrderNumber(orderNumber.trim()).orElseThrow(() -> new ResourceNotFoundException("Sales order not found: " + orderNumber))); }
     @Override public DocumentFlowResponse getByDeliveryId(UUID id) { OutboundDelivery d = outboundDeliveryRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Outbound delivery not found: " + id)); return buildFlow(d.getSalesOrder()); }
     @Override public DocumentFlowResponse getByBillingDocumentId(UUID id) { BillingDocument b = billingDocumentRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Billing document not found: " + id)); return buildFlow(b.getOutboundDelivery().getSalesOrder()); }
 
