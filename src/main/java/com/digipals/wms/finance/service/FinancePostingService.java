@@ -41,7 +41,7 @@ public class FinancePostingService {
             GlAccount account = accountRepository.findByAccountCode(posting.accountCode()).orElseThrow(() -> new InvalidWorkflowException("GL account not configured: " + posting.accountCode()));
             BigDecimal debit = nvl(posting.debit()).setScale(2, RoundingMode.HALF_UP); BigDecimal credit = nvl(posting.credit()).setScale(2, RoundingMode.HALF_UP);
             if (debit.compareTo(BigDecimal.ZERO) < 0 || credit.compareTo(BigDecimal.ZERO) < 0 || (debit.compareTo(BigDecimal.ZERO) > 0 && credit.compareTo(BigDecimal.ZERO) > 0)) throw new InvalidWorkflowException("Each accounting line must contain either a debit or a credit.");
-            document.addLine(AccountingLine.builder().glAccount(account).lineNumber(lineNumber++).debit(debit).credit(credit).companyCode(COMPANY_CODE).costCenter(posting.costCenter()).profitCenter(posting.profitCenter()).functionalArea(posting.functionalArea()).segment(posting.segment()).lineText(posting.lineText()).build());
+            document.addLine(AccountingLine.builder().glAccount(account).lineNumber(lineNumber++).debit(debit).credit(credit).companyCode(COMPANY_CODE).costCenter(posting.costCenter()).profitCenter(posting.profitCenter()).functionalArea(posting.functionalArea()).segment(posting.segment()).lineText(posting.lineText()).internalOrderCode(posting.internalOrderCode()).wbsElement(posting.wbsElement()).build());
         }
         return documentRepository.save(document);
     }
@@ -94,5 +94,9 @@ public class FinancePostingService {
 
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String nextDocumentNumber() { return "FI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT); }
-    public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText) {}
+    public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement) {
+        public PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText) {
+            this(accountCode, debit, credit, costCenter, profitCenter, functionalArea, segment, lineText, null, null);
+        }
+    }
 }
