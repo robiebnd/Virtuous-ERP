@@ -5,8 +5,8 @@ import {financeApi} from "@/lib/api";
 export default function TaxAccountingPage(){
  const [companies,setCompanies]=useState<any[]>([]),[codes,setCodes]=useState<any[]>([]),[postings,setPostings]=useState<any[]>([]),[error,setError]=useState("");
  const [company,setCompany]=useState("ZW01"),[busy,setBusy]=useState(false);
- const [codeForm,setCodeForm]=useState({companyCode:"ZW01",taxCode:"VAT15",description:"Standard VAT",rate:"15",inputAccountCode:"130000",outputAccountCode:"230000",withholding:false});
- const [postForm,setPostForm]=useState({companyCode:"ZW01",documentType:"TAX_INVOICE",referenceNumber:"",currency:"USD",taxCode:"VAT15",inputOutput:"OUTPUT",taxableAmount:"",baseDebitAccount:"120000",baseCreditAccount:"400000",description:"Tax accounting",postingDate:new Date().toISOString().slice(0,10)});
+ const [codeForm,setCodeForm]=useState({companyCode:"ZW01",taxCode:"VAT15",description:"Standard VAT",rate:"15",inputAccountCode:"1510",outputAccountCode:"2210",withholding:false});
+ const [postForm,setPostForm]=useState({companyCode:"ZW01",documentType:"TAX_INVOICE",referenceNumber:"",currency:"USD",taxCode:"VAT15",inputOutput:"OUTPUT",taxableAmount:"",baseDebitAccount:"1200",baseCreditAccount:"4100",description:"Tax accounting",postingDate:new Date().toISOString().slice(0,10)});
  const load=async(c=company)=>{try{const [co,tc,tp]=await Promise.all([financeApi.companyCodes(),financeApi.taxCodes(),financeApi.taxPostings(c)]);setCompanies(co);setCodes(tc.filter((x:any)=>!x.companyCode||x.companyCode===c));setPostings(tp)}catch(e){setError(e instanceof Error?e.message:"Unable to load tax accounting.")}};
  useEffect(()=>{load()},[]);
  const saveCode=async()=>{setBusy(true);try{await financeApi.saveTaxCode({...codeForm,rate:Number(codeForm.rate)});await load(company);setError("")}catch(e){setError(e instanceof Error?e.message:"Unable to save tax code.")}finally{setBusy(false)}};
