@@ -16,6 +16,10 @@ import java.util.*;
 public class TreasuryController {
     private final TreasuryService service;
 
+    @GetMapping("/instruments") public List<TreasuryInstrument> instruments(){return service.instruments();}
+
+    @PostMapping("/instruments") public ResponseEntity<TreasuryInstrument> createInstrument(@Valid @RequestBody TreasuryInstrumentRequest request){return ResponseEntity.status(HttpStatus.CREATED).body(service.createInstrument(request));}
+
     @GetMapping("/cash-position")
     public Map<String,Object> cashPosition(){ return service.cashPosition(); }
 
