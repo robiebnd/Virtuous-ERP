@@ -1,0 +1,2 @@
+package com.digipals.wms.finance.entity; import jakarta.persistence.*; import lombok.*; import java.math.BigDecimal; import java.util.UUID;
+@Entity @Table(name="fund_commitments") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder public class FundCommitment { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="fund_id",nullable=false) Fund fund; String commitmentItem; String fundsCenter; String functionalArea; String referenceNumber; BigDecimal committedAmount; BigDecimal actualAmount; String status; }
