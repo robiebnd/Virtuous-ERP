@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+@Entity @Table(name="collection_cases") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class CollectionCase extends BaseEntity { @Column(name="customer_id",nullable=false) UUID customerId; @Column(name="invoice_reference",nullable=false) String invoiceReference; LocalDate dueDate; BigDecimal amountDue; String status; String priority; String assignedTo; LocalDate promiseDate; BigDecimal promiseAmount; @Column(length=1000) String notes; }
