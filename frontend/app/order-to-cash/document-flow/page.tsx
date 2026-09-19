@@ -34,12 +34,12 @@ export default function DocumentFlowPage() {
 
   return <main className="content">
     <div className="page-head">
-      <div><div className="eyebrow">ORDER TO CASH / DOCUMENT FLOW</div><h1>Document Flow</h1><p>Trace the SAP-style commercial document chain from sales order through delivery, billing, settlement and follow-up.</p></div>
+      <div><div className="eyebrow">ORDER TO CASH / DOCUMENT FLOW</div><h1>Document Flow</h1><p>Trace the commercial document chain from sales order through delivery, billing, settlement and follow-up.</p></div>
     </div>
     <section className="card document-flow-explorer" style={{ marginBottom: 18 }}>
       <div className="section-title">Document Flow Explorer</div>
-      <div className="form-grid">
-        <label>Sales Order Number<input value={salesOrderNumber} onChange={e => setSalesOrderNumber(e.target.value)} placeholder="e.g. SO-000123" /></label>
+      <div className="document-flow-form">
+        <label className="form-field"><span>Sales Order Number</span><input className="form-input" value={salesOrderNumber} onChange={e => setSalesOrderNumber(e.target.value)} placeholder="e.g. SO-000123" /></label>
         <div className="form-actions"><button className="btn primary" onClick={lookup} disabled={loading}>{loading ? "Loading..." : "Display Flow"}</button></div>
       </div>
       {error && <div className="alert error">{error}</div>}
