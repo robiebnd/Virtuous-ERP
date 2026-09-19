@@ -78,7 +78,7 @@ export const financeApi = {
  glAccounts:()=>list<any>("/api/finance/gl-accounts"),
  accountingDocuments:()=>list<any>("/api/finance/accounting-documents"),
  accountingDocument:(id:string)=>api<any>(`/api/finance/accounting-documents/${id}`),
- trialBalance:()=>list<any>("/api/finance/trial-balance"),
+ trialBalance:(companyCode?:string)=>list<any>(companyCode?`/api/finance/trial-balance?companyCode=${encodeURIComponent(companyCode)}`:"/api/finance/trial-balance"),
  openItemsAp:()=>list<any>("/api/finance/open-items/ap"),
  openItemsAr:()=>list<any>("/api/finance/open-items/ar"),
  ageing:(type:"AP"|"AR"="AR")=>api<any>(`/api/finance/ageing?type=${type}`),
