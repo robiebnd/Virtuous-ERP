@@ -6,15 +6,16 @@ import { useMemo, useState } from "react";
 type Row = Record<string, string | number>;
 
 type ModuleWorkspaceProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
+  subtitle?: string;
   createHref?: string;
   createLabel?: string;
-  stats: Array<{ label: string; value: string; foot: string; tone?: "normal" | "warning" | "success" }>;
-  process: Array<{ label: string; detail: string; status: string; tone: "approved" | "pending" | "ready" | "blocked" | "draft" }>;
-  columns: string[];
-  rows: Row[];
+  stats?: Array<{ label: string; value: string; foot: string; tone?: "normal" | "warning" | "success" }>;
+  process?: Array<{ label: string; detail: string; status: string; tone: "approved" | "pending" | "ready" | "blocked" | "draft" }>;
+  columns: Array<string | { key: string; label: string }>;
+  rows?: Row[];
   searchPlaceholder?: string;
   emptyText?: string;
   children?: React.ReactNode;
@@ -29,7 +30,7 @@ const statusClass = (value: string) => {
   return "draft";
 };
 
-export function ModuleWorkspace({ eyebrow, title, description, createHref, createLabel = "Create", stats, process, columns, rows, searchPlaceholder = "Search...", emptyText = "No records found.", children }: ModuleWorkspaceProps) {
+export function ModuleWorkspace({ eyebrow = "WORKSPACE", title, description, subtitle, createHref, createLabel = "Create", stats = [], process = [], columns, rows = [], searchPlaceholder = "Search...", emptyText = "No records found.", children }: ModuleWorkspaceProps) {
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState("ALL");
   const filtered = useMemo(() => rows.filter((row) => {
@@ -38,10 +39,11 @@ export function ModuleWorkspace({ eyebrow, title, description, createHref, creat
     return (!query || values.includes(query.toLowerCase())) && (activeStatus === "ALL" || status === activeStatus);
   }), [rows, query, activeStatus]);
   const statuses = Array.from(new Set(rows.map((r) => String(r.Status ?? r.status ?? "")).filter(Boolean)));
+  const columnDefs = columns.map((column) => typeof column === "string" ? { key: column, label: column } : column);
 
   return <div className="content">
     <div className="page-head">
-      <div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>
+      <div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description ?? subtitle ?? ""}</p></div>
       {createHref && <div className="actions"><Link className="btn primary" href={createHref}>{createLabel}</Link></div>}
     </div>
 
@@ -71,12 +73,12 @@ export function ModuleWorkspace({ eyebrow, title, description, createHref, creat
         </select>
       </div>
       <div className="table-caption"><strong>Records ({filtered.length})</strong><span>Operational workspace</span></div>
-      <div className="table-wrap"><table className="table sap-table"><thead><tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr></thead><tbody>
-        {filtered.map((row, index) => <tr key={`${String(row[columns[0]])}-${index}`}>{columns.map((column) => {
+      <div className="table-wrap"><table className="table sap-table"><thead><tr>{columnDefs.map((c) => <th key={c.key}>{c.label}</th>)}</tr></thead><tbody>
+        {filtered.map((row, index) => <tr key={`${String(row[columnDefs[0]?.key ?? ""] )}-${index}`}>{columnDefs.map(({ key: column }) => {
           const value = String(row[column] ?? "—");
           return <td key={column}>{column.toLowerCase() === "status" ? <span className={`status ${statusClass(value)}`}>{value.replaceAll("_", " ")}</span> : value}</td>;
         })}</tr>)}
-        {!filtered.length && <tr><td colSpan={columns.length} className="empty">{emptyText}</td></tr>}
+        {!filtered.length && <tr><td colSpan={columnDefs.length} className="empty">{emptyText}</td></tr>}
       </tbody></table></div>
     </section>
   </div>;
