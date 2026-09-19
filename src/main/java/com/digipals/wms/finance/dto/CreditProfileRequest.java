@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID; public record CreditProfileRequest(@NotNull UUID customerId,@NotNull @DecimalMin("0.00") BigDecimal creditLimit,@Min(0) @Max(1000) Integer creditScore,String riskClass,LocalDate reviewDate){}
