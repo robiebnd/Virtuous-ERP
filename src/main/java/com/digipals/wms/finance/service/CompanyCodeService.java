@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
+import java.time.Year;\nimport com.digipals.wms.finance.dto.FiscalPeriodRequest;
 
 @Service @RequiredArgsConstructor @Transactional
 public class CompanyCodeService {
@@ -20,7 +21,7 @@ public class CompanyCodeService {
    if(repository.findByCompanyCodeIgnoreCase(code).isPresent()) throw new InvalidWorkflowException("Company code already exists: "+code);
    String currency=currency(r.functionalCurrency());
    CompanyCode x=CompanyCode.builder().companyCode(code).companyName(r.companyName().trim()).countryCode(r.countryCode().trim().toUpperCase(Locale.ROOT)).functionalCurrency(currency).fiscalYearVariant(r.fiscalYearVariant()==null||r.fiscalYearVariant().isBlank()?"CALENDAR":r.fiscalYearVariant().trim().toUpperCase(Locale.ROOT)).reportingCurrency(r.reportingCurrency()==null?currency:currency(r.reportingCurrency())).build();
-   return repository.save(x);
+   CompanyCode saved=repository.save(x);\n   fiscalPeriods.createYear(new FiscalPeriodRequest(Year.now().getValue(),code));\n   return saved;
  }
  public CompanyCode get(String code){ return repository.findByCompanyCodeIgnoreCase(normalize(code)).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+code)); }
  public void ensurePostingReady(String code,int year){ get(code); if(fiscalPeriods.list(normalize(code),year).size()!=12) throw new InvalidWorkflowException("Fiscal year "+year+" is not configured for "+code+"."); }
