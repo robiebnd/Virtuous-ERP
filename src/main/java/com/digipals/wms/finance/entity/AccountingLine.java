@@ -30,6 +30,11 @@ public class AccountingLine {
     @Column(name = "company_code", nullable = false, length = 20)
     @Builder.Default
     private String companyCode = "ZW01";
+    @Column(name = "partner_company_code", length = 20) private String partnerCompanyCode;
+    @Column(name = "tax_code", length = 20) private String taxCode;
+    @Column(name = "tax_base", nullable = false, precision = 19, scale = 2) @Builder.Default private BigDecimal taxBase = BigDecimal.ZERO;
+    @Column(name = "tax_amount", nullable = false, precision = 19, scale = 2) @Builder.Default private BigDecimal taxAmount = BigDecimal.ZERO;
+    @Column(name = "profitability_segment_id") private UUID profitabilitySegmentId;
     @Column(name = "cost_center", length = 40) private String costCenter;
     @Column(name = "profit_center", length = 40) private String profitCenter;
     @Column(name = "functional_area", length = 40) private String functionalArea;
