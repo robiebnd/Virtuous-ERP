@@ -15,6 +15,7 @@ public class AdvancedFinanceController {
  @PostMapping("/revenue-contracts") public ResponseEntity<RevenueContract> revenueContract(@Valid @RequestBody RevenueContractRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createContract(r));}
  @PostMapping("/revenue-obligations") public ResponseEntity<RevenueObligation> obligation(@Valid @RequestBody RevenueObligationRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.addObligation(r));}
  @GetMapping("/revenue-obligations/{contractId}") public List<RevenueObligation> obligations(@PathVariable UUID contractId){return service.obligations(contractId);}
+ @PostMapping("/revenue-allocation") public RevenueObligation allocate(@Valid @RequestBody RevenueAllocationRequest r){return service.allocateRevenue(r);}
  @PostMapping("/revenue-recognition") public ResponseEntity<RevenueRecognitionEvent> recognize(@Valid @RequestBody RecognitionRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.recognize(r));}
  @GetMapping("/tax-codes") public List<TaxCode> taxCodes(){return taxCodes.findAll();}
  @PostMapping("/tax-codes") public ResponseEntity<TaxCode> taxCode(@Valid @RequestBody TaxCodeRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.saveTaxCode(r));}
