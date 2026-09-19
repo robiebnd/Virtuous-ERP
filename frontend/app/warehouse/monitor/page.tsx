@@ -4,7 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { financeApi, orderToCashApi, procurementApi, warehouseExecutionApi } from "@/lib/api";
 
 type Section = "Outbound" | "Inbound" | "Physical Inventory" | "Documents" | "Stock and Bin" | "Resource Management" | "Product Master Data" | "Alert" | "Tools";
-const sections: Section[] = ["Outbound","Inbound","Physical Inventory","Documents","Stock and Bin","Resource Management","Product Master Data","Alert","Tools"];
+const sectionGroups = [
+  { label: "EXECUTION", items: ["Outbound","Inbound"] as Section[] },
+  { label: "INVENTORY", items: ["Physical Inventory","Stock and Bin"] as Section[] },
+  { label: "MASTER DATA", items: ["Product Master Data","Resource Management"] as Section[] },
+  { label: "CONTROL", items: ["Documents","Alert","Tools"] as Section[] }
+];
+const sectionIcons: Record<Section,string> = {
+  "Outbound":"↗", "Inbound":"↙", "Physical Inventory":"▦", "Documents":"▤",
+  "Stock and Bin":"⌗", "Resource Management":"♙", "Product Master Data":"□",
+  "Alert":"!", "Tools":"⚙"
+};
 
 const value = (x:any, ...keys:string[]) => {
   for (const key of keys) {
@@ -91,7 +101,18 @@ export default function WarehouseMonitor() {
     <div className="page-head"><div><div className="eyebrow">WAREHOUSE / EXECUTION</div><h1>Warehouse Management Monitor</h1><p>Execute inbound, outbound, stock, bin and warehouse control processes.</p></div><button className="btn" onClick={load}>Refresh</button></div>
     {error&&<div className="alert error">{error}</div>}{message&&<div className="alert success">{message}</div>}
     <section className="card warehouse-layout">
-      <div className="tree">{sections.map(n=><button key={n} type="button" className={`tree-item ${selected===n?"selected":""}`} onClick={()=>setSelected(n)}><span>▸</span><span>{n}</span></button>)}</div>
+      <aside className="tree">
+  <div className="tree-title">Warehouse Workbench</div>
+  <div className="tree-subtitle">Execution &amp; control</div>
+  {sectionGroups.map(group => <div className="tree-group" key={group.label}>
+    <div className="tree-group-label">{group.label}</div>
+    {group.items.map(n => <button key={n} type="button" className={`tree-item ${selected===n?"selected":""}`} onClick={()=>setSelected(n)}>
+      <span className="tree-icon">{sectionIcons[n]}</span>
+      <span className="tree-label">{n}</span>
+      <span className="tree-arrow">›</span>
+    </button>)}
+  </div>)}
+</aside>
       <div className="monitor">
         <div className="monitor-head"><div><h2>{selected}</h2><span className="section-meta">{filtered.length} records</span></div><div className="actions"><input className="filter" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search"/><button className="icon-btn" onClick={()=>setQuery("")}>⌕</button></div></div>
         {selected==="Stock and Bin"&&<div className="warehouse-operations">
