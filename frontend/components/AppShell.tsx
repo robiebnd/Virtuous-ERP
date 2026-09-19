@@ -87,3 +87,131 @@ const groups = [
     { label: "Warehouses", href: "/master-data/warehouses", icon: "warehouse" as IconName },
   ] },
 ];
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) setProfileOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const crumbs = pathname === "/" ? "Dashboard" : pathname.split("/").filter(Boolean).map((x) => x.replaceAll("-", " ")).join(" / ");
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">
+          <Link href="/" className="brand-logo-link" aria-label="Virtuous ERP home">
+            <img src="/virtuous-logo.png" alt="Virtuous ERP" className="brand-logo" />
+          </Link>
+        </div>
+        <nav className="nav" aria-label="Main navigation">
+          {groups.map((group) => (
+            <div className="nav-group" key={group.title}>
+              <div className="nav-section">{group.title}</div>
+              {group.items.map((item: any) => {
+                const hasChildren = Array.isArray(item.children);
+                const childActive = hasChildren && item.children.some((child: any) =>
+                  pathname === child.href || (child.href.indexOf("#") === -1 && pathname.startsWith(child.href))
+                );
+                const active = !hasChildren && (
+                  pathname === item.href ||
+                  (item.href !== "/" && item.href.indexOf("#") === -1 && pathname.startsWith(item.href))
+                );
+                const expanded = hasChildren ? (openMenus[item.label] ?? childActive) : false;
+
+                if (hasChildren) {
+                  return (
+                    <div key={item.label} className="nav-dropdown">
+                      <button
+                        type="button"
+                        className={`nav-link nav-dropdown-toggle ${childActive ? "active-parent" : ""}`}
+                        onClick={() => setOpenMenus((v) => ({ ...v, [item.label]: !expanded }))}
+                        aria-expanded={expanded}
+                      >
+                        <span className="nav-icon"><Icon name={item.icon} /></span>
+                        <span>{item.label}</span>
+                        <span className={`nav-chevron ${expanded ? "open" : ""}`}>⌄</span>
+                      </button>
+                      {expanded && (
+                        <div className="nav-children">
+                          {item.children.map((child: any) => {
+                            const childIsActive = pathname === child.href ||
+                              (child.href.indexOf("#") === -1 && pathname.startsWith(child.href));
+                            return (
+                              <Link key={child.href} href={child.href} className={`nav-link nav-child ${childIsActive ? "active" : ""}`}>
+                                <span className="nav-icon"><Icon name={child.icon} /></span>
+                                <span>{child.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link key={item.href} href={item.href} className={`nav-link ${active ? "active" : ""}`}>
+                    <span className="nav-icon"><Icon name={item.icon} /></span>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <span>Virtuous ERP</span>
+          <small>Finance, Warehouse, Procurement & Outbound Operations</small>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="topbar">
+          <button className="mobile-menu" aria-label="Open navigation">☰</button>
+          <div className="crumb">Virtuous ERP <span>/</span> {crumbs}</div>
+          <div className="global-search">
+            <span aria-hidden="true">⌕</span>
+            <input aria-label="Search" placeholder="Search in Virtuous ERP" />
+            <kbd>Ctrl K</kbd>
+          </div>
+          <div className="top-actions">
+            <button className="icon-btn" aria-label="Notifications"><Icon name="flag" /></button>
+            <button className="icon-btn" aria-label="Help">?</button>
+            <div className="profile-wrap" ref={profileRef}>
+              <button className={`avatar ${profileOpen ? "avatar-open" : ""}`} aria-label="User profile" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((open) => !open)}>RB</button>
+              {profileOpen && (
+                <div className="profile-menu" role="menu" aria-label="User profile menu">
+                  <div className="profile-header">
+                    <div className="profile-avatar">RB</div>
+                    <div className="profile-identity"><strong>RB</strong><span>Virtuous ERP User</span></div>
+                  </div>
+                  <div className="profile-divider" />
+                  <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">◉</span><span>My Profile</span></button>
+                  <button className="profile-menu-item" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">⚙</span><span>Settings</span></button>
+                  <div className="profile-divider" />
+                  <button className="profile-menu-item profile-signout" role="menuitem" onClick={() => setProfileOpen(false)}><span className="profile-menu-icon">↪</span><span>Sign out</span></button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        {children}
+      </main>
+    </div>
+  );
+}
