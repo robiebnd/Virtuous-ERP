@@ -50,6 +50,12 @@ public class FiscalPeriodService {
     public FiscalPeriod closePeriod(String companyCode, int year, int period, String closedBy, boolean permanent) {
         FiscalPeriod p = find(companyCode, year, period);
         if (!OPEN.equals(p.getStatus())) throw new InvalidWorkflowException("Only an open fiscal period can be closed.");
+        if (period > 1) {
+            FiscalPeriod prior = find(companyCode, year, period - 1);
+            if (OPEN.equals(prior.getStatus())) {
+                throw new InvalidWorkflowException("Close fiscal periods sequentially. " + prior.getPeriodName() + " is still open.");
+            }
+        }
         p.setStatus(permanent ? PERMANENTLY_CLOSED : CLOSED);
         p.setClosedAt(LocalDateTime.now());
         p.setClosedBy(closedBy == null || closedBy.isBlank() ? "SYSTEM" : closedBy.trim());
