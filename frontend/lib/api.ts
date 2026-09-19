@@ -109,3 +109,16 @@ export const warehouseExecutionApi = {
   confirmPacking:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/confirm-packing`,{method:"POST"}),
   postGoodsIssue:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/post-goods-issue`,{method:"POST"})
 };
+
+
+export const productsApi = {
+  list:()=>list<any>("/api/products"),
+  active:()=>list<any>("/api/products/active"),
+  create:(body:any)=>api<any>("/api/products",{method:"POST",body:JSON.stringify(body)}),
+  update:(id:string,body:any)=>api<any>(`/api/products/${id}`,{method:"PUT",body:JSON.stringify(body)}),
+  remove:(id:string)=>api<any>(`/api/products/${id}`,{method:"DELETE"})
+};
+export const productMasterDataApi = {
+  categories:()=>list<any>("/api/product-categories/active"),
+  units:()=>list<any>("/api/uom/active")
+};
