@@ -1,0 +1,3 @@
+package com.digipals.wms.finance.repository;
+import com.digipals.wms.finance.entity.RevenueRecognitionEvent; import org.springframework.data.jpa.repository.JpaRepository; import java.time.LocalDate; import java.util.*;
+public interface RevenueRecognitionEventRepository extends JpaRepository<RevenueRecognitionEvent,UUID>{ boolean existsByObligationIdAndEventDateAndRecognitionType(UUID obligationId,LocalDate eventDate,String recognitionType); }
