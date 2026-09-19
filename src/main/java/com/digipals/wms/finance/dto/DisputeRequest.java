@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.util.UUID; public record DisputeRequest(@NotNull UUID customerId,@NotBlank String invoiceReference,@NotBlank String reasonCode,@NotNull @DecimalMin("0.00") BigDecimal amount,String owner,String resolution){}
