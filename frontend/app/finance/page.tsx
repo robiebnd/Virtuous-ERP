@@ -72,7 +72,7 @@ export default function FinancePage() {
       <Link className="card module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
-      <div className="card module-card"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></div>
+      <Link className="card module-card" href="/finance/inventory-accounting"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></Link>
     </div>
 
     {inventoryReconciliation && <div className="card" style={{ marginBottom: 24, padding: 18 }}>
