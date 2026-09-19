@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.repository; import com.digipals.wms.finance.entity.*; import org.springframework.data.jpa.repository.JpaRepository; import java.time.LocalDate; import java.util.*; public interface FxValuationRunRepository extends JpaRepository<FxValuationRun,UUID>{ boolean existsByReferenceNumberAndValuationDate(String referenceNumber,LocalDate valuationDate); }
