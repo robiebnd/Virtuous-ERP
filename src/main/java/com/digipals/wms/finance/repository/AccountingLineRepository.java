@@ -35,5 +35,7 @@ public interface AccountingLineRepository extends JpaRepository<AccountingLine, 
 
     @Query("select l.profitabilitySegmentId, l.glAccount.accountType, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.companyCode = :companyCode and l.profitabilitySegmentId is not null and d.postingDate >= :startDate and d.postingDate < :endDate group by l.profitabilitySegmentId, l.glAccount.accountType")
     List<Object[]> profitabilityBySegment(@Param("companyCode") String companyCode, @Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
+    @Query("select l.glAccount.accountCode, l.glAccount.accountName, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.companyCode = :companyCode group by l.glAccount.accountCode, l.glAccount.accountName order by l.glAccount.accountCode")
+    List<Object[]> trialBalanceByCompany(@Param("companyCode") String companyCode);
 
 }
