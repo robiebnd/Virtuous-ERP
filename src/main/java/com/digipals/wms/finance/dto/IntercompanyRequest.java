@@ -1,3 +1,3 @@
 package com.digipals.wms.finance.dto;
 import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.time.LocalDate;
-public record IntercompanyRequest(@NotBlank String transactionNumber,@NotBlank String sourceCompanyCode,@NotBlank String targetCompanyCode,@NotNull LocalDate transactionDate,@NotBlank String currency,@NotNull @DecimalMin("0.01") BigDecimal amount,@NotBlank String sourceAccountCode,@NotBlank String targetAccountCode,String description){}
+public record IntercompanyRequest(@NotBlank String transactionNumber,@NotBlank String sourceCompanyCode,@NotBlank String targetCompanyCode,@NotNull LocalDate transactionDate,@NotBlank String currency,@NotNull @DecimalMin("0.01") BigDecimal amount,@NotBlank String sourceAccountCode,@NotBlank String targetAccountCode,@NotBlank String sourceDebitAccountCode,@NotBlank String sourceCreditAccountCode,@NotBlank String targetDebitAccountCode,@NotBlank String targetCreditAccountCode,String description){}
