@@ -35,7 +35,7 @@ const groups = [
     { label: "Accounting Documents", href: "/finance#accounting-documents", icon: "document" as IconName },
     { label: "Trial Balance", href: "/finance#trial-balance", icon: "hierarchy" as IconName },
     { label: "Journal Entry", href: "/finance/journal-entry", icon: "document" as IconName },
-    { label: "Finance Controls", href: "/finance/controls", icon: "settings" as IconName },
+    { label: "Finance Controls", href: "/finance/controls", icon: "hierarchy" as IconName },
     { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
     { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "money" as IconName },
   ] },
