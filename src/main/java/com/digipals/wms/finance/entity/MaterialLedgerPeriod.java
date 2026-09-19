@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import jakarta.persistence.*; import lombok.*; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+@Entity @Table(name="material_ledger_periods",uniqueConstraints=@UniqueConstraint(columnNames={"product_code","period_start"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class MaterialLedgerPeriod { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; String productCode; LocalDate periodStart; BigDecimal quantity; BigDecimal standardValue; BigDecimal actualValue; BigDecimal actualUnitCost; String status; }
