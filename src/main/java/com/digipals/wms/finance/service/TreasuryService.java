@@ -20,9 +20,11 @@ public class TreasuryService {
     private final BankTransactionRepository transactions;
     private final LiquidityForecastRepository forecasts;
     private final AccountingDocumentRepository documents;
-    private final FinanceQueryService financeQueryService;
+    private final FinanceQueryService financeQueryService; private final TreasuryInstrumentRepository instruments; private final TreasuryRiskLimitRepository riskLimits;
 
-    public BankTransaction captureStatementLine(BankTransactionRequest request) {
+    public TreasuryInstrument createInstrument(com.digipals.wms.finance.dto.TreasuryInstrumentRequest r){if(instruments.findByInstrumentNumber(r.instrumentNumber().trim()).isPresent())throw new InvalidWorkflowException("Treasury instrument already exists.");if(r.maturityDate()!=null&&r.maturityDate().isBefore(r.tradeDate()))throw new InvalidWorkflowException("Maturity date cannot be before trade date.");String type=r.instrumentType().trim().toUpperCase();BigDecimal exposure=instruments.findByStatusOrderByMaturityDateAsc("OPEN").stream().filter(x->x.getCounterparty().equalsIgnoreCase(r.counterparty())&&x.getCurrency().equalsIgnoreCase(r.currency())&&x.getInstrumentType().equalsIgnoreCase(type)).map(TreasuryInstrument::getNotionalAmount).reduce(BigDecimal.ZERO,BigDecimal::add).add(r.notionalAmount());riskLimits.findAll().stream().filter(x->x.isActive()&&x.getCounterparty()!=null&&x.getCounterparty().equalsIgnoreCase(r.counterparty())&&(x.getInstrumentType()==null||x.getInstrumentType().equalsIgnoreCase(type))&&(x.getCurrency()==null||x.getCurrency().equalsIgnoreCase(r.currency()))).findFirst().ifPresent(limit->{if(exposure.compareTo(limit.getLimitAmount())>0)throw new InvalidWorkflowException("Treasury risk limit exceeded: "+limit.getLimitCode());});return instruments.save(TreasuryInstrument.builder().instrumentNumber(r.instrumentNumber().trim()).instrumentType(type).counterparty(r.counterparty().trim()).currency(currency(r.currency())).notionalAmount(r.notionalAmount().setScale(2,RoundingMode.HALF_UP)).tradeDate(r.tradeDate()).maturityDate(r.maturityDate()).status("OPEN").valuationAmount(BigDecimal.ZERO).hedgeDesignated(r.hedgeDesignated()).build());}
+ public List<TreasuryInstrument> instruments(){return instruments.findByStatusOrderByMaturityDateAsc("OPEN");}
+ public BankTransaction captureStatementLine(BankTransactionRequest request) {
         BankAccount account = bankAccounts.findByAccountNumber(request.bankAccountNumber().trim())
                 .filter(x -> Boolean.TRUE.equals(x.getActive()))
                 .orElseThrow(() -> new InvalidWorkflowException("Active bank account not found: " + request.bankAccountNumber()));
