@@ -52,7 +52,6 @@ public class FiscalYearCloseService {
         List<Object[]> balances = accountingLineRepository.yearEndBalances(fiscalYear);
         List<FinancePostingService.PostingLine> closing = new ArrayList<>();
         BigDecimal netIncome = BigDecimal.ZERO;
-        BigDecimal currentYearEarnings = BigDecimal.ZERO;
 
         for (Object[] row : balances) {
             String code = row[0].toString();
@@ -63,12 +62,7 @@ public class FiscalYearCloseService {
 
             if ("REVENUE".equals(type) || "EXPENSE".equals(type) || CURRENT_YEAR_EARNINGS.equals(code)) {
                 if (net.signum() == 0) continue;
-                if ("REVENUE".equals(type) || CURRENT_YEAR_EARNINGS.equals(code)) {
-                    netIncome = netIncome.add(net);
-                } else {
-                    netIncome = netIncome.add(net.negate());
-                }
-                if (CURRENT_YEAR_EARNINGS.equals(code)) currentYearEarnings = currentYearEarnings.add(net);
+                netIncome = netIncome.subtract(net);
                 if (net.signum() > 0) {
                     closing.add(new FinancePostingService.PostingLine(code, BigDecimal.ZERO, net, null, null, null, null, "Year-end close"));
                     closing.add(new FinancePostingService.PostingLine(RETAINED_EARNINGS, net, BigDecimal.ZERO, null, null, null, null, "Transfer to retained earnings"));
