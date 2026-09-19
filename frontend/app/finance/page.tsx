@@ -51,11 +51,11 @@ export default function FinancePage() {
   return <main className="page">
     <div className="page-head"><div><div className="eyebrow">FINANCE / FI</div><h1>Finance & Accounting</h1><p>AP, AR, GR/IR, clearing, inventory valuation and accounting documents.</p></div><button className="btn" onClick={load}>Refresh</button></div>
     {error && <div className="alert error">{error}</div>}
-    <div className="stats-grid">
-      <div className="stat-card"><span>Accounts Payable</span><strong>{apOpen.toFixed(2)}</strong><small>Open vendor exposure</small></div>
-      <div className="stat-card"><span>Accounts Receivable</span><strong>{arOpen.toFixed(2)}</strong><small>Open customer exposure</small></div>
-      <div className="stat-card"><span>Inventory Value</span><strong>{inventoryValue.toFixed(2)}</strong><small>On-hand quantity × standard cost</small></div>
-      <div className="stat-card"><span>Posted FI Documents</span><strong>{posted.length}</strong><small>Accounting documents</small></div>
+    <div className="grid stats">
+      <div className="card stat"><div className="stat-label">Accounts Payable</div><div className="stat-value">{apOpen.toFixed(2)}</div><div className="stat-foot">Open vendor exposure</div></div>
+      <div className="stat-card"><div className="stat-label">Accounts Receivable</div><div className="stat-value">{arOpen.toFixed(2)}</div><div className="stat-foot">Open customer exposure</div></div>
+      <div className="stat-card"><div className="stat-label">Inventory Value</div><div className="stat-value">{inventoryValue.toFixed(2)}</div><div className="stat-foot">On-hand quantity × standard cost</div></div>
+      <div className="stat-card"><div className="stat-label">Posted FI Documents</div><div className="stat-value">{posted.length}</div><div className="stat-foot">Accounting documents</div></div>
     </div>
 
     <section className="card form-card" style={{ marginBottom: 24 }}>
@@ -67,19 +67,19 @@ export default function FinancePage() {
       </div>
     </section>
 
-    <div className="module-grid">
+    <div className="grid stats" style={{marginBottom:18}}>
       <Link className="module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
       <div className="module-card"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></div>
     </div>
 
-    {inventoryReconciliation && <div className="module-card" style={{ marginBottom: 24 }}>
+    {inventoryReconciliation && <div className="card" style={{ marginBottom: 24, padding: 18 }}>
       <b>Inventory to GL Reconciliation</b>
       <span>Inventory valuation: {Number(inventoryReconciliation.inventoryValuation || 0).toFixed(2)} · GL 110000: {Number(inventoryReconciliation.inventoryGlBalance || 0).toFixed(2)} · Variance: {Number(inventoryReconciliation.variance || 0).toFixed(2)} · {inventoryReconciliation.balanced ? "BALANCED" : "VARIANCE REQUIRES REVIEW"}</span>
     </div>}
 
-    <div className="module-grid">
+    <div className="grid stats" style={{marginBottom:18}}>
       <div className="module-card"><b>AP Ageing</b><span>Current {Number(apAgeing?.current||0).toFixed(2)} · 1–30 {Number(apAgeing?.days1To30||0).toFixed(2)} · 31–60 {Number(apAgeing?.days31To60||0).toFixed(2)} · 61–90 {Number(apAgeing?.days61To90||0).toFixed(2)} · 91+ {Number(apAgeing?.days91Plus||0).toFixed(2)}</span></div>
       <div className="module-card"><b>AR Ageing</b><span>Current {Number(arAgeing?.current||0).toFixed(2)} · 1–30 {Number(arAgeing?.days1To30||0).toFixed(2)} · 31–60 {Number(arAgeing?.days31To60||0).toFixed(2)} · 61–90 {Number(arAgeing?.days61To90||0).toFixed(2)} · 91+ {Number(arAgeing?.days91Plus||0).toFixed(2)}</span></div>
     </div>
