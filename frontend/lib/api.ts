@@ -76,5 +76,12 @@ export const financeApi = {
  ageing:(type:"AP"|"AR"="AR")=>api<any>(`/api/finance/ageing?type=${type}`),
  inventoryValuation:(warehouseId?:string)=>list<any>(warehouseId ? `/api/finance/inventory-valuation?warehouseId=${encodeURIComponent(warehouseId)}` : "/api/finance/inventory-valuation"),
  inventoryReconciliation:()=>api<any>("/api/finance/inventory-reconciliation"),
- postJournalEntry:(body:any)=>api<any>("/api/finance/journal-entries",{method:"POST",body:JSON.stringify(body)})
+ postJournalEntry:(body:any)=>api<any>("/api/finance/journal-entries",{method:"POST",body:JSON.stringify(body)}),
+ costCenters:()=>list<any>("/api/finance/cost-centers"),
+ createCostCenter:(body:any)=>api<any>("/api/finance/cost-centers",{method:"POST",body:JSON.stringify(body)}),
+ bankAccounts:()=>list<any>("/api/finance/bank-accounts"),
+ createBankAccount:(body:any)=>api<any>("/api/finance/bank-accounts",{method:"POST",body:JSON.stringify(body)}),
+ fixedAssets:()=>list<any>("/api/finance/fixed-assets"),
+ createFixedAsset:(body:any)=>api<any>("/api/finance/fixed-assets",{method:"POST",body:JSON.stringify(body)}),
+ depreciateAsset:(id:string,months=1)=>api<any>(`/api/finance/fixed-assets/${id}/depreciate?months=${months}`,{method:"POST"})
 };
