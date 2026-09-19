@@ -21,6 +21,9 @@ public interface AccountingLineRepository extends JpaRepository<AccountingLine, 
     @Query("select l.internalOrderCode, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.internalOrderCode is not null and l.glAccount.accountType = 'EXPENSE' group by l.internalOrderCode order by l.internalOrderCode");
     List<Object[]> internalOrderActuals();
 
+    @Query("select l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and EXTRACT(YEAR FROM d.postingDate) = :fiscalYear group by l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType order by l.glAccount.accountCode")
+    List<Object[]> yearEndBalances(@Param("fiscalYear") int fiscalYear);
+
     @Query("select coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.internalOrderCode = :orderCode and l.glAccount.accountType = 'EXPENSE'")
     Object[] internalOrderActual(@Param("orderCode") String orderCode);
 
