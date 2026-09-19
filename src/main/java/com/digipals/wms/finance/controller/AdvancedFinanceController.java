@@ -22,6 +22,7 @@ public class AdvancedFinanceController {
  @GetMapping("/tax-codes/{code}/calculate") public BigDecimal calculateTax(@PathVariable String code,@RequestParam BigDecimal taxable){return service.calculateTax(code,taxable);}
  @GetMapping("/fx-rates") public List<FxRate> fxRates(@RequestParam(required=false)LocalDate date){return service.fxRates(date);}
  @PostMapping("/fx-rates") public ResponseEntity<FxRate> fxRate(@Valid @RequestBody FxRateRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.saveFxRate(r));}
+ @PostMapping("/fx-valuation") public ResponseEntity<FxValuationRun> fxValuation(@Valid @RequestBody FxValuationRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.valueForeignBalance(r));}
  @GetMapping("/funds") public List<Fund> funds(){return funds.findAll();}
  @PostMapping("/funds") public ResponseEntity<Fund> fund(@Valid @RequestBody FundRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.saveFund(r));}
  @PostMapping("/fund-commitments") public ResponseEntity<FundCommitment> commitment(@Valid @RequestBody FundCommitmentRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.commitFund(r));}
