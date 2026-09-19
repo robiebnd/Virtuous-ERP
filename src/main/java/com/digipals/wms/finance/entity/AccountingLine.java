@@ -35,4 +35,6 @@ public class AccountingLine {
     @Column(name = "functional_area", length = 40) private String functionalArea;
     @Column(length = 40) private String segment;
     @Column(name = "line_text", length = 500) private String lineText;
+    @Column(name = "internal_order_code", length = 40) private String internalOrderCode;
+    @Column(name = "wbs_element", length = 60) private String wbsElement;
 }
