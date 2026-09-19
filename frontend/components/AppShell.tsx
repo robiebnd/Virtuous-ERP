@@ -39,6 +39,7 @@ const groups = [
     { label: "Journal Entry", href: "/finance/journal-entry", icon: "document" as IconName },
     { label: "Finance Controls", href: "/finance/controls", icon: "hierarchy" as IconName },
     { label: "Management Accounting", href: "/finance/management-accounting", icon: "hierarchy" as IconName },
+    { label: "Treasury & Cash", href: "/finance/treasury", icon: "money" as IconName },
     { label: "Period-End Close", href: "/finance/period-end-close", icon: "clock" as IconName },
     { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
     { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "money" as IconName },
