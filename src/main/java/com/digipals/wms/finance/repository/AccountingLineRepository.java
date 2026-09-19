@@ -3,6 +3,7 @@ package com.digipals.wms.finance.repository;
 import com.digipals.wms.finance.entity.AccountingLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,6 +22,6 @@ public interface AccountingLineRepository extends JpaRepository<AccountingLine, 
     List<Object[]> internalOrderActuals();
 
     @Query("select coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.internalOrderCode = :orderCode and l.glAccount.accountType = 'EXPENSE'")
-    Object[] internalOrderActual(String orderCode);
+    Object[] internalOrderActual(@Param("orderCode") String orderCode);
 
 }
