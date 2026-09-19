@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.util.UUID; public record RevenueAllocationRequest(@NotNull UUID contractId,@NotNull UUID obligationId,@NotNull @DecimalMin("0.00") BigDecimal allocatedPrice){}
