@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.util.UUID; public record InternalOrderSettlementRequest(@NotNull UUID internalOrderId,@NotBlank String targetCostCenter,@NotBlank String expenseAccountCode,@NotBlank String referenceNumber,String description){}
