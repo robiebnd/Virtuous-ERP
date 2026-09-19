@@ -44,7 +44,7 @@ public class FinanceController {
     public AccountingDocumentResponse document(@PathVariable UUID id) { return AccountingDocumentResponse.from(accountingDocumentRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Accounting document not found: " + id))); }
 
     @GetMapping("/trial-balance")
-    public List<TrialBalanceLine> trialBalance() { return financeQueryService.trialBalance(); }
+    public List<TrialBalanceLine> trialBalance(@RequestParam(required = false) String companyCode) { return companyCode == null || companyCode.isBlank() ? financeQueryService.trialBalance() : financeQueryService.trialBalance(companyCode); }
 
     @GetMapping("/open-items/ap")
     public List<OpenItemResponse> accountsPayableOpenItems() { return openItemService.accountsPayable(); }
