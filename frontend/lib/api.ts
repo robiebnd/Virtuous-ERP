@@ -97,7 +97,13 @@ export const financeApi = {
   internalOrders:()=>list<any>("/api/finance/management-accounting/internal-orders"),
   internalOrderActuals:()=>list<any>("/api/finance/management-accounting/internal-orders/actuals"),
   createInternalOrder:(body:any)=>api<any>("/api/finance/management-accounting/internal-orders",{method:"POST",body:JSON.stringify(body)}),
-  allocateCostCenter:(body:any)=>api<any>("/api/finance/management-accounting/allocations",{method:"POST",body:JSON.stringify(body)})
+  allocateCostCenter:(body:any)=>api<any>("/api/finance/management-accounting/allocations",{method:"POST",body:JSON.stringify(body)}),
+  cashPosition:()=>api<any>("/api/finance/treasury/cash-position"),
+  bankTransactions:(bankAccountNumber?:string)=>list<any>(bankAccountNumber?"/api/finance/treasury/bank-transactions?bankAccountNumber="+encodeURIComponent(bankAccountNumber):"/api/finance/treasury/bank-transactions"),
+  captureBankTransaction:(body:any)=>api<any>("/api/finance/treasury/bank-transactions",{method:"POST",body:JSON.stringify(body)}),
+  reconcileBankTransaction:(body:any)=>api<any>("/api/finance/treasury/bank-reconciliation",{method:"POST",body:JSON.stringify(body)}),
+  liquidityForecasts:(from?:string,to?:string)=>list<any>(`/api/finance/treasury/liquidity-forecasts?from=${from||""}&to=${to||""}`),
+  createLiquidityForecast:(body:any)=>api<any>("/api/finance/treasury/liquidity-forecasts",{method:"POST",body:JSON.stringify(body)})
 };
 
 
