@@ -139,7 +139,12 @@ export const financeApi = {
   runAccrual:(id:string)=>api<any>(`/api/finance/advanced/accrual-templates/${id}/run`,{method:"POST"}),
   settleInternalOrder:(body:any)=>api<any>("/api/finance/advanced/internal-orders/settlement",{method:"POST",body:JSON.stringify(body)}),
   materialLedger:(code:string)=>list<any>(`/api/finance/advanced/material-ledger/${encodeURIComponent(code)}`),
-  saveMaterialLedger:(body:any)=>api<any>("/api/finance/advanced/material-ledger",{method:"POST",body:JSON.stringify(body)})
+  saveMaterialLedger:(body:any)=>api<any>("/api/finance/advanced/material-ledger",{method:"POST",body:JSON.stringify(body)}),
+  fiscalPeriods:(year:number,companyCode="ZW01")=>list<any>(`/api/finance/fiscal-periods?fiscalYear=${year}&companyCode=${encodeURIComponent(companyCode)}`),
+  createFiscalYear:(fiscalYear:number,companyCode="ZW01")=>api<any>("/api/finance/fiscal-periods/years",{method:"POST",body:JSON.stringify({fiscalYear,companyCode})}),
+  closeFiscalPeriod:(year:number,period:number,companyCode="ZW01",closedBy="SYSTEM")=>api<any>(`/api/finance/fiscal-periods/${year}/${period}/close?companyCode=${encodeURIComponent(companyCode)}`,{method:"POST",body:JSON.stringify({status:"CLOSED",closedBy})}),
+  reopenFiscalPeriod:(year:number,period:number,companyCode="ZW01")=>api<any>(`/api/finance/fiscal-periods/${year}/${period}/reopen?companyCode=${encodeURIComponent(companyCode)}`,{method:"POST"}),
+  closeFiscalYear:(year:number)=>api<any>(`/api/finance/fiscal-years/${year}/close`,{method:"POST"})
 };
 
 
