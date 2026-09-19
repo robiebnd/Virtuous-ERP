@@ -27,4 +27,10 @@ public interface AccountingLineRepository extends JpaRepository<AccountingLine, 
     @Query("select coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.internalOrderCode = :orderCode and l.glAccount.accountType = 'EXPENSE'")
     Object[] internalOrderActual(@Param("orderCode") String orderCode);
 
+    @Query("select l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.companyCode = :companyCode and d.postingDate >= :startDate and d.postingDate < :endDate group by l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType order by l.glAccount.accountCode")
+    List<Object[]> companyPeriodBalances(@Param("companyCode") String companyCode, @Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
+
+    @Query("select l.companyCode, l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType, coalesce(sum(l.debit),0), coalesce(sum(l.credit),0) from AccountingLine l join l.accountingDocument d where d.status = 'POSTED' and l.companyCode in :companyCodes and d.postingDate >= :startDate and d.postingDate < :endDate group by l.companyCode, l.glAccount.accountCode, l.glAccount.accountName, l.glAccount.accountType order by l.companyCode, l.glAccount.accountCode")
+    List<Object[]> groupPeriodBalances(@Param("companyCodes") List<String> companyCodes, @Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
+
 }
