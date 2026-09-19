@@ -53,3 +53,41 @@
 .advanced-arrow{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--mustard);color:#202818;font-size:16px;font-weight:700}
 @media(max-width:1100px){.advanced-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.advanced-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.advanced-summary,.advanced-module-grid{grid-template-columns:1fr}.advanced-section-head{padding:16px}.advanced-module-grid{padding:10px}.advanced-module{min-height:130px}}
+
+/* Treasury workspace */
+.treasury-page{padding-top:24px}
+.treasury-head{margin-bottom:18px}
+.treasury-head h1{font-size:28px}
+.treasury-head p{max-width:760px}
+.treasury-stats{gap:14px;margin-bottom:20px}
+.treasury-stats .stat{padding:20px 22px;min-height:132px}
+.treasury-stats .stat-label{font-size:12px}
+.treasury-stats .stat-value{font-size:30px;margin:11px 0 5px}
+.treasury-stats .stat-foot{font-size:11px}
+.treasury-tabs{display:flex;align-items:center;gap:0;background:#fff;border:1px solid var(--line);border-radius:7px;margin-bottom:18px;overflow:auto;box-shadow:0 1px 3px rgba(0,0,0,.035)}
+.treasury-tab{padding:14px 18px;color:#536059;text-decoration:none;font-size:12px;font-weight:600;white-space:nowrap;border-bottom:3px solid transparent}
+.treasury-tab:hover{color:var(--olive)}
+.treasury-tab.active{color:var(--olive-dark);border-bottom-color:var(--mustard);background:#fbfcfa}
+.treasury-form-card{overflow:hidden}
+.treasury-form-card .section-title{font-size:16px;padding:18px 22px 8px;border-bottom:0}
+.treasury-help{margin:0;padding:0 22px 16px;color:var(--muted);font-size:12px}
+.treasury-form-card form{border-top:1px solid var(--line)}
+.treasury-form-card .form-grid{padding:22px 22px 18px;gap:18px 22px}
+.treasury-form-card .form-field{min-width:0}
+.treasury-form-card .form-input{width:100%;height:42px}
+.treasury-form-card .form-actions{display:flex;align-items:center;padding:0 22px 20px}
+.treasury-form-card .form-actions .btn{min-height:40px}
+.treasury-table-card{overflow:hidden;margin-top:18px}
+.treasury-table-card .table-wrap{width:100%;overflow:auto}
+.treasury-table-card .table{min-width:760px}
+.treasury-table-card .section-title{padding:17px 20px}
+@media(max-width:900px){
+ .treasury-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .treasury-form-card .form-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+ .treasury-stats{grid-template-columns:1fr}
+ .treasury-form-card .form-grid{grid-template-columns:1fr}
+ .treasury-tabs{margin-left:-1px;margin-right:-1px}
+ .treasury-head h1{font-size:24px}
+}
