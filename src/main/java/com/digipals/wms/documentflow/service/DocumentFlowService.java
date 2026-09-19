@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public interface DocumentFlowService {
     DocumentFlowResponse getBySalesOrderId(UUID salesOrderId);
+    DocumentFlowResponse getBySalesOrderNumber(String orderNumber);
     DocumentFlowResponse getByDeliveryId(UUID deliveryId);
     DocumentFlowResponse getByBillingDocumentId(UUID billingDocumentId);
 }
