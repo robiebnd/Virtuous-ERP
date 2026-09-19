@@ -42,7 +42,7 @@ export default function FinancePage() {
     finally { setLoading(false); }
   }
   useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); financeApi.companyCodes().then(setCompanyCodes).catch(()=>setCompanyCodes([])); }, []);
-  useEffect(() => { load(); }, [warehouseId]);
+  useEffect(() => { load(); }, [warehouseId, companyCode]);
 
   const apOpen = useMemo(() => vendorInvoices.filter(i => ["MATCHED", "POSTED"].includes(i.status)).reduce((s, i) => s + Number(i.totalAmount || 0), 0) - vendorPayments.filter(p => p.status === "PAID").reduce((s, p) => s + Number(p.amount || 0), 0), [vendorInvoices, vendorPayments]);
   const arOpen = useMemo(() => billing.filter(i => i.status === "POSTED").reduce((s, i) => s + Number(i.totalAmount || 0), 0) - incoming.reduce((s, p) => s + Number(p.appliedAmount || p.amount || 0), 0), [billing, incoming]);
