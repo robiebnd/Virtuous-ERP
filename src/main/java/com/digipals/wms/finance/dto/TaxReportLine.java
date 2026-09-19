@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import java.math.BigDecimal; public record TaxReportLine(String taxCode,String description,BigDecimal rate,boolean withholding){}
