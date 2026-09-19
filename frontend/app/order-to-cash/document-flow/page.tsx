@@ -50,5 +50,5 @@ export default function DocumentFlowPage() {
       </div>}
     </section>
     <ModuleWorkspace eyebrow="ORDER TO CASH / TRACEABILITY" title="Commercial Document Chain" description="Use document flow to trace predecessor and settlement relationships without losing the original business document context." columns={["Document","Type","Relationship","Status"]} rows={rows} searchPlaceholder="Search document number or type..." />
-  </div>;
+  </main>;
 }
