@@ -12,5 +12,5 @@ public interface FiscalPeriodRepository extends JpaRepository<FiscalPeriod, UUID
     List<FiscalPeriod> findByCompanyCodeAndFiscalYearOrderByPeriodNumber(String companyCode, Integer fiscalYear);
     Optional<FiscalPeriod> findByCompanyCodeAndFiscalYearAndPeriodNumber(String companyCode, Integer fiscalYear, Integer periodNumber);
     Optional<FiscalPeriod> findByCompanyCodeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(String companyCode, LocalDate date1, LocalDate date2);
-    long countByCompanyCodeAndFiscalYearAndStatus(Integer fiscalYear, String status);
+    long countByCompanyCodeAndFiscalYearAndStatus(String companyCode, Integer fiscalYear, String status);
 }
