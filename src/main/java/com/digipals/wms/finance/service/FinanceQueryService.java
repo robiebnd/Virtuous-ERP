@@ -23,4 +23,13 @@ public class FinanceQueryService {
             return new TrialBalanceLine(row[0].toString(), row[1].toString(), net.max(BigDecimal.ZERO), net.negate().max(BigDecimal.ZERO));
         }).toList();
     }
+    public List<TrialBalanceLine> trialBalance(String companyCode) {
+        return accountingLineRepository.trialBalanceByCompany(companyCode.trim().toUpperCase()).stream().map(row -> {
+            BigDecimal debit = (BigDecimal) row[2];
+            BigDecimal credit = (BigDecimal) row[3];
+            BigDecimal net = debit.subtract(credit);
+            return new TrialBalanceLine(row[0].toString(), row[1].toString(), net.max(BigDecimal.ZERO), net.negate().max(BigDecimal.ZERO));
+        }).toList();
+    }
+
 }
