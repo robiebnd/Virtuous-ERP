@@ -144,7 +144,21 @@ export const financeApi = {
   createFiscalYear:(fiscalYear:number,companyCode="ZW01")=>api<any>("/api/finance/fiscal-periods/years",{method:"POST",body:JSON.stringify({fiscalYear,companyCode})}),
   closeFiscalPeriod:(year:number,period:number,companyCode="ZW01",closedBy="SYSTEM")=>api<any>(`/api/finance/fiscal-periods/${year}/${period}/close?companyCode=${encodeURIComponent(companyCode)}`,{method:"POST",body:JSON.stringify({status:"CLOSED",closedBy})}),
   reopenFiscalPeriod:(year:number,period:number,companyCode="ZW01")=>api<any>(`/api/finance/fiscal-periods/${year}/${period}/reopen?companyCode=${encodeURIComponent(companyCode)}`,{method:"POST"}),
-  closeFiscalYear:(year:number)=>api<any>(`/api/finance/fiscal-years/${year}/close`,{method:"POST"})
+  closeFiscalYear:(year:number)=>api<any>(`/api/finance/fiscal-years/${year}/close`,{method:"POST"}),
+  companyCodes:()=>list<any>("/api/finance/group-reporting/company-codes"),
+  createCompanyCode:(body:any)=>api<any>("/api/finance/group-reporting/company-codes",{method:"POST",body:JSON.stringify(body)}),
+  intercompanyTransactions:()=>list<any>("/api/finance/group-reporting/intercompany"),
+  postIntercompany:(body:any)=>api<any>("/api/finance/group-reporting/intercompany",{method:"POST",body:JSON.stringify(body)}),
+  runGroupReporting:(groupId:string,body:any)=>api<any>(`/api/finance/group-reporting/groups/${groupId}/runs`,{method:"POST",body:JSON.stringify(body)}),
+  groupReportingRuns:(groupId:string)=>list<any>(`/api/finance/group-reporting/groups/${groupId}/runs`),
+  groupReportingBalances:(runId:string)=>list<any>(`/api/finance/group-reporting/runs/${runId}/balances`),
+  taxPostings:(companyCode:string)=>list<any>(`/api/finance/group-reporting/tax-postings?companyCode=${encodeURIComponent(companyCode)}`),
+  postTax:(body:any)=>api<any>("/api/finance/group-reporting/tax-postings",{method:"POST",body:JSON.stringify(body)}),
+  profitabilitySegments:(companyCode:string)=>list<any>(`/api/finance/group-reporting/profitability-segments?companyCode=${encodeURIComponent(companyCode)}`),
+  createProfitabilitySegment:(body:any)=>api<any>("/api/finance/group-reporting/profitability-segments",{method:"POST",body:JSON.stringify(body)}),
+  profitabilityReport:(companyCode:string,year:number,period:number)=>list<any>(`/api/finance/group-reporting/profitability-report?companyCode=${encodeURIComponent(companyCode)}&fiscalYear=${year}&period=${period}`),
+  fxRatesByDate:(date?:string)=>list<any>(date?`/api/finance/advanced/fx-rates?date=${date}`:"/api/finance/advanced/fx-rates")
+
 };
 
 
