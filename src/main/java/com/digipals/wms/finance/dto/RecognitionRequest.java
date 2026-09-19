@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID; public record RecognitionRequest(@NotNull UUID obligationId,@NotNull LocalDate eventDate,@NotNull @DecimalMin("0.01") BigDecimal amount,@NotBlank String recognitionType){}
