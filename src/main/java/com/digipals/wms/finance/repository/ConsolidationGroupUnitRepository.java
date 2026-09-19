@@ -1,2 +1,2 @@
 package com.digipals.wms.finance.repository;
-import com.digipals.wms.finance.entity.ConsolidationGroupUnit; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ConsolidationGroupUnitRepository extends JpaRepository<ConsolidationGroupUnit,ConsolidationGroupUnitId>{ List<ConsolidationGroupUnit> findByIdGroupId(UUID groupId); }
+import com.digipals.wms.finance.entity.ConsolidationGroupUnit; import com.digipals.wms.finance.entity.ConsolidationGroupUnitId; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ConsolidationGroupUnitRepository extends JpaRepository<ConsolidationGroupUnit,ConsolidationGroupUnitId>{ List<ConsolidationGroupUnit> findByIdGroupId(UUID groupId); }
