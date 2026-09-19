@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import jakarta.persistence.*; import lombok.*; import java.math.BigDecimal; import java.time.*; import java.util.UUID;
+@Entity @Table(name="product_cost_estimates",uniqueConstraints=@UniqueConstraint(columnNames={"product_code","costing_date"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class ProductCostEstimate { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; @Column(name="product_code") String productCode; LocalDate costingDate; BigDecimal standardCost; BigDecimal materialCost; BigDecimal laborCost; BigDecimal overheadCost; String status; LocalDateTime releasedAt; }
