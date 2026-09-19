@@ -25,9 +25,16 @@ public class FinancePostingService {
     private static final String COMPANY_CODE = "ZW01";
     private final AccountingDocumentRepository documentRepository;
     private final GlAccountRepository accountRepository;
+    private final FiscalPeriodService fiscalPeriodService;
 
     public AccountingDocument postBalanced(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings) {
+        return postBalancedAtDate(documentType, referenceType, referenceId, referenceNumber, currency, description, postings, LocalDateTime.now());
+    }
+
+    public AccountingDocument postBalancedAtDate(String documentType, String referenceType, UUID referenceId, String referenceNumber, String currency, String description, List<PostingLine> postings, LocalDateTime postingDate) {
         if (referenceId != null && documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus(referenceType, referenceId, POSTED).isPresent()) throw new InvalidWorkflowException("Accounting document already posted for " + referenceType + " " + referenceNumber + ".");
+        if (postingDate == null) throw new InvalidWorkflowException("Posting date is required.");
+        fiscalPeriodService.ensurePostingAllowed(postingDate);
         if (postings == null || postings.size() < 2) throw new InvalidWorkflowException("Accounting document requires at least two lines.");
         BigDecimal totalDebit = postings.stream().map(p -> nvl(p.debit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalCredit = postings.stream().map(p -> nvl(p.credit())).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
@@ -35,7 +42,7 @@ public class FinancePostingService {
         String normalizedCurrency = currency == null ? "USD" : currency.trim().toUpperCase(Locale.ROOT);
         if (!normalizedCurrency.matches("[A-Z]{3}")) throw new InvalidWorkflowException("Accounting currency must be a 3-letter ISO code.");
         LocalDateTime now = LocalDateTime.now();
-        AccountingDocument document = AccountingDocument.builder().documentNumber(nextDocumentNumber()).documentType(documentType).documentDate(now).postingDate(now).companyCode(COMPANY_CODE).currency(normalizedCurrency).referenceType(referenceType).referenceId(referenceId).referenceNumber(referenceNumber).description(description).totalDebit(totalDebit).totalCredit(totalCredit).status(POSTED).build();
+        AccountingDocument document = AccountingDocument.builder().documentNumber(nextDocumentNumber()).documentType(documentType).documentDate(postingDate).postingDate(postingDate).companyCode(COMPANY_CODE).currency(normalizedCurrency).referenceType(referenceType).referenceId(referenceId).referenceNumber(referenceNumber).description(description).totalDebit(totalDebit).totalCredit(totalCredit).status(POSTED).build();
         int lineNumber = 1;
         for (PostingLine posting : postings) {
             GlAccount account = accountRepository.findByAccountCode(posting.accountCode()).orElseThrow(() -> new InvalidWorkflowException("GL account not configured: " + posting.accountCode()));
