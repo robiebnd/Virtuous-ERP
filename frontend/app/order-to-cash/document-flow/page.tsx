@@ -32,11 +32,11 @@ export default function DocumentFlowPage() {
     Status: x.status ?? "—",
   }));
 
-  return <div>
-    <div className="page-header">
+  return <main className="content">
+    <div className="page-head">
       <div><div className="eyebrow">ORDER TO CASH / DOCUMENT FLOW</div><h1>Document Flow</h1><p>Trace the SAP-style commercial document chain from sales order through delivery, billing, settlement and follow-up.</p></div>
     </div>
-    <section className="panel" style={{ marginBottom: 18 }}>
+    <section className="card document-flow-explorer" style={{ marginBottom: 18 }}>
       <div className="section-title">Document Flow Explorer</div>
       <div className="form-grid">
         <label>Sales Order Number<input value={salesOrderNumber} onChange={e => setSalesOrderNumber(e.target.value)} placeholder="e.g. SO-000123" /></label>
