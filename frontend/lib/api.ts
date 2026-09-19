@@ -5,8 +5,16 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: "no-store" });
-  if (!response.ok) throw new Error((await response.text()) || `Request failed: ${response.status}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: "no-store" });
+  } catch (error) {
+    throw new Error(`Backend unavailable at ${API_BASE}. Start the Spring Boot backend and try again.`);
+  }
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `Request failed: ${response.status}`);
+  }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
