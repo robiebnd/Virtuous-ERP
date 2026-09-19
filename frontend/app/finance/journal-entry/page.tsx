@@ -7,7 +7,8 @@ import {financeApi} from "@/lib/api";
 type Line={accountCode:string;debit:string;credit:string;costCenter:string;profitCenter:string;lineText:string;profitabilitySegmentId:string};
 
 export default function JournalEntryPage(){
- const [accounts,setAccounts]=useState<any[]>([]);\n const [segments,setSegments]=useState<any[]>([]);
+ const [accounts,setAccounts]=useState<any[]>([]);
+ const [segments,setSegments]=useState<any[]>([]);
  const [form,setForm]=useState({documentType:"SA",referenceNumber:"",currency:"USD",companyCode:"ZW01",postingDate:new Date().toISOString().slice(0,10),description:""});
  const [lines,setLines]=useState<Line[]>([{accountCode:"",debit:"0.00",credit:"0.00",costCenter:"",profitCenter:"",lineText:"",profitabilitySegmentId:""}]);
  const [message,setMessage]=useState("");const [saving,setSaving]=useState(false);
@@ -18,14 +19,16 @@ export default function JournalEntryPage(){
  const debit=useMemo(()=>lines.reduce((s,x)=>s+(Number(x.debit)||0),0),[lines]);
  const credit=useMemo(()=>lines.reduce((s,x)=>s+(Number(x.credit)||0),0),[lines]);
  const balanced=Math.abs(debit-credit)<0.005 && debit>0;
- const submit=async()=>{setSaving(true);setMessage("");try{const r=await financeApi.postJournalEntry({...form,lines:lines.map(x=>({accountCode:x.accountCode,debit:Number(x.debit)||0,credit:Number(x.credit)||0,costCenter:x.costCenter||null,profitCenter:x.profitCenter||null,lineText:x.lineText||null,profitabilitySegmentId:x.profitabilitySegmentId||null}))});setMessage(`Accounting document ${r.documentNumber||""} posted successfully.`);setLines([{accountCode:"",debit:"0.00",credit:"0.00",costCenter:"",profitCenter:"",lineText:""}]);}catch(e:any){setMessage(e.message||"Unable to post journal entry.")}finally{setSaving(false)}};
+ const submit=async()=>{setSaving(true);setMessage("");try{const r=await financeApi.postJournalEntry({...form,lines:lines.map(x=>({accountCode:x.accountCode,debit:Number(x.debit)||0,credit:Number(x.credit)||0,costCenter:x.costCenter||null,profitCenter:x.profitCenter||null,lineText:x.lineText||null,profitabilitySegmentId:x.profitabilitySegmentId||null}))});setMessage(`Accounting document ${r.documentNumber||""} posted successfully.`);setLines([{accountCode:"",debit:"0.00",credit:"0.00",costCenter:"",profitCenter:"",lineText:"",profitabilitySegmentId:""}]);}catch(e:any){setMessage(e.message||"Unable to post journal entry.")}finally{setSaving(false)}};
  return <div className="content">
   <div className="document-head"><div><div className="eyebrow">FINANCE / FI-GL</div><h1>General Ledger Journal Entry</h1><p>Post a balanced accounting document with GL account and controlling dimensions.</p></div><div className="actions"><Link className="btn" href="/finance">Back</Link><button className="btn primary" disabled={saving||!balanced||lines.some(x=>!x.accountCode)} onClick={submit}>{saving?"Posting…":"Post Document"}</button></div></div>
   {message&&<div className="alert">{message}</div>}
   <section className="card form-card"><div className="section-title">Document Header</div><div className="form-grid">
    <div className="form-field"><label>Document Type *</label><select className="form-input" value={form.documentType} onChange={e=>setForm(v=>({...v,documentType:e.target.value}))}><option>SA</option><option>KR</option><option>DZ</option></select></div>
    <div className="form-field"><label>Reference</label><input className="form-input" value={form.referenceNumber} onChange={e=>setForm(v=>({...v,referenceNumber:e.target.value}))} placeholder="External reference"/></div>
-   <div className="form-field"><label>Company Code *</label><input className="form-input" value={form.companyCode} onChange={e=>{setForm(v=>({...v,companyCode:e.target.value.toUpperCase()}));financeApi.profitabilitySegments(e.target.value||"ZW01").then(setSegments).catch(()=>setSegments([]))}}/></div>\n   <div className="form-field"><label>Posting Date *</label><input className="form-input" type="date" value={form.postingDate} onChange={e=>setForm(v=>({...v,postingDate:e.target.value}))}/></div>\n   <div className="form-field"><label>Currency *</label><select className="form-input" value={form.currency} onChange={e=>setForm(v=>({...v,currency:e.target.value}))}><option>USD</option><option>ZWL</option></select></div>
+   <div className="form-field"><label>Company Code *</label><input className="form-input" value={form.companyCode} onChange={e=>{setForm(v=>({...v,companyCode:e.target.value.toUpperCase()}));financeApi.profitabilitySegments(e.target.value||"ZW01").then(setSegments).catch(()=>setSegments([]))}}/></div>
+   <div className="form-field"><label>Posting Date *</label><input className="form-input" type="date" value={form.postingDate} onChange={e=>setForm(v=>({...v,postingDate:e.target.value}))}/></div>
+   <div className="form-field"><label>Currency *</label><select className="form-input" value={form.currency} onChange={e=>setForm(v=>({...v,currency:e.target.value}))}><option>USD</option><option>ZWL</option></select></div>
    <div className="form-field" style={{gridColumn:"span 2"}}><label>Description *</label><input className="form-input" value={form.description} onChange={e=>setForm(v=>({...v,description:e.target.value}))} placeholder="Business purpose of the journal"/></div>
   </div></section>
   <section className="card form-card"><div className="section-title"><span>Journal Lines</span><button className="btn" onClick={addLine}>Add Line</button></div>
