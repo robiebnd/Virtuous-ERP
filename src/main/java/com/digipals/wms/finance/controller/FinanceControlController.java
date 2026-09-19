@@ -16,6 +16,7 @@ public class FinanceControlController {
  private final CostCenterRepository costCenters;
  private final BankAccountRepository bankAccounts;
  private final FixedAssetRepository fixedAssets;
+ private final com.digipals.wms.finance.service.FixedAssetAccountingService fixedAssetAccountingService;
 
  @GetMapping("/cost-centers") public List<CostCenter> costCenters(){return costCenters.findByActiveTrueOrderByCodeAsc();}
  @PostMapping("/cost-centers") public ResponseEntity<CostCenter> createCostCenter(@RequestBody CostCenter x){return ResponseEntity.status(HttpStatus.CREATED).body(costCenters.save(x));}
@@ -23,15 +24,6 @@ public class FinanceControlController {
  @PostMapping("/bank-accounts") public ResponseEntity<BankAccount> createBankAccount(@RequestBody BankAccount x){x.setCurrency(x.getCurrency()==null?"USD":x.getCurrency().toUpperCase(Locale.ROOT));return ResponseEntity.status(HttpStatus.CREATED).body(bankAccounts.save(x));}
  @GetMapping("/fixed-assets") public List<FixedAsset> fixedAssets(){return fixedAssets.findAll();}
  @PostMapping("/fixed-assets") public ResponseEntity<FixedAsset> createFixedAsset(@RequestBody FixedAsset x){if(x.getAccumulatedDepreciation()==null)x.setAccumulatedDepreciation(BigDecimal.ZERO);if(x.getResidualValue()==null)x.setResidualValue(BigDecimal.ZERO);if(x.getStatus()==null)x.setStatus("ACTIVE");return ResponseEntity.status(HttpStatus.CREATED).body(fixedAssets.save(x));}
- @PostMapping("/fixed-assets/{id}/depreciate") public FixedAsset depreciate(@PathVariable UUID id,@RequestParam(required=false) Integer months){
-   FixedAsset x=fixedAssets.findById(id).orElseThrow();
-   int periods=months==null?1:months;
-   if(periods<1) throw new IllegalArgumentException("Months must be at least 1");
-   BigDecimal depreciable=x.getAcquisitionCost().subtract(x.getResidualValue()).max(BigDecimal.ZERO);
-   BigDecimal monthly= x.getUsefulLifeMonths()==null||x.getUsefulLifeMonths()<1?BigDecimal.ZERO:depreciable.divide(BigDecimal.valueOf(x.getUsefulLifeMonths()),2,RoundingMode.HALF_UP);
-   BigDecimal remaining=depreciable.subtract(x.getAccumulatedDepreciation()).max(BigDecimal.ZERO);
-   x.setAccumulatedDepreciation(x.getAccumulatedDepreciation().add(monthly.multiply(BigDecimal.valueOf(periods))).min(depreciable));
-   if(x.getAccumulatedDepreciation().compareTo(depreciable)>=0)x.setStatus("FULLY_DEPRECIATED");
-   return fixedAssets.save(x);
- }
+ @PostMapping("/fixed-assets/{id}/depreciate") public FixedAsset depreciate(@PathVariable UUID id,@RequestParam(required=false) Integer months){ return fixedAssetAccountingService.depreciate(id, months); }
+
 }
