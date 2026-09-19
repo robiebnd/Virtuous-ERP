@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import java.math.BigDecimal; public record InternalOrderSettlementResponse(String orderCode,BigDecimal settledAmount,java.util.UUID accountingDocumentId){}
