@@ -71,6 +71,8 @@ export default function FinancePage() {
     <div className="grid stats" style={{marginBottom:18}}>
       <Link className="card module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
+      <Link className="card module-card" href="/finance/financial-statements"><b>Financial Statements</b><span>Balance Sheet and Profit & Loss from the general ledger.</span></Link>
+      <Link className="card module-card" href="/finance/period-end-close"><b>Period-End Close</b><span>Run the finance close checklist and review outstanding controls.</span></Link>
       <Link className="module-card" href="/procurement/gr-ir-reconciliation"><b>GR/IR Reconciliation</b><span>Review received, invoiced and outstanding procurement value</span></Link>
       <Link className="card module-card" href="/finance/inventory-accounting"><b>Inventory Accounting</b><span>PGI posts COGS and inventory consumption; billing posts AR and revenue.</span></Link>
     </div>
