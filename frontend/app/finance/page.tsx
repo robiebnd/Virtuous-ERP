@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { financeApi, procurementApi, orderToCashApi, masterDataApi } from "@/lib/api";
 import { ModuleWorkspace } from "@/components/ModuleWorkspace";
+import { FinanceAgeingChart } from "@/components/FinanceAgeingChart";
 
 export default function FinancePage() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -79,12 +80,24 @@ export default function FinancePage() {
       <span>Inventory valuation: {Number(inventoryReconciliation.inventoryValuation || 0).toFixed(2)} · GL 110000: {Number(inventoryReconciliation.inventoryGlBalance || 0).toFixed(2)} · Variance: {Number(inventoryReconciliation.variance || 0).toFixed(2)} · {inventoryReconciliation.balanced ? "BALANCED" : "VARIANCE REQUIRES REVIEW"}</span>
     </div>}
 
-    <div className="grid stats" style={{marginBottom:18}}>
-      <div className="module-card"><b>AP Ageing</b><span>Current {Number(apAgeing?.current||0).toFixed(2)} · 1–30 {Number(apAgeing?.days1To30||0).toFixed(2)} · 31–60 {Number(apAgeing?.days31To60||0).toFixed(2)} · 61–90 {Number(apAgeing?.days61To90||0).toFixed(2)} · 91+ {Number(apAgeing?.days91Plus||0).toFixed(2)}</span></div>
-      <div className="module-card"><b>AR Ageing</b><span>Current {Number(arAgeing?.current||0).toFixed(2)} · 1–30 {Number(arAgeing?.days1To30||0).toFixed(2)} · 31–60 {Number(arAgeing?.days31To60||0).toFixed(2)} · 61–90 {Number(arAgeing?.days61To90||0).toFixed(2)} · 91+ {Number(arAgeing?.days91Plus||0).toFixed(2)}</span></div>
+    <div className="finance-chart-grid">
+      <FinanceAgeingChart title="Accounts Payable Ageing" data={[
+        { label: "Current", value: Number(apAgeing?.current || 0) },
+        { label: "1–30", value: Number(apAgeing?.days1To30 || 0) },
+        { label: "31–60", value: Number(apAgeing?.days31To60 || 0) },
+        { label: "61–90", value: Number(apAgeing?.days61To90 || 0) },
+        { label: "91+", value: Number(apAgeing?.days91Plus || 0) }
+      ]} />
+      <FinanceAgeingChart title="Accounts Receivable Ageing" data={[
+        { label: "Current", value: Number(arAgeing?.current || 0) },
+        { label: "1–30", value: Number(arAgeing?.days1To30 || 0) },
+        { label: "31–60", value: Number(arAgeing?.days31To60 || 0) },
+        { label: "61–90", value: Number(arAgeing?.days61To90 || 0) },
+        { label: "91+", value: Number(arAgeing?.days91Plus || 0) }
+      ]} />
     </div>
 
-    <ModuleWorkspace title="Accounts Payable — Open Items" subtitle={`${apItems.length} supplier open items`} searchPlaceholder="Search supplier or invoice..." columns={[{key:"referenceNumber",label:"Invoice"},{key:"partyName",label:"Supplier"},{key:"documentDate",label:"Document Date"},{key:"dueDate",label:"Due Date"},{key:"originalAmount",label:"Original"},{key:"clearedAmount",label:"Cleared"},{key:"openAmount",label:"Open"},{key:"status",label:"Status"}]} rows={apItems} loading={loading} />
+        <ModuleWorkspace title="Accounts Payable — Open Items" subtitle={`${apItems.length} supplier open items`} searchPlaceholder="Search supplier or invoice..." columns={[{key:"referenceNumber",label:"Invoice"},{key:"partyName",label:"Supplier"},{key:"documentDate",label:"Document Date"},{key:"dueDate",label:"Due Date"},{key:"originalAmount",label:"Original"},{key:"clearedAmount",label:"Cleared"},{key:"openAmount",label:"Open"},{key:"status",label:"Status"}]} rows={apItems} loading={loading} />
     <ModuleWorkspace title="Accounts Receivable — Open Items" subtitle={`${arItems.length} customer open items`} searchPlaceholder="Search customer or billing..." columns={[{key:"referenceNumber",label:"Billing"},{key:"partyName",label:"Customer"},{key:"documentDate",label:"Document Date"},{key:"dueDate",label:"Due Date"},{key:"originalAmount",label:"Original"},{key:"clearedAmount",label:"Cleared"},{key:"openAmount",label:"Open"},{key:"status",label:"Status"}]} rows={arItems} loading={loading} />
 
     <ModuleWorkspace title="Chart of Accounts" subtitle={`${accounts.length} configured GL accounts`} searchPlaceholder="Search accounts..." columns={[{key:"accountCode",label:"Account"},{key:"accountName",label:"Name"},{key:"accountType",label:"Type"},{key:"controlAccount",label:"Control"}]} rows={accounts} loading={loading} />
