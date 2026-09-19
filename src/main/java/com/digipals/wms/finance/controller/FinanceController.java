@@ -4,6 +4,7 @@ import com.digipals.wms.finance.dto.AccountingDocumentResponse;
 import com.digipals.wms.finance.dto.GlAccountResponse;
 import com.digipals.wms.finance.dto.InventoryGlReconciliationResponse;
 import com.digipals.wms.finance.dto.InventoryValuationResponse;
+import com.digipals.wms.finance.dto.JournalEntryRequest;
 import com.digipals.wms.finance.dto.OpenItemResponse;
 import com.digipals.wms.finance.dto.TrialBalanceLine;
 import com.digipals.wms.finance.repository.AccountingDocumentRepository;
@@ -11,9 +12,11 @@ import com.digipals.wms.finance.repository.GlAccountRepository;
 import com.digipals.wms.finance.service.FinanceQueryService;
 import com.digipals.wms.finance.service.InventoryGlReconciliationService;
 import com.digipals.wms.finance.service.InventoryValuationService;
+import com.digipals.wms.finance.service.FinancePostingService;
 import com.digipals.wms.finance.service.OpenItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +31,7 @@ public class FinanceController {
     private final OpenItemService openItemService;
     private final InventoryValuationService inventoryValuationService;
     private final InventoryGlReconciliationService inventoryGlReconciliationService;
+    private final FinancePostingService financePostingService;
 
     @GetMapping("/gl-accounts")
     public List<GlAccountResponse> accounts() { return glAccountRepository.findAllByActiveTrueOrderByAccountCode().stream().map(GlAccountResponse::from).toList(); }
@@ -61,4 +65,28 @@ public class FinanceController {
     public InventoryGlReconciliationResponse inventoryReconciliation() {
         return inventoryGlReconciliationService.reconcile();
     }
+    @PostMapping("/journal-entries")
+    public AccountingDocumentResponse postJournalEntry(@Valid @RequestBody JournalEntryRequest request) {
+        var postings = request.lines().stream()
+                .map(line -> new FinancePostingService.PostingLine(
+                        line.accountCode(),
+                        line.debit(),
+                        line.credit(),
+                        line.costCenter(),
+                        line.profitCenter(),
+                        line.functionalArea(),
+                        line.segment(),
+                        line.lineText()))
+                .toList();
+        var document = financePostingService.postBalanced(
+                request.documentType(),
+                "MANUAL_JOURNAL",
+                null,
+                request.referenceNumber(),
+                request.currency(),
+                request.description(),
+                postings);
+        return AccountingDocumentResponse.from(document);
+    }
+
 }
