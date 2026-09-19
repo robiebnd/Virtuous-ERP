@@ -79,8 +79,14 @@ public class FiscalPeriodService {
 
     @Transactional(readOnly = true)
     public void ensurePostingAllowed(LocalDateTime postingDate) {
+        ensurePostingAllowed(COMPANY_CODE, postingDate);
+    }
+
+    @Transactional(readOnly = true)
+    public void ensurePostingAllowed(String companyCode, LocalDateTime postingDate) {
         LocalDate date = postingDate.toLocalDate();
-        FiscalPeriod p = repository.findByCompanyCodeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(COMPANY_CODE, date, date)
+        String normalizedCompany = normalizeCompany(companyCode);
+        FiscalPeriod p = repository.findByCompanyCodeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(normalizedCompany, date, date)
             .orElseThrow(() -> new InvalidWorkflowException("No fiscal period is configured for posting date " + date + "."));
         if (!OPEN.equals(p.getStatus())) {
             throw new InvalidWorkflowException("Posting is blocked because fiscal period " + p.getPeriodName() + " is " + p.getStatus() + ".");
