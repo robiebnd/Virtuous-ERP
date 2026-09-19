@@ -40,6 +40,7 @@ const groups = [
     { label: "Finance Controls", href: "/finance/controls", icon: "hierarchy" as IconName },
     { label: "Management Accounting", href: "/finance/management-accounting", icon: "hierarchy" as IconName },
     { label: "Treasury & Cash", href: "/finance/treasury", icon: "money" as IconName },
+    { label: "Advanced Finance", href: "/finance/advanced", icon: "hierarchy" as IconName },
     { label: "Period-End Close", href: "/finance/period-end-close", icon: "clock" as IconName },
     { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "money" as IconName },
     { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "money" as IconName },
