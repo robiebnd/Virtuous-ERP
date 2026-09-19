@@ -9,7 +9,7 @@ export default function FinanceControls(){
  const[bank,setBank]=useState({accountNumber:"",bankName:"",branchName:"",currency:"USD",glAccountCode:"100000"});
  const[asset,setAsset]=useState({assetNumber:"",assetName:"",assetClass:"",acquisitionDate:"",acquisitionCost:"",usefulLifeMonths:"60",residualValue:"0",costCenterCode:""});
  const load=()=>Promise.all([financeApi.costCenters(),financeApi.bankAccounts(),financeApi.fixedAssets()]).then(([a,b,c])=>{setCostCenters(a);setBanks(b);setAssets(c)}).catch(e=>setMessage(e.message||"Unable to load finance controls."));
- useEffect(load,[]);
+ useEffect(() => { load(); }, []);
  const createCc=async()=>{try{await financeApi.createCostCenter(cc);setCc({code:"",name:"",responsiblePerson:""});await load();setMessage("Cost centre created.")}catch(e:any){setMessage(e.message)}};
  const createBank=async()=>{try{await financeApi.createBankAccount(bank);await load();setMessage("Bank account created.")}catch(e:any){setMessage(e.message)}};
  const createAsset=async()=>{try{await financeApi.createFixedAsset({...asset,acquisitionCost:Number(asset.acquisitionCost),usefulLifeMonths:Number(asset.usefulLifeMonths),residualValue:Number(asset.residualValue)});setAsset({...asset,assetNumber:"",assetName:"",acquisitionCost:""});await load();setMessage("Fixed asset created.")}catch(e:any){setMessage(e.message)}};
