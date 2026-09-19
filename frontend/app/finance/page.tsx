@@ -38,7 +38,8 @@ export default function FinancePage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load finance workspace."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); }, []);\n  useEffect(() => { load(); }, [warehouseId]);
+  useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); }, []);
+  useEffect(() => { load(); }, [warehouseId]);
 
   const apOpen = useMemo(() => vendorInvoices.filter(i => ["MATCHED", "POSTED"].includes(i.status)).reduce((s, i) => s + Number(i.totalAmount || 0), 0) - vendorPayments.filter(p => p.status === "PAID").reduce((s, p) => s + Number(p.amount || 0), 0), [vendorInvoices, vendorPayments]);
   const arOpen = useMemo(() => billing.filter(i => i.status === "POSTED").reduce((s, i) => s + Number(i.totalAmount || 0), 0) - incoming.reduce((s, p) => s + Number(p.appliedAmount || p.amount || 0), 0), [billing, incoming]);
