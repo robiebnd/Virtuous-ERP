@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal; import java.time.LocalDate;
+@Entity @Table(name="accrual_templates") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class AccrualTemplate extends BaseEntity { @Column(name="template_code",nullable=false,unique=true) String templateCode; String description; String expenseAccountCode; String liabilityAccountCode; BigDecimal amount; String costCenterCode; String frequency; LocalDate nextRunDate; boolean active; }
