@@ -93,3 +93,19 @@ export const financeApi = {
  createFixedAsset:(body:any)=>api<any>("/api/finance/fixed-assets",{method:"POST",body:JSON.stringify(body)}),
  depreciateAsset:(id:string,months=1)=>api<any>(`/api/finance/fixed-assets/${id}/depreciate?months=${months}`,{method:"POST"})
 };
+
+
+export const warehouseExecutionApi = {
+  inventory:()=>list<any>("/api/warehouse-execution/inventory"),
+  warehouses:()=>list<any>("/api/warehouse-execution/warehouses"),
+  bins:(warehouseId:string)=>list<any>(`/api/warehouse-execution/warehouses/${warehouseId}/bins`),
+  products:()=>list<any>("/api/warehouse-execution/products"),
+  adjust:(id:string,quantity:number)=>api<any>(`/api/warehouse-execution/inventory/${id}/adjust?quantity=${quantity}`,{method:"POST"}),
+  reserve:(id:string,quantity:number)=>api<any>(`/api/warehouse-execution/inventory/${id}/reserve?quantity=${quantity}`,{method:"POST"}),
+  release:(id:string,quantity:number)=>api<any>(`/api/warehouse-execution/inventory/${id}/release?quantity=${quantity}`,{method:"POST"}),
+  transfer:(body:any)=>api<any>("/api/warehouse-execution/inventory/transfer",{method:"POST",body:JSON.stringify(body)}),
+  startPicking:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/start-picking`,{method:"POST"}),
+  confirmPicking:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/confirm-picking`,{method:"POST"}),
+  confirmPacking:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/confirm-packing`,{method:"POST"}),
+  postGoodsIssue:(id:string)=>api<any>(`/api/warehouse-execution/outbound/${id}/post-goods-issue`,{method:"POST"})
+};
