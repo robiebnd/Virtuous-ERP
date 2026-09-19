@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { financeApi, procurementApi, orderToCashApi } from "@/lib/api";
+import { financeApi, procurementApi, orderToCashApi, masterDataApi } from "@/lib/api";
 import { ModuleWorkspace } from "@/components/ModuleWorkspace";
 
 export default function FinancePage() {
@@ -15,22 +15,30 @@ export default function FinancePage() {
   const [incoming, setIncoming] = useState<any[]>([]);
   const [inventoryValuation, setInventoryValuation] = useState<any[]>([]);
   const [inventoryReconciliation, setInventoryReconciliation] = useState<any | null>(null);
+  const [apItems, setApItems] = useState<any[]>([]);
+  const [arItems, setArItems] = useState<any[]>([]);
+  const [apAgeing, setApAgeing] = useState<any | null>(null);
+  const [arAgeing, setArAgeing] = useState<any | null>(null);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehouseId, setWarehouseId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   async function load() {
     setLoading(true); setError("");
     try {
-      const [a, d, tb, vi, vp, b, ip, iv, ir] = await Promise.all([
+      const [a, d, tb, vi, vp, b, ip, iv, ir, ap, ar, apa, ara] = await Promise.all([
         financeApi.glAccounts(), financeApi.accountingDocuments(), financeApi.trialBalance(),
         procurementApi.vendorInvoices(), procurementApi.vendorPayments(), orderToCashApi.billingDocuments(), orderToCashApi.incomingPayments(),
-        financeApi.inventoryValuation(), financeApi.inventoryReconciliation()
+        financeApi.inventoryValuation(warehouseId || undefined), financeApi.inventoryReconciliation(),
+        financeApi.openItemsAp(), financeApi.openItemsAr(), financeApi.ageing("AP"), financeApi.ageing("AR")
       ]);
       setAccounts(a); setDocuments(d); setTrialBalance(tb); setVendorInvoices(vi); setVendorPayments(vp); setBilling(b); setIncoming(ip); setInventoryValuation(iv); setInventoryReconciliation(ir);
+      setApItems(ap); setArItems(ar); setApAgeing(apa); setArAgeing(ara);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load finance workspace."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { masterDataApi.warehouses().then(setWarehouses).catch(()=>setWarehouses([])); }, []);\n  useEffect(() => { load(); }, [warehouseId]);
 
   const apOpen = useMemo(() => vendorInvoices.filter(i => ["MATCHED", "POSTED"].includes(i.status)).reduce((s, i) => s + Number(i.totalAmount || 0), 0) - vendorPayments.filter(p => p.status === "PAID").reduce((s, p) => s + Number(p.amount || 0), 0), [vendorInvoices, vendorPayments]);
   const arOpen = useMemo(() => billing.filter(i => i.status === "POSTED").reduce((s, i) => s + Number(i.totalAmount || 0), 0) - incoming.reduce((s, p) => s + Number(p.appliedAmount || p.amount || 0), 0), [billing, incoming]);
@@ -49,6 +57,15 @@ export default function FinancePage() {
       <div className="stat-card"><span>Posted FI Documents</span><strong>{posted.length}</strong><small>Accounting documents</small></div>
     </div>
 
+    <section className="card form-card" style={{ marginBottom: 24 }}>
+      <div className="section-title">Accounting Context</div>
+      <div className="form-grid">
+        <div className="form-field"><label>Company Code</label><input className="form-input" value="ZW01" readOnly /></div>
+        <div className="form-field"><label>Valuation Warehouse</label><select className="form-input" value={warehouseId} onChange={e=>setWarehouseId(e.target.value)}><option value="">All warehouses</option>{warehouses.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.code} — {x.name}</option>)}</select></div>
+        <div className="form-field"><label>Ledger</label><input className="form-input" value="0L — Leading Ledger" readOnly /></div>
+      </div>
+    </section>
+
     <div className="module-grid">
       <Link className="module-card" href="/procurement/vendor-invoices"><b>Accounts Payable</b><span>Invoice verification, matching and blocked invoices</span></Link>
       <Link className="module-card" href="/order-to-cash/accounts-receivable"><b>Accounts Receivable</b><span>Customer open items, incoming payments and clearing</span></Link>
@@ -60,6 +77,14 @@ export default function FinancePage() {
       <b>Inventory to GL Reconciliation</b>
       <span>Inventory valuation: {Number(inventoryReconciliation.inventoryValuation || 0).toFixed(2)} · GL 110000: {Number(inventoryReconciliation.inventoryGlBalance || 0).toFixed(2)} · Variance: {Number(inventoryReconciliation.variance || 0).toFixed(2)} · {inventoryReconciliation.balanced ? "BALANCED" : "VARIANCE REQUIRES REVIEW"}</span>
     </div>}
+
+    <div className="module-grid">
+      <div className="module-card"><b>AP Ageing</b><span>Current {Number(apAgeing?.current||0).toFixed(2)} · 1–30 {Number(apAgeing?.days1to30||0).toFixed(2)} · 31–60 {Number(apAgeing?.days31to60||0).toFixed(2)} · 61–90 {Number(apAgeing?.days61to90||0).toFixed(2)} · 91+ {Number(apAgeing?.days91Plus||0).toFixed(2)}</span></div>
+      <div className="module-card"><b>AR Ageing</b><span>Current {Number(arAgeing?.current||0).toFixed(2)} · 1–30 {Number(arAgeing?.days1to30||0).toFixed(2)} · 31–60 {Number(arAgeing?.days31to60||0).toFixed(2)} · 61–90 {Number(arAgeing?.days61to90||0).toFixed(2)} · 91+ {Number(arAgeing?.days91Plus||0).toFixed(2)}</span></div>
+    </div>
+
+    <ModuleWorkspace title="Accounts Payable — Open Items" subtitle={`${apItems.length} supplier open items`} searchPlaceholder="Search supplier or invoice..." columns={[{key:"documentNumber",label:"Invoice"},{key:"partnerName",label:"Supplier"},{key:"documentDate",label:"Document Date"},{key:"dueDate",label:"Due Date"},{key:"originalAmount",label:"Original"},{key:"clearedAmount",label:"Cleared"},{key:"openAmount",label:"Open"},{key:"status",label:"Status"}]} rows={apItems} loading={loading} />
+    <ModuleWorkspace title="Accounts Receivable — Open Items" subtitle={`${arItems.length} customer open items`} searchPlaceholder="Search customer or billing..." columns={[{key:"documentNumber",label:"Billing"},{key:"partnerName",label:"Customer"},{key:"documentDate",label:"Document Date"},{key:"dueDate",label:"Due Date"},{key:"originalAmount",label:"Original"},{key:"clearedAmount",label:"Cleared"},{key:"openAmount",label:"Open"},{key:"status",label:"Status"}]} rows={arItems} loading={loading} />
 
     <ModuleWorkspace title="Chart of Accounts" subtitle={`${accounts.length} configured GL accounts`} searchPlaceholder="Search accounts..." columns={[{key:"accountCode",label:"Account"},{key:"accountName",label:"Name"},{key:"accountType",label:"Type"},{key:"controlAccount",label:"Control"}]} rows={accounts} loading={loading} />
     <ModuleWorkspace title="Inventory Valuation" subtitle={`${inventoryValuation.length} warehouse/product balances`} searchPlaceholder="Search product or warehouse..." columns={[{key:"warehouseCode",label:"Warehouse"},{key:"sku",label:"SKU"},{key:"productName",label:"Product"},{key:"quantityOnHand",label:"Qty On Hand"},{key:"unitCost",label:"Unit Cost"},{key:"inventoryValue",label:"Inventory Value"}]} rows={inventoryValuation} loading={loading} />
