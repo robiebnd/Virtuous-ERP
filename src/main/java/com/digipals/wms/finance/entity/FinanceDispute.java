@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal; import java.time.LocalDateTime; import java.util.UUID;
+@Entity @Table(name="finance_disputes") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class FinanceDispute extends BaseEntity { @Column(name="customer_id",nullable=false) UUID customerId; @Column(name="invoice_reference",nullable=false) String invoiceReference; String reasonCode; BigDecimal amount; String status; String owner; @Column(length=1000) String resolution; LocalDateTime resolvedAt; }
