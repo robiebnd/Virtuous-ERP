@@ -22,6 +22,7 @@ public class GroupReportingService {
  private final GroupReportingBalanceRepository balances;
  private final IntercompanyTransactionRepository intercompany;
  private final FxRateRepository fxRates;
+ private final FiscalPeriodService fiscalPeriods;
 
  public GroupReportingRun run(UUID groupId, GroupReportingRunRequest request){
    ConsolidationGroup group=groups.findById(groupId).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
@@ -30,8 +31,9 @@ public class GroupReportingService {
    LocalDate start=LocalDate.of(request.fiscalYear(),request.periodNumber(),1);
    LocalDate end=start.withDayOfMonth(start.lengthOfMonth()).plusDays(1);
    List<String> companyCodes=new ArrayList<>();
-   for(ConsolidationGroupUnit m:memberships){ConsolidationUnit u=units.findById(m.getId().getUnitId()).orElseThrow(()->new InvalidWorkflowException("Consolidation unit not found.")); if(!u.isActive())continue; companies.findByCompanyCodeIgnoreCase(u.getCompanyCode()).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+u.getCompanyCode())); companyCodes.add(u.getCompanyCode());}
+   for(ConsolidationGroupUnit m:memberships){ConsolidationUnit u=units.findById(m.getId().getUnitId()).orElseThrow(()->new InvalidWorkflowException("Consolidation unit not found.")); if(!u.isActive())continue; companies.findByCompanyCodeIgnoreCase(u.getCompanyCode()).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+u.getCompanyCode())); FiscalPeriod fp=fiscalPeriods.find(u.getCompanyCode(),request.fiscalYear(),request.periodNumber()); if("OPEN".equals(fp.getStatus())) throw new InvalidWorkflowException("Local fiscal period must be closed before group reporting: "+u.getCompanyCode()+"/"+request.fiscalYear()+"/"+request.periodNumber()); companyCodes.add(u.getCompanyCode());}
    if(companyCodes.isEmpty()) throw new InvalidWorkflowException("No active company codes are assigned to the consolidation group.");
+   if(group.getReportingCurrency()==null||group.getReportingCurrency().isBlank()) throw new InvalidWorkflowException("Consolidation group reporting currency is required.");
    if(runs.findByGroupIdAndFiscalYearAndPeriodNumber(groupId,request.fiscalYear(),request.periodNumber()).isPresent()) throw new InvalidWorkflowException("Group reporting run already exists for this group and period.");
    GroupReportingRun run=GroupReportingRun.builder().group(group).fiscalYear(request.fiscalYear()).periodNumber(request.periodNumber()).reportingCurrency(group.getReportingCurrency()).status("RUNNING").totalDebit(BigDecimal.ZERO).totalCredit(BigDecimal.ZERO).translationAdjustment(BigDecimal.ZERO).build();
    run=runs.save(run);
