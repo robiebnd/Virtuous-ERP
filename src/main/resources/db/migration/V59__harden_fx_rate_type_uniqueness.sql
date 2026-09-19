@@ -1,0 +1,2 @@
+ALTER TABLE fx_rates DROP CONSTRAINT IF EXISTS fx_rates_rate_date_from_currency_to_currency_key;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fx_rate_type ON fx_rates(rate_date,from_currency,to_currency,rate_type);
