@@ -136,7 +136,8 @@ export const financeApi = {
   releaseProductCost:(id:string)=>api<any>(`/api/finance/advanced/product-costing/${id}/release`,{method:"POST"}),
   accrualTemplates:()=>list<any>("/api/finance/advanced/accrual-templates"),
   createAccrualTemplate:(body:any)=>api<any>("/api/finance/advanced/accrual-templates",{method:"POST",body:JSON.stringify(body)}),
-  runAccrual:(id:string)=>api<any>(`/api/finance/advanced/accrual-templates/${id}/run`,{method:"POST"}),
+  runAccrual:(id:string)=>api<any>(`/api/finance/advanced/accrual-templates/${id}/run`,{method:"POST"}),,
+  settleInternalOrder:(body:any)=>api<any>("/api/finance/advanced/internal-orders/settlement",{method:"POST",body:JSON.stringify(body)})
   materialLedger:(code:string)=>list<any>(`/api/finance/advanced/material-ledger/${encodeURIComponent(code)}`),
   saveMaterialLedger:(body:any)=>api<any>("/api/finance/advanced/material-ledger",{method:"POST",body:JSON.stringify(body)})
 };
