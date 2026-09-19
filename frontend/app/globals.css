@@ -91,3 +91,7 @@
  .treasury-tabs{margin-left:-1px;margin-right:-1px}
  .treasury-head h1{font-size:24px}
 }
+
+/* Sidebar navigation refinements */
+.nav-dropdown{margin:2px 0}.nav-dropdown-toggle{width:100%;border:0;text-align:left;background:transparent}.nav-dropdown-toggle.active-parent{background:rgba(213,167,44,.12);color:#fff}.nav-chevron{margin-left:auto;font-size:15px;line-height:1;transition:transform .15s;color:#dce2d5}.nav-chevron.open{transform:rotate(180deg)}.nav-children{margin:3px 0 5px 12px;padding-left:10px;border-left:1px solid rgba(255,255,255,.18)}.nav-child{padding:8px 10px;font-size:12px;margin:1px 0}.nav-child .nav-icon{width:20px}.nav-child.active{background:var(--mustard);color:#1d2618}.nav-dropdown-toggle.active-parent .nav-icon{color:var(--mustard)}
+@media(max-width:1050px){.nav-children{margin-left:0;padding-left:0;border-left:0}.nav-chevron{display:none}}
