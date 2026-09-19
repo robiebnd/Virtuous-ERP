@@ -1,0 +1,3 @@
+package com.digipals.wms.finance.dto;
+import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.util.UUID;
+public record ProfitabilityPostRequest(@NotBlank String companyCode,@NotNull UUID segmentId,@NotBlank String accountCode,@NotNull @DecimalMin("0.00") BigDecimal amount,@NotNull Boolean revenue,@NotBlank String currency,@NotNull java.time.LocalDate postingDate,@DecimalMin("0.00") BigDecimal quantity){}
