@@ -1,0 +1,5 @@
+"use client";
+import {useEffect,useState} from "react";
+import {financeApi} from "@/lib/api";
+import {ModuleWorkspace} from "@/components/ModuleWorkspace";
+export default function ChartOfAccountsPage(){const[rows,setRows]=useState<any[]>([]);const[error,setError]=useState("");useEffect(()=>{financeApi.glAccounts().then(setRows).catch(e=>setError(e.message||"Unable to load chart of accounts."));},[]);return <main className="content"><div className="page-head"><div><div className="eyebrow">FINANCE / FI-GL</div><h1>Chart of Accounts</h1><p>Maintain and review the general ledger account structure used by Virtuous ERP.</p></div><button className="btn" onClick={()=>financeApi.glAccounts().then(setRows)}>Refresh</button></div>{error&&<div className="alert error">{error}</div>}<ModuleWorkspace title="General Ledger Accounts" subtitle={`${rows.length} configured GL accounts`} searchPlaceholder="Search account code or name..." columns={[{key:"accountCode",label:"Account"},{key:"accountName",label:"Name"},{key:"accountType",label:"Type"},{key:"controlAccount",label:"Control Account"},{key:"active",label:"Status"}]} rows={rows}/></main>}
