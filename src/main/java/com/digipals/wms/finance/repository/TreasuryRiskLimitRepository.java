@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.repository; import com.digipals.wms.finance.entity.*; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface TreasuryRiskLimitRepository extends JpaRepository<TreasuryRiskLimit,UUID>{ Optional<TreasuryRiskLimit> findByLimitCode(String limitCode); }
