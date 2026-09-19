@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; public record FundRequest(@NotBlank String fundCode,@NotBlank String fundName,@Pattern(regexp="[A-Za-z]{3}") String currency,@NotNull @DecimalMin("0.00") BigDecimal budgetAmount){}
