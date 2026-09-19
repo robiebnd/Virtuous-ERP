@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal;
+@Entity @Table(name="revenue_obligations") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class RevenueObligation extends BaseEntity { @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="contract_id",nullable=false) RevenueContract contract; String obligationCode; String description; BigDecimal standalonePrice; BigDecimal allocatedPrice; BigDecimal fulfilledAmount; String status; }
