@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; public record ConsolidationUnitRequest(@NotBlank String unitCode,@NotBlank String unitName,@Pattern(regexp="[A-Za-z]{3}") String localCurrency,@DecimalMin("0.0000") @DecimalMax("100.0000") java.math.BigDecimal ownershipPercent){}
