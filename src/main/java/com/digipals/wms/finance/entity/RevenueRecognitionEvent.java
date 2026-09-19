@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import jakarta.persistence.*; import lombok.*; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+@Entity @Table(name="revenue_recognition_events",uniqueConstraints=@UniqueConstraint(columnNames={"obligation_id","event_date","recognition_type"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class RevenueRecognitionEvent { @Id @GeneratedValue(strategy=GenerationType.UUID) UUID id; @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="obligation_id",nullable=false) RevenueObligation obligation; LocalDate eventDate; BigDecimal amount; String recognitionType; UUID accountingDocumentId; }
