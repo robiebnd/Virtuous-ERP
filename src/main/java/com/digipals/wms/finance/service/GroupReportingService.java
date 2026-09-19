@@ -41,14 +41,14 @@ public class GroupReportingService {
    for(Object[] row:raw){
      String company=(String)row[0], account=(String)row[1], name=(String)row[2], type=(String)row[3];
      BigDecimal debit=(BigDecimal)row[4], credit=(BigDecimal)row[5];
-     BigDecimal rate=rateFor(company,run.getReportingCurrency(),end.minusDays(1));
+     BigDecimal rate=rateFor(company,run.getReportingCurrency(),end.minusDays(1),type);
      BigDecimal td=debit.multiply(rate).setScale(2,RoundingMode.HALF_UP), tc=credit.multiply(rate).setScale(2,RoundingMode.HALF_UP);
      GroupReportingBalance b=GroupReportingBalance.builder().run(run).companyCode(company).accountCode(account).accountName(name).accountType(type).localDebit(debit).localCredit(credit).fxRate(rate).translatedDebit(td).translatedCredit(tc).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(td).finalCredit(tc).build();
      balances.save(b); byKey.put(company+"|"+account,b);
    }
    for(IntercompanyTransaction tx:intercompany.findByStatusOrderByTransactionDateDesc("POSTED")){
      if(tx.getTransactionDate().isBefore(start)||!tx.getTransactionDate().isBefore(end)||!companyCodes.contains(tx.getSourceCompanyCode())||!companyCodes.contains(tx.getTargetCompanyCode())) continue;
-     BigDecimal rate=rateFor(tx.getCurrency(),run.getReportingCurrency(),tx.getTransactionDate());
+     BigDecimal rate=rateFor(tx.getCurrency(),run.getReportingCurrency(),tx.getTransactionDate(),"BALANCE");
      BigDecimal amount=tx.getAmount().multiply(rate).setScale(2,RoundingMode.HALF_UP);
      eliminate(byKey,tx.getSourceCompanyCode(),tx.getSourceDebitAccountCode(),amount,true);
      eliminate(byKey,tx.getSourceCompanyCode(),tx.getSourceCreditAccountCode(),amount,false);
@@ -62,8 +62,13 @@ public class GroupReportingService {
  public List<GroupReportingRun> runs(UUID groupId){return runs.findByGroupIdOrderByFiscalYearDescPeriodNumberDesc(groupId);}
  public List<GroupReportingBalance> balances(UUID runId){return balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(runId);}
  private void eliminate(Map<String,GroupReportingBalance> map,String company,String account,BigDecimal amount,boolean debit){if(account==null||account.isBlank())return;GroupReportingBalance b=map.get(company+"|"+account);if(b==null)return;if(debit)b.setEliminationDebit(b.getEliminationDebit().add(amount));else b.setEliminationCredit(b.getEliminationCredit().add(amount));}
- private BigDecimal rateFor(String from,String to,LocalDate date){
+ private BigDecimal rateFor(String from,String to,LocalDate date,String accountType){
    if(from.equalsIgnoreCase(to))return BigDecimal.ONE;
-   return fxRates.findTopByRateDateLessThanEqualAndFromCurrencyAndToCurrencyOrderByRateDateDesc(date,from.toUpperCase(),to.toUpperCase()).map(FxRate::getRate).orElseGet(()->fxRates.findTopByRateDateLessThanEqualAndFromCurrencyAndToCurrencyOrderByRateDateDesc(date,to.toUpperCase(),from.toUpperCase()).map(x->BigDecimal.ONE.divide(x.getRate(),8,RoundingMode.HALF_UP)).orElseThrow(()->new InvalidWorkflowException("No FX rate available from "+from+" to "+to+" for "+date+".")));
+   String type=("REVENUE".equalsIgnoreCase(accountType)||"EXPENSE".equalsIgnoreCase(accountType))?"AVERAGE":"CLOSING";
+   return fxRates.findTopByRateDateLessThanEqualAndFromCurrencyAndToCurrencyAndRateTypeOrderByRateDateDesc(date,from.toUpperCase(),to.toUpperCase(),type)
+     .map(FxRate::getRate)
+     .orElseGet(()->fxRates.findTopByRateDateLessThanEqualAndFromCurrencyAndToCurrencyAndRateTypeOrderByRateDateDesc(date,to.toUpperCase(),from.toUpperCase(),type)
+       .map(x->BigDecimal.ONE.divide(x.getRate(),8,RoundingMode.HALF_UP))
+       .orElseThrow(()->new InvalidWorkflowException("No "+type+" FX rate available from "+from+" to "+to+" for "+date+".")));
  }
 }
