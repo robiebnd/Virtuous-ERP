@@ -76,7 +76,9 @@ public class FinanceController {
                         line.profitCenter(),
                         line.functionalArea(),
                         line.segment(),
-                        line.lineText()))
+                        line.lineText(),
+                        line.internalOrderCode(),
+                        line.wbsElement()))
                 .toList();
         var document = financePostingService.postBalanced(
                 request.documentType(),
