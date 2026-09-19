@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+@Entity @Table(name="revenue_contracts") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class RevenueContract extends BaseEntity { @Column(name="contract_number",nullable=false,unique=true) String contractNumber; @Column(name="customer_id",nullable=false) UUID customerId; LocalDate contractDate; String currency; BigDecimal transactionPrice; String status; }
