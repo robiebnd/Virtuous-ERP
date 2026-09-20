@@ -168,6 +168,11 @@ export const financeApi = {
   profitabilitySegments:(companyCode:string)=>list<any>(`/api/finance/group-reporting/profitability-segments?companyCode=${encodeURIComponent(companyCode)}`),
   createProfitabilitySegment:(body:any)=>api<any>("/api/finance/group-reporting/profitability-segments",{method:"POST",body:JSON.stringify(body)}),
   profitabilityReport:(companyCode:string,year:number,period:number)=>list<any>(`/api/finance/group-reporting/profitability-report?companyCode=${encodeURIComponent(companyCode)}&fiscalYear=${year}&period=${period}`),
+  copaAllocationRules:(companyCode:string)=>list<any>(`/api/finance/group-reporting/copa/allocation-rules?companyCode=${encodeURIComponent(companyCode)}`),
+  createCopaAllocationRule:(body:any)=>api<any>("/api/finance/group-reporting/copa/allocation-rules",{method:"POST",body:JSON.stringify(body)}),
+  addCopaAllocationTarget:(body:any)=>api<any>("/api/finance/group-reporting/copa/allocation-targets",{method:"POST",body:JSON.stringify(body)}),
+  runCopaAllocation:(ruleId:string,body:any)=>api<any>(`/api/finance/group-reporting/copa/allocation-rules/${ruleId}/run`,{method:"POST",body:JSON.stringify(body)}),
+  copaAllocationRuns:(companyCode:string)=>list<any>(`/api/finance/group-reporting/copa/allocation-runs?companyCode=${encodeURIComponent(companyCode)}`),
   fxRatesByDate:(date?:string)=>list<any>(date?`/api/finance/advanced/fx-rates?date=${date}`:"/api/finance/advanced/fx-rates")
 
 };
