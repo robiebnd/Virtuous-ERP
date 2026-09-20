@@ -11,13 +11,38 @@ import java.math.*; import java.time.*; import java.util.*;
 
 @Service @RequiredArgsConstructor @Transactional
 public class ProfitabilityService {
- private final ProfitabilitySegmentRepository segments; private final AccountingLineRepository lines; private final CompanyCodeRepository companies;
+ private final ProfitabilitySegmentRepository segments; private final AccountingLineRepository lines; private final CompanyCodeRepository companies; private final GlAccountRepository glAccounts; private final ProfitabilityPostingRepository profitabilityPostings; private final FinancePostingService postingService;
  public ProfitabilitySegment saveSegment(ProfitabilitySegmentRequest r){
    String company=r.companyCode().trim().toUpperCase(Locale.ROOT); companies.findByCompanyCodeIgnoreCase(company).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+company));
    if(segments.findBySegmentCodeIgnoreCase(r.segmentCode().trim()).isPresent()) throw new InvalidWorkflowException("Profitability segment already exists.");
    return segments.save(ProfitabilitySegment.builder().segmentCode(r.segmentCode().trim().toUpperCase()).segmentName(r.segmentName().trim()).companyCode(company).customerId(r.customerId()).productCode(r.productCode()).salesChannel(r.salesChannel()).marketRegion(r.marketRegion()).customerGroup(r.customerGroup()).productGroup(r.productGroup()).active(true).build());
  }
  public List<ProfitabilitySegment> segments(String company){return segments.findByCompanyCodeOrderBySegmentCode(company.trim().toUpperCase(Locale.ROOT));}
+ public AccountingDocument post(ProfitabilityPostRequest r){
+   String company=r.companyCode().trim().toUpperCase(Locale.ROOT);
+   ProfitabilitySegment segment=segments.findById(r.segmentId()).filter(x->x.getCompanyCode().equalsIgnoreCase(company)&&x.isActive()).orElseThrow(()->new InvalidWorkflowException("Active profitability segment not found for company: "+company));
+   GlAccount account=glAccounts.findByAccountCode(r.accountCode().trim()).orElseThrow(()->new InvalidWorkflowException("GL account not configured: "+r.accountCode()));
+   BigDecimal amount=r.amount().setScale(2,RoundingMode.HALF_UP);
+   if(amount.signum()<=0) throw new InvalidWorkflowException("Profitability posting amount must be greater than zero.");
+   boolean revenue=Boolean.TRUE.equals(r.revenue());
+   if(revenue && !"REVENUE".equalsIgnoreCase(account.getAccountType())) throw new InvalidWorkflowException("Revenue profitability postings require a revenue GL account.");
+   if(!revenue && !"EXPENSE".equalsIgnoreCase(account.getAccountType())) throw new InvalidWorkflowException("Cost profitability postings require an expense GL account.");
+   UUID ref=UUID.nameUUIDFromBytes(("COPA_POST:"+company+":"+r.segmentId()+":"+r.accountCode()+":"+r.postingDate()+":"+amount+":"+revenue).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+   List<FinancePostingService.PostingLine> postingLines;
+   if(revenue){
+     postingLines=List.of(
+       new FinancePostingService.PostingLine("120000",amount,BigDecimal.ZERO,null,null,null,null,"CO-PA revenue",null,null,null,null,BigDecimal.ZERO,BigDecimal.ZERO,null),
+       new FinancePostingService.PostingLine(account.getAccountCode(),BigDecimal.ZERO,amount,null,null,null,null,"CO-PA revenue",null,null,null,null,BigDecimal.ZERO,BigDecimal.ZERO,segment.getId()));
+   } else {
+     postingLines=List.of(
+       new FinancePostingService.PostingLine(account.getAccountCode(),amount,BigDecimal.ZERO,null,null,null,null,"CO-PA cost",null,null,null,null,BigDecimal.ZERO,BigDecimal.ZERO,segment.getId()),
+       new FinancePostingService.PostingLine("210000",BigDecimal.ZERO,amount,null,null,null,null,"CO-PA cost",null,null,null,null,BigDecimal.ZERO,BigDecimal.ZERO,null));
+   }
+   AccountingDocument document=postingService.postBalancedAtDate(company,"COPA_POSTING","COPA_POSTING",ref,r.segmentId().toString(),r.currency(),"CO-PA posting "+segment.getSegmentCode(),postingLines,r.postingDate().atStartOfDay());
+   AccountingLine pAndLLine=document.getLines().stream().filter(x->x.getGlAccount().getAccountCode().equals(account.getAccountCode())).findFirst().orElseThrow();
+   profitabilityPostings.save(ProfitabilityPosting.builder().accountingLine(pAndLLine).segment(segment).postingDate(r.postingDate()).revenueAmount(revenue?amount:BigDecimal.ZERO).costAmount(revenue?BigDecimal.ZERO:amount).quantity(r.quantity()==null?BigDecimal.ZERO:r.quantity()).currency(r.currency().trim().toUpperCase(Locale.ROOT)).build());
+   return document;
+ }
  public List<ProfitabilityReportLine> report(String company,int year,int period){
    String code=company.trim().toUpperCase(Locale.ROOT); LocalDate start=LocalDate.of(year,period,1), end=start.withDayOfMonth(start.lengthOfMonth()).plusDays(1);
    Map<UUID,BigDecimal[]> totals=new HashMap<>();
