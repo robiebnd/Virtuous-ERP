@@ -15,7 +15,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GroupReportingController {
  private final CompanyCodeRepository companies; private final CompanyCodeService companyService; private final GroupReportingService groupReporting; private final IntercompanyService intercompany; private final IntercompanyTransactionRepository intercompanyRepository; private final TaxAccountingService taxAccounting; private final TaxPostingRepository taxPostings; private final ProfitabilityService profitability;
- private final ConsolidationGroupRepository groups; private final ConsolidationUnitRepository units;
+ private final ConsolidationGroupRepository groups; private final ConsolidationUnitRepository units; private final ConsolidationNciResultRepository nciResults;
 
  @GetMapping("/company-codes") public List<CompanyCode> companyCodes(){return companyService.list();}
  @PostMapping("/company-codes") public ResponseEntity<CompanyCode> createCompanyCode(@Valid @RequestBody CompanyCodeRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(companyService.save(r));}
@@ -29,6 +29,7 @@ public class GroupReportingController {
  @GetMapping("/groups/{groupId}/account-mappings") public List<GroupAccountMapping> mappings(@PathVariable UUID groupId){return groupReporting.mappings(groupId);}
  @PostMapping("/groups/{groupId}/account-mappings") public ResponseEntity<GroupAccountMapping> mapping(@PathVariable UUID groupId,@Valid @RequestBody GroupAccountMappingRequest r){ if(!groupId.equals(r.groupId())) throw new IllegalArgumentException("Path groupId must match request groupId."); return ResponseEntity.status(HttpStatus.CREATED).body(groupReporting.saveMapping(r));}
  @GetMapping("/runs/{runId}/balances") public List<GroupReportingBalance> balances(@PathVariable UUID runId){return groupReporting.balances(runId);}
+ @GetMapping("/runs/{runId}/nci") public List<ConsolidationNciResult> nci(@PathVariable UUID runId){return nciResults.findByRunIdOrderByNciAmountDesc(runId);}
 
  @GetMapping("/tax-postings") public List<TaxPosting> taxPostingList(@RequestParam String companyCode){return taxPostings.findByCompanyCodeOrderByCreatedAtDesc(companyCode);}
  @GetMapping("/tax-report") public TaxReportSummary taxReport(@RequestParam String companyCode,@RequestParam java.time.LocalDate periodStart,@RequestParam java.time.LocalDate periodEnd){return taxAccounting.report(companyCode,periodStart,periodEnd);}
