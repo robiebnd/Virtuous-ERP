@@ -173,6 +173,7 @@ export const financeApi = {
   addCopaAllocationTarget:(body:any)=>api<any>("/api/finance/group-reporting/copa/allocation-targets",{method:"POST",body:JSON.stringify(body)}),
   runCopaAllocation:(ruleId:string,body:any)=>api<any>(`/api/finance/group-reporting/copa/allocation-rules/${ruleId}/run`,{method:"POST",body:JSON.stringify(body)}),
   copaAllocationRuns:(companyCode:string)=>list<any>(`/api/finance/group-reporting/copa/allocation-runs?companyCode=${encodeURIComponent(companyCode)}`),
+  copaAllocationResults:(runId:string)=>list<any>(`/api/finance/group-reporting/copa/allocation-runs/${runId}/results`),
   fxRatesByDate:(date?:string)=>list<any>(date?`/api/finance/advanced/fx-rates?date=${date}`:"/api/finance/advanced/fx-rates")
 
 };
