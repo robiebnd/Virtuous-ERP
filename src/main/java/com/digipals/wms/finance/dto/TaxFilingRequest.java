@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.time.LocalDate; public record TaxFilingRequest(@NotBlank String companyCode,@NotBlank String taxType,@NotNull LocalDate periodStart,@NotNull LocalDate periodEnd,String filingReference,String notes,String filedBy){}
