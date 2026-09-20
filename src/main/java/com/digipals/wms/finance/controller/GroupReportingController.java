@@ -42,6 +42,7 @@ public class GroupReportingController {
  @GetMapping("/profitability-segments") public List<ProfitabilitySegment> segments(@RequestParam String companyCode){return profitability.segments(companyCode);}
  @PostMapping("/profitability-segments") public ResponseEntity<ProfitabilitySegment> segment(@Valid @RequestBody ProfitabilitySegmentRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(profitability.saveSegment(r));}
  @GetMapping("/profitability-report") public List<ProfitabilityReportLine> profitabilityReport(@RequestParam String companyCode,@RequestParam int fiscalYear,@RequestParam int period){return profitability.report(companyCode,fiscalYear,period);}
+ @PostMapping("/profitability-postings") public ResponseEntity<AccountingDocument> profitabilityPost(@Valid @RequestBody ProfitabilityPostRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(profitability.post(r));}
  @GetMapping("/copa/allocation-rules") public List<CopaAllocationRule> copaRules(@RequestParam String companyCode){return controls.rules(companyCode);}
  @PostMapping("/copa/allocation-rules") public ResponseEntity<CopaAllocationRule> copaRule(@Valid @RequestBody CopaAllocationRuleRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.saveRule(r));}
  @PostMapping("/copa/allocation-targets") public ResponseEntity<CopaAllocationTarget> copaTarget(@Valid @RequestBody CopaAllocationTargetRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.addTarget(r));}
