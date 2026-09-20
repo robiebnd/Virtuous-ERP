@@ -20,7 +20,7 @@ public class ProfitabilityService {
  public List<ProfitabilitySegment> segments(String company){return segments.findByCompanyCodeOrderBySegmentCode(company.trim().toUpperCase(Locale.ROOT));}
  public AccountingDocument post(ProfitabilityPostRequest r){
    String company=r.companyCode().trim().toUpperCase(Locale.ROOT);
-   ProfitabilitySegment segment=segments.findById(r.segmentId()).filter(x->x.getCompanyCode().equalsIgnoreCase(company)&&x.isActive()).orElseThrow(()->new InvalidWorkflowException("Active profitability segment not found for company: "+company));
+   ProfitabilitySegment segment=segments.findById(r.segmentId()).filter(x->x.getCompanyCode().equalsIgnoreCase(company)).orElseThrow(()->new InvalidWorkflowException("Active profitability segment not found for company: "+company));
    GlAccount account=glAccounts.findByAccountCode(r.accountCode().trim()).orElseThrow(()->new InvalidWorkflowException("GL account not configured: "+r.accountCode()));
    BigDecimal amount=r.amount().setScale(2,RoundingMode.HALF_UP);
    if(amount.signum()<=0) throw new InvalidWorkflowException("Profitability posting amount must be greater than zero.");
