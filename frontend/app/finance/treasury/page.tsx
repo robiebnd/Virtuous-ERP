@@ -41,11 +41,21 @@ export default function TreasuryPage() {
     currency: "USD",
   });
 
+  const [valuation, setValuation] = useState({
+    instrumentNumber: "",
+    valuationDate: new Date().toISOString().slice(0, 10),
+    valuationAmount: "",
+    balanceAccountCode: "",
+    gainAccountCode: "",
+    lossAccountCode: "",
+    currency: "USD",
+  });
+
   async function load() {
     setLoading(true);
     setError("");
     try {
-      const [c, a, t, f] = await Promise.all([
+      const [c, a, t, f, i] = await Promise.all([
         financeApi.cashPosition(),
         financeApi.bankAccounts(),
         financeApi.bankTransactions(),
