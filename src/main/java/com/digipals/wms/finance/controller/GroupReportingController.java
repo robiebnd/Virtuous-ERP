@@ -31,6 +31,7 @@ public class GroupReportingController {
  @GetMapping("/runs/{runId}/balances") public List<GroupReportingBalance> balances(@PathVariable UUID runId){return groupReporting.balances(runId);}
 
  @GetMapping("/tax-postings") public List<TaxPosting> taxPostingList(@RequestParam String companyCode){return taxPostings.findByCompanyCodeOrderByCreatedAtDesc(companyCode);}
+ @GetMapping("/tax-report") public TaxReportSummary taxReport(@RequestParam String companyCode,@RequestParam java.time.LocalDate periodStart,@RequestParam java.time.LocalDate periodEnd){return taxAccounting.report(companyCode,periodStart,periodEnd);}
  @PostMapping("/tax-postings") public ResponseEntity<TaxPosting> taxPost(@Valid @RequestBody TaxPostingRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(taxAccounting.post(r));}
 
  @GetMapping("/profitability-segments") public List<ProfitabilitySegment> segments(@RequestParam String companyCode){return profitability.segments(companyCode);}
