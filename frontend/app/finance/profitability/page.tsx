@@ -5,7 +5,8 @@ import {financeApi} from "@/lib/api";
 export default function ProfitabilityPage(){
  const [companies,setCompanies]=useState<any[]>([]),[segments,setSegments]=useState<any[]>([]),[report,setReport]=useState<any[]>([]),[rules,setRules]=useState<any[]>([]),[allocationRuns,setAllocationRuns]=useState<any[]>([]),[error,setError]=useState("");
  const [company,setCompany]=useState("ZW01"),[year,setYear]=useState(new Date().getFullYear()),[period,setPeriod]=useState(1);
- const [form,setForm]=useState({segmentCode:"",segmentName:"",companyCode:"ZW01",productCode:"",salesChannel:"",marketRegion:"",customerGroup:"",productGroup:""});\n const [postingForm,setPostingForm]=useState({segmentId:"",accountCode:"400000",amount:"",revenue:true,currency:"USD",postingDate:new Date().toISOString().slice(0,10),quantity:""});
+ const [form,setForm]=useState({segmentCode:"",segmentName:"",companyCode:"ZW01",productCode:"",salesChannel:"",marketRegion:"",customerGroup:"",productGroup:""});
+ const [postingForm,setPostingForm]=useState({segmentId:"",accountCode:"400000",amount:"",revenue:true,currency:"USD",postingDate:new Date().toISOString().slice(0,10),quantity:""});
  const [allocationForm,setAllocationForm]=useState({ruleCode:"",ruleName:"",sourceSegmentId:"",driverType:"PERCENTAGE"});
  const [targetForm,setTargetForm]=useState({ruleId:"",targetSegmentId:"",allocationPercent:"100"});
  const load=async(c=company)=>{try{const [co,s]=await Promise.all([financeApi.companyCodes(),financeApi.profitabilitySegments(c)]);setCompanies(co);setSegments(s);setRules(await financeApi.copaAllocationRules(c));setAllocationRuns(await financeApi.copaAllocationRuns(c));setForm(x=>({...x,companyCode:c}));setError("")}catch(e){setError(e instanceof Error?e.message:"Unable to load CO-PA.")}};
