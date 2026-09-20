@@ -47,6 +47,7 @@ public class GroupReportingController {
  @PostMapping("/copa/allocation-targets") public ResponseEntity<CopaAllocationTarget> copaTarget(@Valid @RequestBody CopaAllocationTargetRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.addTarget(r));}
  @PostMapping("/copa/allocation-rules/{ruleId}/run") public ResponseEntity<CopaAllocationRun> copaRun(@PathVariable UUID ruleId,@Valid @RequestBody CopaAllocationRunRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.runCopa(ruleId,r));}
  @GetMapping("/copa/allocation-runs") public List<CopaAllocationRun> copaRuns(@RequestParam String companyCode){return controls.copaRuns(companyCode);}
+ @GetMapping("/copa/allocation-runs/{runId}/results") public List<CopaAllocationResult> copaResults(@PathVariable UUID runId){return controls.copaResults(runId);}
  @PostMapping("/tax-filings/prepare") public ResponseEntity<TaxFilingRecord> prepareTaxFiling(@Valid @RequestBody TaxFilingRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.prepareFiling(r));}
  @PostMapping("/tax-filings/file") public TaxFilingRecord fileTaxFiling(@Valid @RequestBody TaxFilingRequest r){return controls.file(r);}
  @GetMapping("/tax-filings") public List<TaxFilingRecord> taxFilings(@RequestParam String companyCode){return controls.filings(companyCode);}
