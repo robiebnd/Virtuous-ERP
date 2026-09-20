@@ -26,6 +26,8 @@ public class GroupReportingController {
 
  @PostMapping("/groups/{groupId}/runs") public ResponseEntity<GroupReportingRun> run(@PathVariable UUID groupId,@Valid @RequestBody GroupReportingRunRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(groupReporting.run(groupId,r));}
  @GetMapping("/groups/{groupId}/runs") public List<GroupReportingRun> runs(@PathVariable UUID groupId){return groupReporting.runs(groupId);}
+ @GetMapping("/groups/{groupId}/account-mappings") public List<GroupAccountMapping> mappings(@PathVariable UUID groupId){return groupReporting.mappings(groupId);}
+ @PostMapping("/groups/{groupId}/account-mappings") public ResponseEntity<GroupAccountMapping> mapping(@PathVariable UUID groupId,@Valid @RequestBody GroupAccountMappingRequest r){ if(!groupId.equals(r.groupId())) throw new IllegalArgumentException("Path groupId must match request groupId."); return ResponseEntity.status(HttpStatus.CREATED).body(groupReporting.saveMapping(r));}
  @GetMapping("/runs/{runId}/balances") public List<GroupReportingBalance> balances(@PathVariable UUID runId){return groupReporting.balances(runId);}
 
  @GetMapping("/tax-postings") public List<TaxPosting> taxPostingList(@RequestParam String companyCode){return taxPostings.findByCompanyCodeOrderByCreatedAtDesc(companyCode);}
