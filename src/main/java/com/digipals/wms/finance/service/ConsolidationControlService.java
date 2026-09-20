@@ -14,7 +14,7 @@ public class ConsolidationControlService {
  private final GroupReportingRunRepository runs; private final GroupReportingBalanceRepository balances; private final ConsolidationGroupRepository groups;
  private final ConsolidationJournalRepository journals; private final ConsolidationAuditEventRepository audits;
  private final CopaAllocationRuleRepository copaRules; private final CopaAllocationTargetRepository copaTargets; private final CopaAllocationRunRepository copaRuns;
- private final ProfitabilitySegmentRepository segments; private final ProfitabilityService profitability;
+ private final ProfitabilitySegmentRepository segments; private final ProfitabilityService profitability; private final CopaAllocationResultRepository copaResults;
  private final CompanyCodeRepository companies; private final TaxAccountingService taxAccounting; private final TaxFilingRecordRepository filings;
 
  public ConsolidationJournal postJournal(ConsolidationJournalRequest r){
@@ -67,9 +67,15 @@ public class ConsolidationControlService {
    ProfitabilityReportLine source=profitability.report(rule.getCompanyCode(),r.fiscalYear(),r.periodNumber()).stream().filter(x->x.segmentId().equals(rule.getSourceSegment().getId())).findFirst().orElse(null);
    BigDecimal amount=source==null?BigDecimal.ZERO:source.cost();
    if(amount.signum()<=0) throw new InvalidWorkflowException("No positive source cost is available for the selected CO-PA segment and period.");
-   return copaRuns.save(CopaAllocationRun.builder().rule(rule).fiscalYear(r.fiscalYear()).periodNumber(r.periodNumber()).allocatedAmount(amount.setScale(2,RoundingMode.HALF_UP)).status("POSTED").runAt(LocalDateTime.now()).runBy(r.runBy().trim()).build());
+   CopaAllocationRun run=copaRuns.save(CopaAllocationRun.builder().rule(rule).fiscalYear(r.fiscalYear()).periodNumber(r.periodNumber()).allocatedAmount(amount.setScale(2,RoundingMode.HALF_UP)).status("POSTED").runAt(LocalDateTime.now()).runBy(r.runBy().trim()).build());
+   for(CopaAllocationTarget target:targets){
+     BigDecimal allocated=amount.multiply(target.getAllocationPercent()).divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
+     copaResults.save(CopaAllocationResult.builder().run(run).targetSegment(target.getTargetSegment()).allocationPercent(target.getAllocationPercent()).allocatedAmount(allocated).build());
+   }
+   return run;
  }
  public List<CopaAllocationRun> copaRuns(String company){return copaRuns.findByRuleCompanyCodeOrderByRunAtDesc(company.trim().toUpperCase(Locale.ROOT));}
+ public List<CopaAllocationResult> copaResults(UUID runId){return copaResults.findByRunIdOrderByAllocatedAmountDesc(runId);}
 
  public TaxFilingRecord prepareFiling(TaxFilingRequest r){
    String company=r.companyCode().trim().toUpperCase(Locale.ROOT); companies.findByCompanyCodeIgnoreCase(company).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+company));
