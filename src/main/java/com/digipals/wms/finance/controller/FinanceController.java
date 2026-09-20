@@ -14,6 +14,7 @@ import com.digipals.wms.finance.service.InventoryGlReconciliationService;
 import com.digipals.wms.finance.service.InventoryValuationService;
 import com.digipals.wms.finance.service.FinancePostingService;
 import com.digipals.wms.finance.service.OpenItemService;
+import com.digipals.wms.finance.service.FinanceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ public class FinanceController {
     private final InventoryValuationService inventoryValuationService;
     private final InventoryGlReconciliationService inventoryGlReconciliationService;
     private final FinancePostingService financePostingService;
+    private final FinanceControlService financeControlService;
 
     @GetMapping("/gl-accounts")
     public List<GlAccountResponse> accounts() { return glAccountRepository.findAllByActiveTrueOrderByAccountCode().stream().map(GlAccountResponse::from).toList(); }
@@ -66,6 +68,11 @@ public class FinanceController {
     public InventoryGlReconciliationResponse inventoryReconciliation() {
         return inventoryGlReconciliationService.reconcile();
     }
+    @GetMapping("/control-summary")
+    public com.digipals.wms.finance.dto.FinanceControlSummary controlSummary(@RequestParam(required = false) String companyCode) {
+        return financeControlService.summary(companyCode);
+    }
+
     @PostMapping("/journal-entries")
     public AccountingDocumentResponse postJournalEntry(@Valid @RequestBody JournalEntryRequest request) {
         var postings = request.lines().stream()
