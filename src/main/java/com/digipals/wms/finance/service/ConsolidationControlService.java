@@ -11,7 +11,7 @@ import java.math.*; import java.time.*; import java.util.*;
 
 @Service @RequiredArgsConstructor @Transactional
 public class ConsolidationControlService {
- private final GroupReportingRunRepository runs; private final ConsolidationGroupRepository groups;
+ private final GroupReportingRunRepository runs; private final GroupReportingBalanceRepository balances; private final ConsolidationGroupRepository groups;
  private final ConsolidationJournalRepository journals; private final ConsolidationAuditEventRepository audits;
  private final CopaAllocationRuleRepository copaRules; private final CopaAllocationTargetRepository copaTargets; private final CopaAllocationRunRepository copaRuns;
  private final ProfitabilitySegmentRepository segments; private final ProfitabilityService profitability;
@@ -32,6 +32,11 @@ public class ConsolidationControlService {
    debit=debit.setScale(2,RoundingMode.HALF_UP);credit=credit.setScale(2,RoundingMode.HALF_UP);
    if(debit.signum()<=0||debit.compareTo(credit)!=0) throw new InvalidWorkflowException("Consolidation journal must balance.");
    j.setTotalDebit(debit);j.setTotalCredit(credit);j=journals.save(j);
+   for(ConsolidationJournalLine line:j.getLines()){
+     ConsolidationJournalLine l=line;
+     GroupReportingBalance b=balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId()).stream().filter(x->"GROUP".equalsIgnoreCase(x.getCompanyCode())&&x.getAccountCode().equals(l.getAccountCode())).findFirst().orElseGet(()->balances.save(GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode(l.getAccountCode()).accountName("Consolidation journal "+l.getAccountCode()).accountType("ADJUSTMENT").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(BigDecimal.ZERO).translatedCredit(BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(BigDecimal.ZERO).finalCredit(BigDecimal.ZERO).build()));
+     b.setFinalDebit(b.getFinalDebit().add(l.getDebit())); b.setFinalCredit(b.getFinalCredit().add(l.getCredit())); balances.save(b);
+   }
    audit(run.getGroup(),run,j,"JOURNAL_POSTED","POSTED",j.getJournalNumber(),j.getDescription(),r.postedBy());
    return j;
  }
