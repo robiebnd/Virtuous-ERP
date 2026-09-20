@@ -26,6 +26,8 @@ public class GroupReportingService {
  private final ConsolidationAdjustmentRepository adjustments;
  private final GroupAccountMappingRepository accountMappings;
  private final ConsolidationNciResultRepository nciResults;
+ private final ConsolidationJournalRepository journals;
+ private final ConsolidationAuditEventRepository audits;
 
  public GroupReportingRun run(UUID groupId, GroupReportingRunRequest request){
    ConsolidationGroup group=groups.findById(groupId).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
@@ -40,6 +42,7 @@ public class GroupReportingService {
    if(runs.findByGroupIdAndFiscalYearAndPeriodNumber(groupId,request.fiscalYear(),request.periodNumber()).isPresent()) throw new InvalidWorkflowException("Group reporting run already exists for this group and period.");
    GroupReportingRun run=GroupReportingRun.builder().group(group).fiscalYear(request.fiscalYear()).periodNumber(request.periodNumber()).reportingCurrency(group.getReportingCurrency()).status("RUNNING").totalDebit(BigDecimal.ZERO).totalCredit(BigDecimal.ZERO).translationAdjustment(BigDecimal.ZERO).build();
    run=runs.save(run);
+   audit(run,"RUN_STARTED","POSTED",null,"Group reporting run started.");
    Map<String,GroupReportingBalance> byKey=new LinkedHashMap<>();
    BigDecimal translationAdjustment=BigDecimal.ZERO;
    List<Object[]> raw=lines.groupPeriodBalances(companyCodes,start.atStartOfDay(),end.atStartOfDay());
@@ -51,6 +54,7 @@ public class GroupReportingService {
      GroupReportingBalance b=GroupReportingBalance.builder().run(run).companyCode(company).accountCode(account).accountName(name).accountType(type).localDebit(debit).localCredit(credit).fxRate(rate).translatedDebit(td).translatedCredit(tc).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(td).finalCredit(tc).build();
      balances.save(b); byKey.put(company+"|"+account,b);
    }
+   List<ConsolidationJournalRequest.Line> eliminationLines=new ArrayList<>();
    for(IntercompanyTransaction tx:intercompany.findByStatusOrderByTransactionDateDesc("POSTED")){
      if(tx.getTransactionDate().isBefore(start)||!tx.getTransactionDate().isBefore(end)||!companyCodes.contains(tx.getSourceCompanyCode())||!companyCodes.contains(tx.getTargetCompanyCode())) continue;
      BigDecimal rate=rateFor(tx.getCurrency(),run.getReportingCurrency(),tx.getTransactionDate(),"BALANCE");
@@ -59,7 +63,12 @@ public class GroupReportingService {
      eliminate(byKey,tx.getSourceCompanyCode(),tx.getSourceCreditAccountCode(),amount,false);
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetDebitAccountCode(),amount,true);
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetCreditAccountCode(),amount,false);
+     eliminationLines.add(new ConsolidationJournalRequest.Line(tx.getSourceDebitAccountCode(),BigDecimal.ZERO,amount,tx.getSourceCompanyCode(),tx.getTargetCompanyCode(),"Eliminate intercompany debit"));
+     eliminationLines.add(new ConsolidationJournalRequest.Line(tx.getSourceCreditAccountCode(),amount,BigDecimal.ZERO,tx.getSourceCompanyCode(),tx.getTargetCompanyCode(),"Eliminate intercompany credit"));
+     eliminationLines.add(new ConsolidationJournalRequest.Line(tx.getTargetDebitAccountCode(),BigDecimal.ZERO,amount,tx.getTargetCompanyCode(),tx.getSourceCompanyCode(),"Eliminate intercompany debit"));
+     eliminationLines.add(new ConsolidationJournalRequest.Line(tx.getTargetCreditAccountCode(),amount,BigDecimal.ZERO,tx.getTargetCompanyCode(),tx.getSourceCompanyCode(),"Eliminate intercompany credit"));
    }
+   if(!eliminationLines.isEmpty()) createInternalJournal(run,"INTERCOMPANY_ELIMINATION","Automatic intercompany elimination",eliminationLines,"SYSTEM");
    BigDecimal totalD=BigDecimal.ZERO,totalC=BigDecimal.ZERO;
    List<GroupAccountMapping> mappings=accountMappings.findByGroupIdAndActiveTrueOrderByCompanyCodeAscLocalAccountCodeAsc(groupId);
    Map<String,GroupAccountMapping> mappingByKey=new HashMap<>();
@@ -97,7 +106,7 @@ b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(Big
    run.setNciAmount(totalNci.setScale(2,RoundingMode.HALF_UP));
    BigDecimal imbalance=totalD.subtract(totalC).setScale(2,RoundingMode.HALF_UP);
    if(imbalance.compareTo(BigDecimal.ZERO)!=0){GroupReportingBalance fx=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode("3310").accountName("Foreign Currency Translation Reserve").accountType("EQUITY").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).translatedCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).finalCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).build();balances.save(fx);totalD=totalD.add(fx.getFinalDebit());totalC=totalC.add(fx.getFinalCredit());translationAdjustment=imbalance.negate();}
-   run.setTotalDebit(totalD.setScale(2,RoundingMode.HALF_UP));run.setTotalCredit(totalC.setScale(2,RoundingMode.HALF_UP));run.setTranslationAdjustment(translationAdjustment.setScale(2,RoundingMode.HALF_UP));run.setStatus("COMPLETED");run.setCompletedAt(LocalDateTime.now());return runs.save(run);
+   run.setTotalDebit(totalD.setScale(2,RoundingMode.HALF_UP));run.setTotalCredit(totalC.setScale(2,RoundingMode.HALF_UP));run.setTranslationAdjustment(translationAdjustment.setScale(2,RoundingMode.HALF_UP));run.setStatus("COMPLETED");run.setCompletedAt(LocalDateTime.now());run=runs.save(run);audit(run,"RUN_COMPLETED","POSTED",null,"Group reporting run completed.");return run;
  }
  public List<GroupAccountMapping> mappings(UUID groupId){return accountMappings.findByGroupIdAndActiveTrueOrderByCompanyCodeAscLocalAccountCodeAsc(groupId);}
  public GroupAccountMapping saveMapping(com.digipals.wms.finance.dto.GroupAccountMappingRequest r){
@@ -109,6 +118,16 @@ b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(Big
  }
  public List<GroupReportingRun> runs(UUID groupId){return runs.findByGroupIdOrderByFiscalYearDescPeriodNumberDesc(groupId);}
  public List<GroupReportingBalance> balances(UUID runId){return balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(runId);}
+ private ConsolidationJournal createInternalJournal(GroupReportingRun run,String type,String description,List<ConsolidationJournalRequest.Line> lines,String actor){
+   BigDecimal debit=lines.stream().map(x->x.debit()==null?BigDecimal.ZERO:x.debit()).reduce(BigDecimal.ZERO,BigDecimal::add).setScale(2,RoundingMode.HALF_UP);
+   BigDecimal credit=lines.stream().map(x->x.credit()==null?BigDecimal.ZERO:x.credit()).reduce(BigDecimal.ZERO,BigDecimal::add).setScale(2,RoundingMode.HALF_UP);
+   if(debit.signum()<=0||debit.compareTo(credit)!=0) throw new InvalidWorkflowException("Automatic consolidation journal is not balanced.");
+   ConsolidationJournal j=ConsolidationJournal.builder().run(run).journalNumber("CJ-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.ROOT)).journalType(type).description(description).postingDate(LocalDate.of(run.getFiscalYear(),run.getPeriodNumber(),1).withDayOfMonth(LocalDate.of(run.getFiscalYear(),run.getPeriodNumber(),1).lengthOfMonth())).status("POSTED").totalDebit(debit).totalCredit(credit).postedBy(actor).postedAt(LocalDateTime.now()).build();
+   int n=1; for(ConsolidationJournalRequest.Line l:lines) j.getLines().add(ConsolidationJournalLine.builder().journal(j).lineNumber(n++).accountCode(l.accountCode()).debit(nvl(l.debit()).setScale(2,RoundingMode.HALF_UP)).credit(nvl(l.credit()).setScale(2,RoundingMode.HALF_UP)).companyCode(l.companyCode()).partnerCompanyCode(l.partnerCompanyCode()).description(l.description()).build());
+   j=journals.save(j);audit(run,"JOURNAL_POSTED","POSTED",j.getJournalNumber(),description);return j;
+ }
+ private void audit(GroupReportingRun run,String type,String status,String ref,String details){audits.save(ConsolidationAuditEvent.builder().group(run.getGroup()).run(run).eventType(type).eventStatus(status).eventTime(LocalDateTime.now()).actor("SYSTEM").referenceNumber(ref).details(details).build());}
+
  private void eliminate(Map<String,GroupReportingBalance> map,String company,String account,BigDecimal amount,boolean debit){if(account==null||account.isBlank())return;GroupReportingBalance b=map.get(company+"|"+account);if(b==null)return;if(debit)b.setEliminationDebit(b.getEliminationDebit().add(amount));else b.setEliminationCredit(b.getEliminationCredit().add(amount));}
  private BigDecimal rateFor(String from,String to,LocalDate date,String accountType){
    if(from.equalsIgnoreCase(to))return BigDecimal.ONE;
