@@ -198,6 +198,9 @@ public class TreasuryService {
                 .filter(x -> "POSTED".equals(x.getStatus()))
                 .orElseThrow(() -> new InvalidWorkflowException("Posted accounting document not found: " + request.accountingDocumentNumber()));
 
+        if (transactions.findFirstByAccountingDocumentId(document.getId()).isPresent())
+            throw new InvalidWorkflowException("Accounting document is already reconciled to another bank transaction.");
+
         if (!document.getCurrency().equalsIgnoreCase(account.getCurrency()))
             throw new InvalidWorkflowException("Bank transaction currency and accounting document currency do not match.");
 
