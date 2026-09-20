@@ -152,6 +152,7 @@ export const financeApi = {
   runGroupReporting:(groupId:string,body:any)=>api<any>(`/api/finance/group-reporting/groups/${groupId}/runs`,{method:"POST",body:JSON.stringify(body)}),
   groupReportingRuns:(groupId:string)=>list<any>(`/api/finance/group-reporting/groups/${groupId}/runs`),
   groupReportingBalances:(runId:string)=>list<any>(`/api/finance/group-reporting/runs/${runId}/balances`),
+  groupReportingNci:(runId:string)=>list<any>(`/api/finance/group-reporting/runs/${runId}/nci`),
   groupAccountMappings:(groupId:string)=>list<any>(`/api/finance/group-reporting/groups/${groupId}/account-mappings`),
   createGroupAccountMapping:(body:any)=>api<any>(`/api/finance/group-reporting/groups/${body.groupId}/account-mappings`,{method:"POST",body:JSON.stringify(body)}),
   taxPostings:(companyCode:string)=>list<any>(`/api/finance/group-reporting/tax-postings?companyCode=${encodeURIComponent(companyCode)}`),
