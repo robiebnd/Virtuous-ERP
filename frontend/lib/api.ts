@@ -168,6 +168,7 @@ export const financeApi = {
   profitabilitySegments:(companyCode:string)=>list<any>(`/api/finance/group-reporting/profitability-segments?companyCode=${encodeURIComponent(companyCode)}`),
   createProfitabilitySegment:(body:any)=>api<any>("/api/finance/group-reporting/profitability-segments",{method:"POST",body:JSON.stringify(body)}),
   profitabilityReport:(companyCode:string,year:number,period:number)=>list<any>(`/api/finance/group-reporting/profitability-report?companyCode=${encodeURIComponent(companyCode)}&fiscalYear=${year}&period=${period}`),
+  postProfitability:(body:any)=>api<any>("/api/finance/group-reporting/profitability-postings",{method:"POST",body:JSON.stringify(body)}),
   copaAllocationRules:(companyCode:string)=>list<any>(`/api/finance/group-reporting/copa/allocation-rules?companyCode=${encodeURIComponent(companyCode)}`),
   createCopaAllocationRule:(body:any)=>api<any>("/api/finance/group-reporting/copa/allocation-rules",{method:"POST",body:JSON.stringify(body)}),
   addCopaAllocationTarget:(body:any)=>api<any>("/api/finance/group-reporting/copa/allocation-targets",{method:"POST",body:JSON.stringify(body)}),
