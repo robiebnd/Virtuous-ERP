@@ -129,6 +129,7 @@ b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(Big
  }
  private void audit(GroupReportingRun run,String type,String status,String ref,String details){audits.save(ConsolidationAuditEvent.builder().group(run.getGroup()).run(run).eventType(type).eventStatus(status).eventTime(LocalDateTime.now()).actor("SYSTEM").referenceNumber(ref).details(details).build());}
 
+ private BigDecimal nvl(BigDecimal value){return value==null?BigDecimal.ZERO:value;}
  private void eliminate(Map<String,GroupReportingBalance> map,String company,String account,BigDecimal amount,boolean debit){if(account==null||account.isBlank())return;GroupReportingBalance b=map.get(company+"|"+account);if(b==null)return;if(debit)b.setEliminationDebit(b.getEliminationDebit().add(amount));else b.setEliminationCredit(b.getEliminationCredit().add(amount));}
  private BigDecimal rateFor(String from,String to,LocalDate date,String accountType){
    if(from.equalsIgnoreCase(to))return BigDecimal.ONE;
