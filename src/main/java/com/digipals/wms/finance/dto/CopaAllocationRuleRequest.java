@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.util.UUID; public record CopaAllocationRuleRequest(@NotBlank String companyCode,@NotBlank String ruleCode,@NotBlank String ruleName,@NotNull UUID sourceSegmentId,@NotBlank String driverType){}
