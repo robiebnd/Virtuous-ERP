@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder; import java.math.BigDecimal;
+@Entity @Table(name="copa_allocation_targets") @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class CopaAllocationTarget extends BaseEntity { @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="rule_id",nullable=false) CopaAllocationRule rule; @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="target_segment_id",nullable=false) ProfitabilitySegment targetSegment; @Column(name="allocation_percent",nullable=false,precision=9,scale=4) BigDecimal allocationPercent; }
