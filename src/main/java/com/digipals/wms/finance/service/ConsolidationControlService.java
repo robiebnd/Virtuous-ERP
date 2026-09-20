@@ -88,6 +88,8 @@ public class ConsolidationControlService {
  public TaxFilingRecord file(TaxFilingRequest r){
    TaxFilingRecord f=filings.findByCompanyCodeAndTaxTypeAndPeriodStartAndPeriodEnd(r.companyCode().trim().toUpperCase(Locale.ROOT),r.taxType().trim().toUpperCase(Locale.ROOT),r.periodStart(),r.periodEnd()).orElseThrow(()->new InvalidWorkflowException("Prepare the tax filing before filing."));
    if(!"READY".equals(f.getStatus())) throw new InvalidWorkflowException("Tax filing must be READY before filing.");
+   TaxReportSummary current=taxAccounting.report(f.getCompanyCode(),f.getPeriodStart(),f.getPeriodEnd());
+   if(f.getOutputTax().compareTo(current.outputTax())!=0||f.getInputTax().compareTo(current.inputTax())!=0||f.getRecoverableInputTax().compareTo(current.recoverableInputTax())!=0||f.getNetTax().compareTo(current.netTax())!=0) throw new InvalidWorkflowException("Tax filing totals changed since preparation. Re-prepare the filing before filing.");
    f.setStatus("FILED");f.setFilingReference(r.filingReference());f.setFiledBy(r.filedBy()==null?"SYSTEM":r.filedBy().trim());f.setFiledAt(LocalDateTime.now());return filings.save(f);
  }
  public List<TaxFilingRecord> filings(String company){return filings.findByCompanyCodeOrderByPeriodEndDesc(company.trim().toUpperCase(Locale.ROOT));}
