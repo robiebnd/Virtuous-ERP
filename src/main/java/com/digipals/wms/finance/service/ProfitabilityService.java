@@ -22,7 +22,7 @@ public class ProfitabilityService {
    String code=company.trim().toUpperCase(Locale.ROOT); LocalDate start=LocalDate.of(year,period,1), end=start.withDayOfMonth(start.lengthOfMonth()).plusDays(1);
    Map<UUID,BigDecimal[]> totals=new HashMap<>();
    for(Object[] row:lines.profitabilityBySegment(code,start.atStartOfDay(),end.atStartOfDay())){UUID id=(UUID)row[0];String type=(String)row[1];BigDecimal debit=(BigDecimal)row[2],credit=(BigDecimal)row[3];BigDecimal net=credit.subtract(debit);BigDecimal[] t=totals.computeIfAbsent(id,k->new BigDecimal[]{BigDecimal.ZERO,BigDecimal.ZERO});if("REVENUE".equalsIgnoreCase(type))t[0]=t[0].add(net);else if("EXPENSE".equalsIgnoreCase(type))t[1]=t[1].add(debit.subtract(credit));}
-   return totals.entrySet().stream().map(e->{ProfitabilitySegment s=segments.findById(e.getKey()).orElseThrow();BigDecimal revenue=e.getValue()[0],cost=e.getValue()[1];return new ProfitabilityReportLine(s.getId(),s.getSegmentCode(),s.getSegmentName(),revenue,cost,revenue.subtract(cost));}).sorted(Comparator.comparing(ProfitabilityReportLine::segmentCode)).toList();
+   return totals.entrySet().stream().map(e->{ProfitabilitySegment s=segments.findById(e.getKey()).orElseThrow();BigDecimal revenue=e.getValue()[0],cost=e.getValue()[1];return new ProfitabilityReportLine(s.getId(),s.getSegmentCode(),s.getSegmentName(),s.getProductCode(),s.getSalesChannel(),s.getMarketRegion(),s.getCustomerGroup(),s.getProductGroup(),revenue,cost,revenue.subtract(cost));}).sorted(Comparator.comparing(ProfitabilityReportLine::segmentCode)).toList();
  }
 
 }
