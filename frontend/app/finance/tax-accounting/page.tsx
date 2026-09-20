@@ -216,10 +216,7 @@ export default function TaxAccountingPage() {
         </div>
       </div>
 
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 18 }}
-      >
+      <div className="grid tax-form-grid" style={{ marginBottom: 18 }}>
         <section className="card form-card">
           <div className="section-title">Tax Code Setup</div>
           <div className="form-grid">
