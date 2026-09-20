@@ -4,4 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.*;
 public interface ProfitabilityPostingRepository extends JpaRepository<ProfitabilityPosting,UUID> {
  List<ProfitabilityPosting> findBySegmentIdOrderByPostingDateDesc(UUID segmentId);
+ Optional<ProfitabilityPosting> findByAccountingLineId(UUID accountingLineId);
 }
