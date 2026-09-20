@@ -115,3 +115,27 @@
 .fiscal-result{margin:0 14px 14px}
 @media(max-width:1000px){.period-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fiscal-toolbar{align-items:stretch;flex-direction:column}}
 @media(max-width:650px){.period-grid{grid-template-columns:1fr}.fiscal-actions{width:100%}.fiscal-actions .btn{flex:1}}
+
+/* Management Accounting workspace */
+.management-accounting .management-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 22px;padding:22px}
+.management-accounting .allocation-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 22px;padding:22px}
+.management-accounting .management-form-grid .form-field,
+.management-accounting .allocation-grid .form-field{min-width:0}
+.management-accounting .management-form-grid .form-input,
+.management-accounting .allocation-grid .form-input{width:100%;box-sizing:border-box}
+.management-accounting .reporting-period-grid{grid-template-columns:minmax(180px,280px);padding:18px 22px}
+.management-accounting .table-wrap{width:100%;overflow-x:auto}
+.management-accounting .table{min-width:760px}
+.management-accounting .section-title{padding:17px 22px;border-bottom:1px solid var(--line)}
+.management-accounting .form-card form{padding:0}
+.management-accounting .form-card .btn{margin:0 22px 22px}
+.management-accounting .allocation-card{margin-top:18px}
+@media(max-width:900px){
+ .management-accounting .allocation-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){
+ .management-accounting .management-form-grid,
+ .management-accounting .allocation-grid,
+ .management-accounting .reporting-period-grid{grid-template-columns:1fr}
+ .management-accounting .table{min-width:700px}
+}
