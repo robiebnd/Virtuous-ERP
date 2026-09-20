@@ -25,19 +25,20 @@ export default function FinancePage() {
   const [companyCode, setCompanyCode] = useState("ZW01");
   const [warehouseId, setWarehouseId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [controls, setControls] = useState<any | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
     setLoading(true); setError("");
     try {
-      const [a, d, tb, vi, vp, b, ip, iv, ir, ap, ar, apa, ara] = await Promise.all([
+      const [a, d, tb, vi, vp, b, ip, iv, ir, ap, ar, apa, ara, ctrl] = await Promise.all([
         financeApi.glAccounts(), financeApi.accountingDocuments(), financeApi.trialBalance(companyCode),
         procurementApi.vendorInvoices(), procurementApi.vendorPayments(), orderToCashApi.billingDocuments(), orderToCashApi.incomingPayments(),
         financeApi.inventoryValuation(warehouseId || undefined), financeApi.inventoryReconciliation(),
-        financeApi.openItemsAp(), financeApi.openItemsAr(), financeApi.ageing("AP"), financeApi.ageing("AR")
+        financeApi.openItemsAp(), financeApi.openItemsAr(), financeApi.ageing("AP"), financeApi.ageing("AR"), financeApi.financeControlSummary(companyCode)
       ]);
       setAccounts(a); setDocuments(d); setTrialBalance(tb); setVendorInvoices(vi); setVendorPayments(vp); setBilling(b); setIncoming(ip); setInventoryValuation(iv); setInventoryReconciliation(ir);
-      setApItems(ap); setArItems(ar); setApAgeing(apa); setArAgeing(ara);
+      setApItems(ap); setArItems(ar); setApAgeing(apa); setArAgeing(ara); setControls(ctrl);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load finance workspace."); }
     finally { setLoading(false); }
   }
@@ -67,6 +68,23 @@ export default function FinancePage() {
         <div className="form-field"><label>Company Code</label><select className="form-input" value={companyCode} onChange={e=>setCompanyCode(e.target.value)}>{companyCodes.map(x=><option key={x.id}>{x.companyCode}</option>)}</select></div>
         <div className="form-field"><label>Valuation Warehouse</label><select className="form-input" value={warehouseId} onChange={e=>setWarehouseId(e.target.value)}><option value="">All warehouses</option>{warehouses.filter(x=>x.active!==false).map(x=><option key={x.id} value={x.id}>{x.code} — {x.name}</option>)}</select></div>
         <div className="form-field"><label>Ledger</label><input className="form-input" value="0L — Leading Ledger" readOnly /></div>
+      </div>
+    </section>
+
+    <section className="card form-card" style={{ marginBottom: 24 }}>
+      <div className="section-title">Finance Control Readiness</div>
+      <p style={{ marginTop: 0 }}>Control exceptions requiring finance review before period close.</p>
+      <div className="grid stats">
+        <div className="stat-card"><div className="stat-label">Current Period</div><div className="stat-value">{controls?.currentPeriodStatus || "—"}</div><div className="stat-foot">{controls ? `P${controls.currentPeriod} / ${controls.fiscalYear}` : "Loading"}</div></div>
+        <div className="stat-card"><div className="stat-label">Unreconciled Bank Lines</div><div className="stat-value">{controls?.unreconciledBankTransactions ?? "—"}</div><div className="stat-foot">Require bank matching</div></div>
+        <div className="stat-card"><div className="stat-label">Duplicate References</div><div className="stat-value">{controls?.duplicatePostingReferences ?? "—"}</div><div className="stat-foot">Posted reference collisions</div></div>
+        <div className="stat-card"><div className="stat-label">Inventory / GL Variance</div><div className="stat-value">{controls ? Number(controls.inventoryGlVariance || 0).toFixed(2) : "—"}</div><div className="stat-foot">{controls?.inventoryReconciled ? "Within tolerance" : "Requires review"}</div></div>
+      </div>
+      <div style={{ marginTop: 14, display: "flex", gap: 18, flexWrap: "wrap" }}>
+        <span>Open fiscal periods: <b>{controls?.openFiscalPeriods ?? "—"}</b></span>
+        <span>Non-posted FI documents: <b>{controls?.nonPostedAccountingDocuments ?? "—"}</b></span>
+        <span>Tax filings ready: <b>{controls?.taxFilingsReady ?? "—"}</b></span>
+        <span>Tax filings filed: <b>{controls?.taxFilingsFiled ?? "—"}</b></span>
       </div>
     </section>
 
