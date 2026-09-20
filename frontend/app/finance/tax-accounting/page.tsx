@@ -5,7 +5,9 @@ import {financeApi} from "@/lib/api";
 export default function TaxAccountingPage(){
  const [companies,setCompanies]=useState<any[]>([]),[codes,setCodes]=useState<any[]>([]),[postings,setPostings]=useState<any[]>([]),[report,setReport]=useState<any>(null),[error,setError]=useState("");
  const [company,setCompany]=useState("ZW01"),[busy,setBusy]=useState(false);
- const [filings,setFilings]=useState<any[]>([]);\n const [filing,setFiling]=useState({taxType:"VAT",periodStart:"",periodEnd:"",filingReference:"",notes:"",filedBy:""});\n const [reportStart,setReportStart]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10)),[reportEnd,setReportEnd]=useState(new Date().toISOString().slice(0,10));
+ const [filings,setFilings]=useState<any[]>([]);
+ const [filing,setFiling]=useState({taxType:"VAT",periodStart:"",periodEnd:"",filingReference:"",notes:"",filedBy:""});
+ const [reportStart,setReportStart]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10)),[reportEnd,setReportEnd]=useState(new Date().toISOString().slice(0,10));
  const [codeForm,setCodeForm]=useState({companyCode:"ZW01",taxCode:"VAT15",description:"Standard VAT",rate:"15",inputAccountCode:"1510",outputAccountCode:"2210",withholding:false});
  const [postForm,setPostForm]=useState({companyCode:"ZW01",documentType:"TAX_INVOICE",referenceNumber:"",currency:"USD",taxCode:"VAT15",inputOutput:"OUTPUT",taxableAmount:"",baseDebitAccount:"1200",baseCreditAccount:"4100",description:"Tax accounting",postingDate:new Date().toISOString().slice(0,10)});
  const load=async(c=company)=>{try{const [co,tc,tp]=await Promise.all([financeApi.companyCodes(),financeApi.taxCodes(),financeApi.taxPostings(c)]);setCompanies(co);setCodes(tc.filter((x:any)=>!x.companyCode||x.companyCode===c));setPostings(tp);setFilings(await financeApi.taxFilings(c));setError("")}catch(e){setError(e instanceof Error?e.message:"Unable to load tax accounting.")}};
