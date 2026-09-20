@@ -1,0 +1,4 @@
+package com.digipals.wms.finance.entity;
+import com.digipals.wms.common.entity.BaseEntity; import jakarta.persistence.*; import lombok.*; import lombok.experimental.SuperBuilder;
+@Entity @Table(name="copa_allocation_rules",uniqueConstraints=@UniqueConstraint(name="uq_copa_allocation_rule",columnNames={"company_code","rule_code"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
+public class CopaAllocationRule extends BaseEntity { @Column(name="company_code",nullable=false,length=20) String companyCode; @Column(name="rule_code",nullable=false,length=50) String ruleCode; @Column(name="rule_name",nullable=false,length=150) String ruleName; @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="source_segment_id",nullable=false) ProfitabilitySegment sourceSegment; @Column(name="driver_type",nullable=false,length=30) String driverType; }
