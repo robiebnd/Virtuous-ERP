@@ -36,9 +36,7 @@ public class FinanceControlService {
                 .findFirst().orElse(null);
 
         long openPeriods = yearPeriods.stream().filter(p -> "OPEN".equals(p.getStatus())).count();
-        long unreconciled = bankTransactions.findByStatusOrderByTransactionDateDesc("UNRECONCILED").stream()
-                .filter(t -> t.getBankAccount() != null && company.equalsIgnoreCase(t.getBankAccount().getCompanyCode()))
-                .count();
+        long unreconciled = bankTransactions.findByStatusOrderByTransactionDateDesc("UNRECONCILED").size();
 
         List<AccountingDocument> allDocuments = documents.findAll();
         long nonPosted = allDocuments.stream()
