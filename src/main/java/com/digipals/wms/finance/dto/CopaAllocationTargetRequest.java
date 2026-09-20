@@ -1,0 +1,1 @@
+package com.digipals.wms.finance.dto; import jakarta.validation.constraints.*; import java.math.BigDecimal; import java.util.UUID; public record CopaAllocationTargetRequest(@NotNull UUID ruleId,@NotNull UUID targetSegmentId,@NotNull @DecimalMin("0.01") @DecimalMax("100.00") BigDecimal allocationPercent){}
