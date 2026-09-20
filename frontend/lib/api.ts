@@ -79,6 +79,7 @@ export const financeApi = {
  accountingDocuments:()=>list<any>("/api/finance/accounting-documents"),
  accountingDocument:(id:string)=>api<any>(`/api/finance/accounting-documents/${id}`),
  trialBalance:(companyCode?:string)=>list<any>(companyCode?`/api/finance/trial-balance?companyCode=${encodeURIComponent(companyCode)}`:"/api/finance/trial-balance"),
+  financeControlSummary:(companyCode?:string)=>api<any>(companyCode?`/api/finance/control-summary?companyCode=${encodeURIComponent(companyCode)}`:"/api/finance/control-summary"),
  openItemsAp:()=>list<any>("/api/finance/open-items/ap"),
  openItemsAr:()=>list<any>("/api/finance/open-items/ar"),
  ageing:(type:"AP"|"AR"="AR")=>api<any>(`/api/finance/ageing?type=${type}`),
