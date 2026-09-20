@@ -24,6 +24,7 @@ public class GroupReportingService {
  private final FxRateRepository fxRates;
  private final FiscalPeriodService fiscalPeriods;
  private final ConsolidationAdjustmentRepository adjustments;
+ private final GroupAccountMappingRepository accountMappings;
 
  public GroupReportingRun run(UUID groupId, GroupReportingRunRequest request){
    ConsolidationGroup group=groups.findById(groupId).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
@@ -59,7 +60,13 @@ public class GroupReportingService {
      eliminate(byKey,tx.getTargetCompanyCode(),tx.getTargetCreditAccountCode(),amount,false);
    }
    BigDecimal totalD=BigDecimal.ZERO,totalC=BigDecimal.ZERO;
-   for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(BigDecimal.ZERO));b.setFinalCredit(b.getTranslatedCredit().subtract(b.getEliminationCredit()).max(BigDecimal.ZERO));balances.save(b);totalD=totalD.add(b.getFinalDebit());totalC=totalC.add(b.getFinalCredit());}
+   List<GroupAccountMapping> mappings=accountMappings.findByGroupIdAndActiveTrueOrderByCompanyCodeAscLocalAccountCodeAsc(groupId);
+   Map<String,GroupAccountMapping> mappingByKey=new HashMap<>();
+   for(GroupAccountMapping m:mappings) mappingByKey.put(m.getCompanyCode().toUpperCase(Locale.ROOT)+"|"+m.getLocalAccountCode(),m);
+   for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){
+     GroupAccountMapping mapping=mappingByKey.get(b.getCompanyCode().toUpperCase(Locale.ROOT)+"|"+b.getAccountCode());
+     if(mapping!=null){ b.setAccountCode(mapping.getGroupAccountCode()); b.setAccountName(mapping.getGroupAccountName()); b.setAccountType(mapping.getGroupAccountType()); }
+b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(BigDecimal.ZERO));b.setFinalCredit(b.getTranslatedCredit().subtract(b.getEliminationCredit()).max(BigDecimal.ZERO));balances.save(b);totalD=totalD.add(b.getFinalDebit());totalC=totalC.add(b.getFinalCredit());}
    for(ConsolidationAdjustment a:adjustments.findByGroupIdAndPeriodStartAndStatus(groupId,start,"POSTED")){
      BigDecimal debit=a.getDebit()==null?BigDecimal.ZERO:a.getDebit(), credit=a.getCredit()==null?BigDecimal.ZERO:a.getCredit();
      String key="GROUP|"+a.getAccountCode(); GroupReportingBalance b=byKey.get(key);
@@ -69,6 +76,14 @@ public class GroupReportingService {
    BigDecimal imbalance=totalD.subtract(totalC).setScale(2,RoundingMode.HALF_UP);
    if(imbalance.compareTo(BigDecimal.ZERO)!=0){GroupReportingBalance fx=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode("3310").accountName("Foreign Currency Translation Reserve").accountType("EQUITY").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).translatedCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).finalCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).build();balances.save(fx);totalD=totalD.add(fx.getFinalDebit());totalC=totalC.add(fx.getFinalCredit());translationAdjustment=imbalance.negate();}
    run.setTotalDebit(totalD.setScale(2,RoundingMode.HALF_UP));run.setTotalCredit(totalC.setScale(2,RoundingMode.HALF_UP));run.setTranslationAdjustment(translationAdjustment.setScale(2,RoundingMode.HALF_UP));run.setStatus("COMPLETED");run.setCompletedAt(LocalDateTime.now());return runs.save(run);
+ }
+ public List<GroupAccountMapping> mappings(UUID groupId){return accountMappings.findByGroupIdAndActiveTrueOrderByCompanyCodeAscLocalAccountCodeAsc(groupId);}
+ public GroupAccountMapping saveMapping(com.digipals.wms.finance.dto.GroupAccountMappingRequest r){
+   ConsolidationGroup group=groups.findById(r.groupId()).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
+   String company=r.companyCode().trim().toUpperCase(Locale.ROOT), local=r.localAccountCode().trim(), target=r.groupAccountCode().trim();
+   companies.findByCompanyCodeIgnoreCase(company).orElseThrow(()->new InvalidWorkflowException("Company code not found: "+company));
+   accountMappings.findByGroupIdAndCompanyCodeAndLocalAccountCode(group.getId(),company,local).ifPresent(x->{throw new InvalidWorkflowException("Group account mapping already exists for "+company+"/"+local+".");});
+   return accountMappings.save(GroupAccountMapping.builder().group(group).companyCode(company).localAccountCode(local).groupAccountCode(target).groupAccountName(r.groupAccountName().trim()).groupAccountType(r.groupAccountType().trim().toUpperCase(Locale.ROOT)).active(true).build());
  }
  public List<GroupReportingRun> runs(UUID groupId){return runs.findByGroupIdOrderByFiscalYearDescPeriodNumberDesc(groupId);}
  public List<GroupReportingBalance> balances(UUID runId){return balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(runId);}
