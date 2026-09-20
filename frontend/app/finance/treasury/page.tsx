@@ -11,6 +11,7 @@ export default function TreasuryPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [tx, setTx] = useState<any[]>([]);
   const [forecasts, setForecasts] = useState<any[]>([]);
+  const [instruments, setInstruments] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -49,11 +50,13 @@ export default function TreasuryPage() {
         financeApi.bankAccounts(),
         financeApi.bankTransactions(),
         financeApi.liquidityForecasts(),
+        financeApi.treasuryInstruments(),
       ]);
       setCash(c);
       setAccounts(a);
       setTx(t);
       setForecasts(f);
+      setInstruments(i);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load treasury.");
     } finally {
@@ -100,6 +103,21 @@ export default function TreasuryPage() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to reconcile transaction.");
+    }
+  }
+
+  async function valueInstrument(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    try {
+      await financeApi.valueTreasuryInstrument({
+        ...valuation,
+        valuationAmount: Number(valuation.valuationAmount),
+      });
+      setValuation((x) => ({ ...x, instrumentNumber: "", valuationAmount: "" }));
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to value treasury instrument.");
     }
   }
 
@@ -171,6 +189,7 @@ export default function TreasuryPage() {
         <a className="treasury-tab" href="#reconciliation">Reconciliation</a>
         <a className="treasury-tab" href="#cash-position">Cash Position</a>
         <a className="treasury-tab" href="#liquidity">Liquidity Forecast</a>
+        <a className="treasury-tab" href="#instruments">Treasury Instruments</a>
         <a className="treasury-tab" href="#transactions">Transactions</a>
       </nav>
 
@@ -242,6 +261,68 @@ export default function TreasuryPage() {
             <button className="btn primary">Reconcile</button>
           </div>
         </form>
+      </section>
+
+      <section id="instruments" className="card form-card treasury-form-card">
+        <div className="section-title">Treasury Instrument Valuation</div>
+        <p className="treasury-help">Post a controlled fair-value movement to the instrument balance and gain/loss accounts. Valuations must be chronological and respect the fiscal posting period.</p>
+        <form onSubmit={valueInstrument}>
+          <div className="form-grid">
+            <div className="form-field">
+              <label>Instrument</label>
+              <select className="form-input" required value={valuation.instrumentNumber} onChange={(e) => {
+                const selected = instruments.find((x) => x.instrumentNumber === e.target.value);
+                setValuation({ ...valuation, instrumentNumber: e.target.value, currency: selected?.currency || valuation.currency });
+              }}>
+                <option value="">Select instrument</option>
+                {instruments.map((x) => (
+                  <option key={x.id} value={x.instrumentNumber}>{x.instrumentNumber} — {x.counterparty} — {x.currency}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label>Valuation Date</label>
+              <input className="form-input" type="date" required value={valuation.valuationDate} onChange={(e) => setValuation({ ...valuation, valuationDate: e.target.value })} />
+            </div>
+            <div className="form-field">
+              <label>New Valuation Amount</label>
+              <input className="form-input" type="number" step="0.01" required value={valuation.valuationAmount} onChange={(e) => setValuation({ ...valuation, valuationAmount: e.target.value })} />
+            </div>
+            <div className="form-field">
+              <label>Balance Account</label>
+              <input className="form-input" required value={valuation.balanceAccountCode} onChange={(e) => setValuation({ ...valuation, balanceAccountCode: e.target.value })} placeholder="GL account" />
+            </div>
+            <div className="form-field">
+              <label>Gain Account</label>
+              <input className="form-input" required value={valuation.gainAccountCode} onChange={(e) => setValuation({ ...valuation, gainAccountCode: e.target.value })} placeholder="GL account" />
+            </div>
+            <div className="form-field">
+              <label>Loss Account</label>
+              <input className="form-input" required value={valuation.lossAccountCode} onChange={(e) => setValuation({ ...valuation, lossAccountCode: e.target.value })} placeholder="GL account" />
+            </div>
+          </div>
+          <div className="form-actions">
+            <button className="btn primary">Post Valuation</button>
+          </div>
+        </form>
+        <div className="table-wrap treasury-instrument-table">
+          <table className="table">
+            <thead><tr><th>Instrument</th><th>Type</th><th>Counterparty</th><th>Currency</th><th>Notional</th><th>Valuation</th><th>Last Valued</th></tr></thead>
+            <tbody>
+              {instruments.map((x) => (
+                <tr key={x.id}>
+                  <td>{x.instrumentNumber}</td>
+                  <td>{x.instrumentType}</td>
+                  <td>{x.counterparty}</td>
+                  <td>{x.currency}</td>
+                  <td>{money(x.notionalAmount)}</td>
+                  <td>{money(x.valuationAmount)}</td>
+                  <td>{x.lastValuationDate || "Not yet valued"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section id="liquidity" className="card form-card treasury-form-card">
