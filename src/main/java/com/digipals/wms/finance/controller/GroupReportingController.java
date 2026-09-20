@@ -15,7 +15,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GroupReportingController {
  private final CompanyCodeRepository companies; private final CompanyCodeService companyService; private final GroupReportingService groupReporting; private final IntercompanyService intercompany; private final IntercompanyTransactionRepository intercompanyRepository; private final TaxAccountingService taxAccounting; private final TaxPostingRepository taxPostings; private final ProfitabilityService profitability;
- private final ConsolidationGroupRepository groups; private final ConsolidationUnitRepository units; private final ConsolidationNciResultRepository nciResults;
+ private final ConsolidationGroupRepository groups; private final ConsolidationUnitRepository units; private final ConsolidationNciResultRepository nciResults; private final ConsolidationControlService controls;
 
  @GetMapping("/company-codes") public List<CompanyCode> companyCodes(){return companyService.list();}
  @PostMapping("/company-codes") public ResponseEntity<CompanyCode> createCompanyCode(@Valid @RequestBody CompanyCodeRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(companyService.save(r));}
@@ -30,6 +30,10 @@ public class GroupReportingController {
  @PostMapping("/groups/{groupId}/account-mappings") public ResponseEntity<GroupAccountMapping> mapping(@PathVariable UUID groupId,@Valid @RequestBody GroupAccountMappingRequest r){ if(!groupId.equals(r.groupId())) throw new IllegalArgumentException("Path groupId must match request groupId."); return ResponseEntity.status(HttpStatus.CREATED).body(groupReporting.saveMapping(r));}
  @GetMapping("/runs/{runId}/balances") public List<GroupReportingBalance> balances(@PathVariable UUID runId){return groupReporting.balances(runId);}
  @GetMapping("/runs/{runId}/nci") public List<ConsolidationNciResult> nci(@PathVariable UUID runId){return nciResults.findByRunIdOrderByNciAmountDesc(runId);}
+ @GetMapping("/runs/{runId}/journals") public List<ConsolidationJournal> journals(@PathVariable UUID runId){return controls.journals(runId);}
+ @GetMapping("/groups/{groupId}/audit") public List<ConsolidationAuditEvent> audit(@PathVariable UUID groupId){return controls.audit(groupId);}
+ @GetMapping("/runs/{runId}/audit") public List<ConsolidationAuditEvent> runAudit(@PathVariable UUID runId){return controls.runAudit(runId);}
+ @PostMapping("/journals") public ResponseEntity<ConsolidationJournal> journal(@Valid @RequestBody ConsolidationJournalRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.postJournal(r));}
 
  @GetMapping("/tax-postings") public List<TaxPosting> taxPostingList(@RequestParam String companyCode){return taxPostings.findByCompanyCodeOrderByCreatedAtDesc(companyCode);}
  @GetMapping("/tax-report") public TaxReportSummary taxReport(@RequestParam String companyCode,@RequestParam java.time.LocalDate periodStart,@RequestParam java.time.LocalDate periodEnd){return taxAccounting.report(companyCode,periodStart,periodEnd);}
@@ -38,4 +42,12 @@ public class GroupReportingController {
  @GetMapping("/profitability-segments") public List<ProfitabilitySegment> segments(@RequestParam String companyCode){return profitability.segments(companyCode);}
  @PostMapping("/profitability-segments") public ResponseEntity<ProfitabilitySegment> segment(@Valid @RequestBody ProfitabilitySegmentRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(profitability.saveSegment(r));}
  @GetMapping("/profitability-report") public List<ProfitabilityReportLine> profitabilityReport(@RequestParam String companyCode,@RequestParam int fiscalYear,@RequestParam int period){return profitability.report(companyCode,fiscalYear,period);}
+ @GetMapping("/copa/allocation-rules") public List<CopaAllocationRule> copaRules(@RequestParam String companyCode){return controls.rules(companyCode);}
+ @PostMapping("/copa/allocation-rules") public ResponseEntity<CopaAllocationRule> copaRule(@Valid @RequestBody CopaAllocationRuleRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.saveRule(r));}
+ @PostMapping("/copa/allocation-targets") public ResponseEntity<CopaAllocationTarget> copaTarget(@Valid @RequestBody CopaAllocationTargetRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.addTarget(r));}
+ @PostMapping("/copa/allocation-rules/{ruleId}/run") public ResponseEntity<CopaAllocationRun> copaRun(@PathVariable UUID ruleId,@Valid @RequestBody CopaAllocationRunRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.runCopa(ruleId,r));}
+ @GetMapping("/copa/allocation-runs") public List<CopaAllocationRun> copaRuns(@RequestParam String companyCode){return controls.copaRuns(companyCode);}
+ @PostMapping("/tax-filings/prepare") public ResponseEntity<TaxFilingRecord> prepareTaxFiling(@Valid @RequestBody TaxFilingRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(controls.prepareFiling(r));}
+ @PostMapping("/tax-filings/file") public TaxFilingRecord fileTaxFiling(@Valid @RequestBody TaxFilingRequest r){return controls.file(r);}
+ @GetMapping("/tax-filings") public List<TaxFilingRecord> taxFilings(@RequestParam String companyCode){return controls.filings(companyCode);}
 }
