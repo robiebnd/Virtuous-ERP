@@ -2,6 +2,7 @@ package com.digipals.wms.finance.service;
 
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.finance.dto.GroupReportingRunRequest;
+import com.digipals.wms.finance.dto.ConsolidationJournalRequest;
 import com.digipals.wms.finance.entity.*;
 import com.digipals.wms.finance.repository.*;
 import lombok.RequiredArgsConstructor;
