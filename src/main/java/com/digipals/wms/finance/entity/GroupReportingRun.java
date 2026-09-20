@@ -19,5 +19,6 @@ public class GroupReportingRun extends BaseEntity {
     @Column(name="total_debit",nullable=false,precision=19,scale=2) private BigDecimal totalDebit;
     @Column(name="total_credit",nullable=false,precision=19,scale=2) private BigDecimal totalCredit;
     @Column(name="translation_adjustment",nullable=false,precision=19,scale=2) private BigDecimal translationAdjustment;
+    @Column(name="nci_amount",nullable=false,precision=19,scale=2) private BigDecimal nciAmount;
     @Column(name="completed_at") private LocalDateTime completedAt;
 }
