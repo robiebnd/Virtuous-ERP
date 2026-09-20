@@ -25,6 +25,7 @@ public class GroupReportingService {
  private final FiscalPeriodService fiscalPeriods;
  private final ConsolidationAdjustmentRepository adjustments;
  private final GroupAccountMappingRepository accountMappings;
+ private final ConsolidationNciResultRepository nciResults;
 
  public GroupReportingRun run(UUID groupId, GroupReportingRunRequest request){
    ConsolidationGroup group=groups.findById(groupId).orElseThrow(()->new InvalidWorkflowException("Consolidation group not found."));
@@ -73,6 +74,27 @@ b.setFinalDebit(b.getTranslatedDebit().subtract(b.getEliminationDebit()).max(Big
      if(b==null){b=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode(a.getAccountCode()).accountName("Consolidation adjustment").accountType("ADJUSTMENT").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(BigDecimal.ZERO).translatedCredit(BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(BigDecimal.ZERO).finalCredit(BigDecimal.ZERO).build(); byKey.put(key,b); balances.save(b);}
      b.setFinalDebit(b.getFinalDebit().add(debit)); b.setFinalCredit(b.getFinalCredit().add(credit)); balances.save(b); totalD=totalD.add(debit); totalC=totalC.add(credit);
    }
+   BigDecimal totalNci=BigDecimal.ZERO;
+   for(ConsolidationGroupUnit membership:memberships){
+     ConsolidationUnit unit=units.findById(membership.getId().getUnitId()).orElseThrow(()->new InvalidWorkflowException("Consolidation unit not found."));
+     BigDecimal ownership=unit.getOwnershipPercent()==null?BigDecimal.valueOf(100):unit.getOwnershipPercent();
+     if(ownership.compareTo(BigDecimal.ZERO)<0||ownership.compareTo(BigDecimal.valueOf(100))>0) throw new InvalidWorkflowException("Ownership percentage must be between 0 and 100 for "+unit.getUnitCode()+".");
+     BigDecimal nciPercent=BigDecimal.valueOf(100).subtract(ownership);
+     if(nciPercent.signum()==0) continue;
+     BigDecimal assets=BigDecimal.ZERO, liabilities=BigDecimal.ZERO, equity=BigDecimal.ZERO;
+     for(GroupReportingBalance b:balances.findByRunIdOrderByAccountCodeAscCompanyCodeAsc(run.getId())){
+       if(!unit.getCompanyCode().equalsIgnoreCase(b.getCompanyCode())) continue;
+       BigDecimal signed=b.getFinalDebit().subtract(b.getFinalCredit());
+       if("ASSET".equalsIgnoreCase(b.getAccountType())) assets=assets.add(signed);
+       else if("LIABILITY".equalsIgnoreCase(b.getAccountType())) liabilities=liabilities.add(b.getFinalCredit().subtract(b.getFinalDebit()));
+       else if("EQUITY".equalsIgnoreCase(b.getAccountType())) equity=equity.add(b.getFinalCredit().subtract(b.getFinalDebit()));
+     }
+     BigDecimal netAssets=assets.subtract(liabilities).setScale(2,RoundingMode.HALF_UP);
+     BigDecimal nci=netAssets.multiply(nciPercent).divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
+     nciResults.save(ConsolidationNciResult.builder().run(run).unit(unit).ownershipPercent(ownership).nciPercent(nciPercent).netAssets(netAssets).nciAmount(nci).build());
+     totalNci=totalNci.add(nci);
+   }
+   run.setNciAmount(totalNci.setScale(2,RoundingMode.HALF_UP));
    BigDecimal imbalance=totalD.subtract(totalC).setScale(2,RoundingMode.HALF_UP);
    if(imbalance.compareTo(BigDecimal.ZERO)!=0){GroupReportingBalance fx=GroupReportingBalance.builder().run(run).companyCode("GROUP").accountCode("3310").accountName("Foreign Currency Translation Reserve").accountType("EQUITY").localDebit(BigDecimal.ZERO).localCredit(BigDecimal.ZERO).fxRate(BigDecimal.ONE).translatedDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).translatedCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).eliminationDebit(BigDecimal.ZERO).eliminationCredit(BigDecimal.ZERO).finalDebit(imbalance.signum()<0?imbalance.abs():BigDecimal.ZERO).finalCredit(imbalance.signum()>0?imbalance:BigDecimal.ZERO).build();balances.save(fx);totalD=totalD.add(fx.getFinalDebit());totalC=totalC.add(fx.getFinalCredit());translationAdjustment=imbalance.negate();}
    run.setTotalDebit(totalD.setScale(2,RoundingMode.HALF_UP));run.setTotalCredit(totalC.setScale(2,RoundingMode.HALF_UP));run.setTranslationAdjustment(translationAdjustment.setScale(2,RoundingMode.HALF_UP));run.setStatus("COMPLETED");run.setCompletedAt(LocalDateTime.now());return runs.save(run);
