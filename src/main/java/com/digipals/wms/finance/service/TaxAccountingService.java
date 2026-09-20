@@ -2,6 +2,8 @@ package com.digipals.wms.finance.service;
 
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.finance.dto.TaxPostingRequest;
+import com.digipals.wms.finance.dto.TaxReportLine;
+import com.digipals.wms.finance.dto.TaxReportSummary;
 import com.digipals.wms.finance.entity.*;
 import com.digipals.wms.finance.repository.*;
 import lombok.RequiredArgsConstructor;
