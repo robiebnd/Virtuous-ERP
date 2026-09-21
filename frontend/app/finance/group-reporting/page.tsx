@@ -424,13 +424,12 @@ export default function GroupReportingPage() {
         </div>
       </section>
 
-      <section className="card" style={{ marginBottom: 18 }}>
+      <section className="card intercompany-card" style={{ marginBottom: 18 }}>
         <div className="section-title">Intercompany Transaction</div>
-        <p className="muted">
-          Post balanced source and target company entries with explicit
-          elimination accounts.
+        <p className="intercompany-description">
+          Post balanced source and target company entries with explicit elimination accounts.
         </p>
-        <div className="form-grid">
+        <div className="form-grid intercompany-form-grid">
           {Object.entries(icForm).map(([key, value]) => (
             <div className="form-field" key={key}>
               <label>{key}</label>
@@ -453,7 +452,7 @@ export default function GroupReportingPage() {
               />
             </div>
           ))}
-          <div className="form-field">
+          <div className="form-field intercompany-action">
             <label>&nbsp;</label>
             <button className="btn primary" onClick={postIntercompany} disabled={busy}>
               Post Intercompany
