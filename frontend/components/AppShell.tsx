@@ -56,8 +56,8 @@ const groups = [
       { label: "Tax Accounting", href: "/finance/tax-accounting", icon: "receipt" as IconName },
       { label: "Profitability Analysis", href: "/finance/profitability", icon: "chart" as IconName },
       { label: "Management Accounting", href: "/finance/management-accounting", icon: "calculator" as IconName },
-      { label: "Accounts Payable", href: "/finance#accounts-payable", icon: "coins" as IconName },
-      { label: "Accounts Receivable", href: "/finance#accounts-receivable", icon: "briefcase" as IconName },
+      { label: "Accounts Payable", href: "/procurement/vendor-invoices", icon: "coins" as IconName },
+      { label: "Accounts Receivable", href: "/order-to-cash/accounts-receivable", icon: "briefcase" as IconName },
     ]}
   ] },
   { title: "Outbound Operations", items: [
