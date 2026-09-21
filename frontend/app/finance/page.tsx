@@ -71,16 +71,16 @@ export default function FinancePage() {
       </div>
     </section>
 
-    <section className="card form-card" style={{ marginBottom: 24 }}>
+    <section className="card finance-control-readiness" style={{ marginBottom: 24 }}>
       <div className="section-title">Finance Control Readiness</div>
-      <p style={{ marginTop: 0 }}>Control exceptions requiring finance review before period close.</p>
-      <div className="grid stats">
+      <p className="finance-control-description">Control exceptions requiring finance review before period close.</p>
+      <div className="grid finance-control-grid">
         <div className="stat-card"><div className="stat-label">Current Period</div><div className="stat-value">{controls?.currentPeriodStatus || "—"}</div><div className="stat-foot">{controls ? `P${controls.currentPeriod} / ${controls.fiscalYear}` : "Loading"}</div></div>
         <div className="stat-card"><div className="stat-label">Unreconciled Bank Lines</div><div className="stat-value">{controls?.unreconciledBankTransactions ?? "—"}</div><div className="stat-foot">Require bank matching</div></div>
         <div className="stat-card"><div className="stat-label">Duplicate References</div><div className="stat-value">{controls?.duplicatePostingReferences ?? "—"}</div><div className="stat-foot">Posted reference collisions</div></div>
         <div className="stat-card"><div className="stat-label">Inventory / GL Variance</div><div className="stat-value">{controls ? Number(controls.inventoryGlVariance || 0).toFixed(2) : "—"}</div><div className="stat-foot">{controls?.inventoryReconciled ? "Within tolerance" : "Requires review"}</div></div>
       </div>
-      <div style={{ marginTop: 14, display: "flex", gap: 18, flexWrap: "wrap" }}>
+      <div className="finance-control-summary">
         <span>Open fiscal periods: <b>{controls?.openFiscalPeriods ?? "—"}</b></span>
         <span>Non-posted FI documents: <b>{controls?.nonPostedAccountingDocuments ?? "—"}</b></span>
         <span>Tax filings ready: <b>{controls?.taxFilingsReady ?? "—"}</b></span>
