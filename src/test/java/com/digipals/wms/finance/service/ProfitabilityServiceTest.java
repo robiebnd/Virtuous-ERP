@@ -51,7 +51,7 @@ class ProfitabilityServiceTest {
         when(segments.findById(segmentId)).thenReturn(Optional.of(segment));
         when(glAccounts.findByAccountCode("400000")).thenReturn(Optional.of(revenue));
         when(postingService.postBalancedAtDate(anyString(), eq("COPA_POSTING"), eq("COPA_POSTING"), any(UUID.class),
-                anyString(), eq("USD"), anyString(), anyList(), any(LocalDate.class).atStartOfDay()))
+                anyString(), eq("USD"), anyString(), anyList(), any(java.time.LocalDateTime.class)))
                 .thenReturn(document);
         when(profitabilityPostings.save(any(ProfitabilityPosting.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
