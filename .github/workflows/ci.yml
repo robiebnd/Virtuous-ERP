@@ -16,8 +16,8 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Compile backend
-        run: bash mvnw -DskipTests compile
+      - name: Test and compile backend
+        run: bash mvnw -B test
   frontend:
     runs-on: ubuntu-latest
     defaults:
