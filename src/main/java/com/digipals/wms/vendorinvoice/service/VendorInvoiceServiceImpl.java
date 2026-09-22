@@ -116,7 +116,18 @@ public class VendorInvoiceServiceImpl implements VendorInvoiceService {
         invoice.setStatus(blocked ? VendorInvoiceStatus.BLOCKED : VendorInvoiceStatus.MATCHED);
         invoice.setBlockReason(blocked ? String.join("; ", reasons) : null);
         VendorInvoice saved = invoiceRepository.save(invoice);
-        if (!blocked) financePostingService.postVendorInvoice(saved.getId(), saved.getInvoiceNumber(), saved.getCurrency(), saved.getTotalAmount());
+        if (!blocked) {
+            var accountingDocument = financePostingService.postVendorInvoice(
+                    saved.getId(),
+                    saved.getInvoiceNumber(),
+                    saved.getCurrency(),
+                    saved.getTotalAmount()
+            );
+            saved.setAccountingDocument(accountingDocument);
+            saved.setStatus(VendorInvoiceStatus.POSTED);
+            saved.setPostedAt(LocalDateTime.now());
+            saved = invoiceRepository.save(saved);
+        }
         return toResponse(saved);
     }
 
