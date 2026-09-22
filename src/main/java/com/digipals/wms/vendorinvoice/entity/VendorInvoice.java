@@ -19,9 +19,6 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @SuperBuilder
 public class VendorInvoice extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "accounting_document_id")
-    private com.digipals.wms.finance.entity.AccountingDocument accountingDocument;
     @Column(name="invoice_number", nullable=false, unique=true, length=60)
     private String invoiceNumber;
     @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="supplier_id", nullable=false)
