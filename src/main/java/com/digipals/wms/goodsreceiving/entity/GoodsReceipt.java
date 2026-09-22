@@ -21,10 +21,6 @@ import java.util.List;
 @SuperBuilder
 public class GoodsReceipt extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "accounting_document_id")
-    private com.digipals.wms.finance.entity.AccountingDocument accountingDocument;
-
     @Column(name = "grn_number", nullable = false, unique = true)
     private String grnNumber;
 
