@@ -5,7 +5,8 @@ import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.DuplicateResourceException;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.finance.service.FinancePostingService;
+import com.digipals.wms.integration.procurement.VendorInvoiceMatchedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceipt;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
 import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
@@ -44,7 +45,7 @@ public class VendorInvoiceServiceImpl implements VendorInvoiceService {
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final DocumentNumberService documentNumberService;
     private final CurrentUserService currentUserService;
-    private final FinancePostingService financePostingService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public VendorInvoiceResponse create(CreateVendorInvoiceRequest request) {
@@ -117,16 +118,13 @@ public class VendorInvoiceServiceImpl implements VendorInvoiceService {
         invoice.setBlockReason(blocked ? String.join("; ", reasons) : null);
         VendorInvoice saved = invoiceRepository.save(invoice);
         if (!blocked) {
-            var accountingDocument = financePostingService.postVendorInvoice(
+            eventPublisher.publishEvent(new VendorInvoiceMatchedEvent(
                     saved.getId(),
                     saved.getInvoiceNumber(),
                     saved.getCurrency(),
-                    saved.getTotalAmount()
-            );
-            saved.setAccountingDocument(accountingDocument);
-            saved.setStatus(VendorInvoiceStatus.POSTED);
-            saved.setPostedAt(LocalDateTime.now());
-            saved = invoiceRepository.save(saved);
+                    saved.getTotalAmount(),
+                    LocalDateTime.now()
+            ));
         }
         return toResponse(saved);
     }
