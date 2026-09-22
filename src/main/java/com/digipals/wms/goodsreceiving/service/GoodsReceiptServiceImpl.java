@@ -147,7 +147,14 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         goodsReceipt.setApprovedAt(LocalDateTime.now());
         GoodsReceipt saved = repository.save(goodsReceipt);
         if (receiptValue.compareTo(BigDecimal.ZERO) > 0) {
-            financePostingService.postGoodsReceipt(saved.getId(), saved.getGrnNumber(), goodsReceipt.getPurchaseOrder().getCurrency(), receiptValue);
+            var accountingDocument = financePostingService.postGoodsReceipt(
+                    saved.getId(),
+                    saved.getGrnNumber(),
+                    goodsReceipt.getPurchaseOrder().getCurrency(),
+                    receiptValue
+            );
+            saved.setAccountingDocument(accountingDocument);
+            saved = repository.save(saved);
         }
         return GoodsReceiptMapper.toResponse(saved);
     }
