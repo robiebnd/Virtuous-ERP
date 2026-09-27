@@ -90,7 +90,7 @@ class TreasuryServiceTest {
                         LocalDate.of(2026, 9, 21),
                         LocalDate.of(2026, 12, 31),
                         false
-                ));
+                )));
 
         assertTrue(ex.getMessage().contains("risk limit exceeded"));
         verify(instruments, never()).save(any());
@@ -123,7 +123,7 @@ class TreasuryServiceTest {
                         "490000",
                         "590000",
                         "USD"
-                ));
+                )));
 
         assertTrue(ex.getMessage().contains("chronological order"));
         verifyNoInteractions(postingService);
@@ -155,7 +155,7 @@ class TreasuryServiceTest {
                         "490000",
                         "590000",
                         "USD"
-                ));
+                )));
 
         assertTrue(ex.getMessage().contains("difference is zero"));
         verifyNoInteractions(postingService);
