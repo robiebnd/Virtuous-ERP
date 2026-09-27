@@ -5,8 +5,8 @@ import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.DuplicateResourceException;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.integration.procurement.VendorInvoiceMatchedEvent;
-import org.springframework.context.ApplicationEventPublisher;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceipt;
 import com.digipals.wms.goodsreceiving.entity.GoodsReceiptLine;
 import com.digipals.wms.goodsreceiving.entity.ReceiptStatus;
@@ -45,7 +45,7 @@ public class VendorInvoiceServiceImpl implements VendorInvoiceService {
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final DocumentNumberService documentNumberService;
     private final CurrentUserService currentUserService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final IntegrationOutboxService outboxService;
 
     @Override
     public VendorInvoiceResponse create(CreateVendorInvoiceRequest request) {
@@ -118,13 +118,19 @@ public class VendorInvoiceServiceImpl implements VendorInvoiceService {
         invoice.setBlockReason(blocked ? String.join("; ", reasons) : null);
         VendorInvoice saved = invoiceRepository.save(invoice);
         if (!blocked) {
-            eventPublisher.publishEvent(new VendorInvoiceMatchedEvent(
+            outboxService.enqueue(
+                    IntegrationEventTypes.PROCUREMENT_VENDOR_INVOICE_MATCHED,
+                    "VENDOR_INVOICE",
                     saved.getId(),
-                    saved.getInvoiceNumber(),
-                    saved.getCurrency(),
-                    saved.getTotalAmount(),
+                    new com.digipals.wms.integration.procurement.VendorInvoiceMatchedEvent(
+                            saved.getId(),
+                            saved.getInvoiceNumber(),
+                            saved.getCurrency(),
+                            saved.getTotalAmount(),
+                            LocalDateTime.now()
+                    ),
                     LocalDateTime.now()
-            ));
+            );
         }
         return toResponse(saved);
     }
