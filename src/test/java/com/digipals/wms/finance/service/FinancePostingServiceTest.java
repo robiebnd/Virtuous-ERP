@@ -33,13 +33,13 @@ class FinancePostingServiceTest {
     @BeforeEach
     void setUp() {
         service = new FinancePostingService(documentRepository, accountRepository, fiscalPeriodService);
-        when(documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus(anyString(), any(), eq("POSTED")))
+        lenient().when(documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus(anyString(), any(), eq("POSTED")))
                 .thenReturn(Optional.empty());
-        when(documentRepository.findFirstByReferenceTypeAndReferenceNumberAndStatus(anyString(), anyString(), eq("POSTED")))
+        lenient().when(documentRepository.findFirstByReferenceTypeAndReferenceNumberAndStatus(anyString(), anyString(), eq("POSTED")))
                 .thenReturn(Optional.empty());
-        when(documentRepository.save(any(AccountingDocument.class)))
+        lenient().when(documentRepository.save(any(AccountingDocument.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-        when(accountRepository.findByAccountCode(anyString()))
+        lenient().when(accountRepository.findByAccountCode(anyString()))
                 .thenAnswer(invocation -> Optional.of(GlAccount.builder()
                         .accountCode(invocation.getArgument(0))
                         .accountName("Test Account")
@@ -115,7 +115,7 @@ class FinancePostingServiceTest {
     @Test
     void rejectsDuplicateReferenceId() {
         UUID referenceId = UUID.randomUUID();
-        when(documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus("TEST_REF", referenceId, "POSTED"))
+        lenient().when(documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus("TEST_REF", referenceId, "POSTED"))
                 .thenReturn(Optional.of(AccountingDocument.builder().documentNumber("FI-OLD").status("POSTED").build()));
 
         InvalidWorkflowException ex = assertThrows(InvalidWorkflowException.class, () ->
@@ -137,7 +137,7 @@ class FinancePostingServiceTest {
 
     @Test
     void rejectsDuplicateReferenceNumber() {
-        when(documentRepository.findFirstByReferenceTypeAndReferenceNumberAndStatus("TEST_REF", "TEST-005", "POSTED"))
+        lenient().when(documentRepository.findFirstByReferenceTypeAndReferenceNumberAndStatus("TEST_REF", "TEST-005", "POSTED"))
                 .thenReturn(Optional.of(AccountingDocument.builder().documentNumber("FI-OLD").status("POSTED").build()));
 
         InvalidWorkflowException ex = assertThrows(InvalidWorkflowException.class, () ->
