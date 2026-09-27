@@ -7,8 +7,8 @@ import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
 import com.digipals.wms.common.mapper.GoodsReceiptMapper;
-import com.digipals.wms.integration.procurement.GoodsReceiptApprovedEvent;
-import org.springframework.context.ApplicationEventPublisher;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.goodsreceiving.dto.CreateGoodsReceiptRequest;
 import com.digipals.wms.goodsreceiving.dto.GoodsReceiptResponse;
 import com.digipals.wms.goodsreceiving.dto.UpdateGoodsReceiptRequest;
@@ -50,7 +50,7 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
     private final GoodsReceiptLineRepository goodsReceiptLineRepository;
     private final GoodsMovementService goodsMovementService;
     private final PurchaseOrderLineRepository purchaseOrderLineRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final IntegrationOutboxService outboxService;
 
     private GoodsReceipt getGoodsReceipt(UUID id) { return repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
     private GoodsReceipt getGoodsReceiptWithLines(UUID id) { return repository.findWithLinesById(id).orElseThrow(() -> new ResourceNotFoundException("Goods Receipt not found.")); }
@@ -148,13 +148,19 @@ public class GoodsReceiptServiceImpl implements GoodsReceiptService {
         goodsReceipt.setApprovedAt(LocalDateTime.now());
         GoodsReceipt saved = repository.save(goodsReceipt);
         if (receiptValue.compareTo(BigDecimal.ZERO) > 0) {
-            eventPublisher.publishEvent(new GoodsReceiptApprovedEvent(
+            outboxService.enqueue(
+                    IntegrationEventTypes.PROCUREMENT_GOODS_RECEIPT_APPROVED,
+                    "GOODS_RECEIPT",
                     saved.getId(),
-                    saved.getGrnNumber(),
-                    goodsReceipt.getPurchaseOrder().getCurrency(),
-                    receiptValue,
+                    new com.digipals.wms.integration.procurement.GoodsReceiptApprovedEvent(
+                            saved.getId(),
+                            saved.getGrnNumber(),
+                            goodsReceipt.getPurchaseOrder().getCurrency(),
+                            receiptValue,
+                            LocalDateTime.now()
+                    ),
                     LocalDateTime.now()
-            ));
+            );
         }
         return GoodsReceiptMapper.toResponse(saved);
     }
