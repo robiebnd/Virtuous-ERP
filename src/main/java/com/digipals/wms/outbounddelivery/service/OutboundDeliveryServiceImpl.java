@@ -4,7 +4,8 @@ import com.digipals.wms.bin.entity.Bin;
 import com.digipals.wms.bin.entity.BinStatus;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.finance.service.FinancePostingService;
+import com.digipals.wms.integration.inventory.GoodsIssuePostedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.digipals.wms.inventory.service.InventoryService;
 import com.digipals.wms.outbounddelivery.dto.CreateOutboundDeliveryRequest;
 import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
@@ -40,7 +41,7 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
     private final ProductRepository productRepository;
     private final InventoryService inventoryService;
     private final CurrentUserService currentUserService;
-    private final FinancePostingService financePostingService;
+    private final ApplicationEventPublisher eventPublisher;
     private final WarehouseRepository warehouseRepository;
 
     @Override
@@ -134,7 +135,13 @@ public class OutboundDeliveryServiceImpl implements OutboundDeliveryService {
         }
 
         if (cogs.compareTo(BigDecimal.ZERO) > 0) {
-            financePostingService.postGoodsIssueWithCogs(delivery.getId(), delivery.getDeliveryNumber(), normalizeCurrency(delivery.getSalesOrder().getCurrency()), cogs);
+            eventPublisher.publishEvent(new GoodsIssuePostedEvent(
+                    delivery.getId(),
+                    delivery.getDeliveryNumber(),
+                    normalizeCurrency(delivery.getSalesOrder().getCurrency()),
+                    cogs,
+                    LocalDateTime.now()
+            ));
         }
         delivery.setGoodsIssueAt(LocalDateTime.now());
         delivery.setStatus(OutboundDeliveryStatus.POSTED_GOODS_ISSUE);
