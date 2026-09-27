@@ -63,7 +63,7 @@ class TreasuryServiceTest {
                         LocalDate.of(2026, 9, 21),
                         LocalDate.of(2026, 12, 31),
                         false
-                ));
+                )));
 
         assertEquals("Treasury instrument already exists.", ex.getMessage());
         verify(instruments, never()).save(any());
