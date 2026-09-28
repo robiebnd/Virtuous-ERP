@@ -7,7 +7,9 @@ import com.digipals.wms.billing.entity.BillingStatus;
 import com.digipals.wms.billing.repository.BillingDocumentRepository;
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.finance.service.FinancePostingService;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.o2c.CustomerBillingPostedEvent;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.outbounddelivery.entity.OutboundDelivery;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryItem;
 import com.digipals.wms.outbounddelivery.entity.OutboundDeliveryStatus;
@@ -27,7 +29,7 @@ import java.util.UUID;
 public class BillingDocumentServiceImpl implements BillingDocumentService {
     private final BillingDocumentRepository billingDocumentRepository;
     private final OutboundDeliveryRepository outboundDeliveryRepository;
-    private final FinancePostingService financePostingService;
+    private final IntegrationOutboxService outboxService;
 
     @Override @Transactional
     public BillingDocument create(CreateBillingRequest request) {
@@ -65,7 +67,19 @@ public class BillingDocumentServiceImpl implements BillingDocumentService {
 
         billing.setStatus(BillingStatus.POSTED);
         BillingDocument saved = billingDocumentRepository.save(billing);
-        financePostingService.postCustomerInvoice(saved.getId(), saved.getBillingNumber(), saved.getCurrency(), saved.getTotalAmount());
+        outboxService.enqueue(
+                IntegrationEventTypes.O2C_CUSTOMER_BILLING_POSTED,
+                "BILLING_DOCUMENT",
+                saved.getId(),
+                new CustomerBillingPostedEvent(
+                        saved.getId(),
+                        saved.getBillingNumber(),
+                        saved.getCurrency(),
+                        saved.getTotalAmount(),
+                        saved.getBillingDate()
+                ),
+                saved.getBillingDate()
+        );
         return saved;
     }
 
