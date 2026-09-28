@@ -1,6 +1,6 @@
 package com.digipals.wms.manufacturing.service;
 import com.digipals.wms.manufacturing.entity.*;
-import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
+import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID; import java.util.List;
 public interface ManufacturingService {
  List<ProductionOrder> listProductionOrders(); List<Bom> listBoms();
  MasterRecipe createRecipe(MasterRecipe r); Bom createBom(Bom b); Routing createRouting(Routing r);
