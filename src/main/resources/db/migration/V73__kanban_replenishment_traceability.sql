@@ -1,0 +1,2 @@
+ALTER TABLE mfg_kanban_signals ADD COLUMN IF NOT EXISTS generated_production_order_id UUID REFERENCES mfg_production_orders(id);
+CREATE INDEX IF NOT EXISTS idx_kanban_signal_generated_order ON mfg_kanban_signals(generated_production_order_id);
