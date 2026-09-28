@@ -1,1 +1,3 @@
-package com.digipals.wms.manufacturing.repository; import com.digipals.wms.manufacturing.entity.CapacityRecord; import org.springframework.data.jpa.repository.JpaRepository; import java.time.LocalDate; import java.util.*; public interface CapacityRecordRepository extends JpaRepository<CapacityRecord,UUID>{List<CapacityRecord> findByWorkCenterAndCapacityDateBetween(String wc,LocalDate from,LocalDate to);}
+package com.digipals.wms.manufacturing.repository;
+import com.digipals.wms.manufacturing.entity.CapacityRecord; import org.springframework.data.jpa.repository.JpaRepository; import java.time.LocalDate; import java.util.*;
+public interface CapacityRecordRepository extends JpaRepository<CapacityRecord,UUID>{List<CapacityRecord> findByWorkCenterAndCapacityDateBetween(String wc,LocalDate from,LocalDate to); Optional<CapacityRecord> findByWorkCenterAndCapacityDate(String workCenter,LocalDate capacityDate);}
