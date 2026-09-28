@@ -54,6 +54,13 @@ export const procurementApi = {
  closeGrIr:(purchaseOrderId:string)=>api<any>(`/api/procurement/gr-ir/purchase-order/${purchaseOrderId}/close`,{method:"POST"})
 };
 
+export const customerApi = {
+  list:()=>list<any>("/api/customers"),
+  get:(id:string)=>api<any>(`/api/customers/${id}`),
+  create:(body:any)=>api<any>("/api/customers",{method:"POST",body:JSON.stringify(body)}),
+  update:(id:string,body:any)=>api<any>(`/api/customers/${id}`,{method:"PUT",body:JSON.stringify(body)})
+};
+
 export const orderToCashApi = {
  salesOrders:()=>list<any>("/api/sales-orders"),
  salesOrder:(id:string)=>api<any>(`/api/sales-orders/${id}`),
