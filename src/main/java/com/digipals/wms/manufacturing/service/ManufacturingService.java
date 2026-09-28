@@ -1,14 +1,16 @@
 package com.digipals.wms.manufacturing.service;
 import com.digipals.wms.manufacturing.entity.*;
-import java.math.BigDecimal; import java.time.*; import java.util.*;
+import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
 public interface ManufacturingService {
- MasterRecipe createRecipe(MasterRecipe recipe);
- Bom createBom(Bom bom);
- Routing createRouting(Routing routing);
- ProductionOrder createProductionOrder(UUID productId,String plant,String orderType,BigDecimal quantity,LocalDate start,LocalDate finish);
+ MasterRecipe createRecipe(MasterRecipe r); Bom createBom(Bom b); Routing createRouting(Routing r);
+ ProductionOrder createProductionOrder(UUID productId,String plant,String type,BigDecimal qty,LocalDate start,LocalDate finish);
  ProductionOrder releaseProductionOrder(UUID id);
- ProductionConfirmation confirmProduction(UUID id,BigDecimal quantity,BigDecimal scrap,String operation,String remarks);
- CapacityRecord saveCapacity(CapacityRecord record);
- MrpPlan runMrp(String plant,String strategyGroup,int demandCount,int plannedOrderCount);
- KanbanSignal signalKanban(UUID cycleId,String triggerSource);
+ ProductionConfirmation confirmProduction(UUID id,BigDecimal qty,BigDecimal scrap,String operation,String remarks);
+ void issueComponents(UUID orderId, UUID binId, BigDecimal quantityMultiplier);
+ ProductionConfirmation receiveFinishedGoods(UUID orderId, UUID binId, BigDecimal quantity);
+ ProductionOrder closeProductionOrder(UUID id);
+ CapacityRecord saveCapacity(CapacityRecord r);
+ MrpPlan runMrp(String plant,String strategy,int demand,int planned);
+ MrpPlan runMrp(UUID productId,String plant,String strategy,BigDecimal grossDemand,BigDecimal currentStock,BigDecimal safetyStock,BigDecimal lotSize);
+ KanbanSignal signalKanban(UUID cycleId,String trigger);
 }
