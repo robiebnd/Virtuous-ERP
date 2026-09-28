@@ -13,6 +13,8 @@ public class QualityManagementController {
  @PostMapping("/lots") public InspectionLot lot(@RequestBody LotRequest r){return service.createLot(r.productId(),r.plantCode(),r.inspectionType(),r.sourceDocumentType(),r.sourceDocumentId(),r.quantity());}
  @PostMapping("/lots/{id}/results") public InspectionResult result(@PathVariable UUID id,@RequestBody ResultRequest r){return service.recordResult(id,r.characteristicId(),r.measuredValue(),r.qualitativeResult());}
  @PostMapping("/lots/{id}/decision") public UsageDecision decision(@PathVariable UUID id,@RequestBody DecisionRequest r){return service.decide(id,r.decisionCode(),r.stockAction(),r.remarks());}
+ @PostMapping("/catalogs") public QualityCatalogCode catalogCode(@RequestBody QualityCatalogCode c){return service.createCatalogCode(c);}
+ @GetMapping("/catalogs/{type}") public List<QualityCatalogCode> catalog(@PathVariable String type){return service.catalog(type);}
  @PostMapping("/notifications") public QualityNotification notification(@RequestBody QualityNotification n){return service.createNotification(n);}
  @GetMapping("/lots/open") public List<InspectionLot> open(){return service.openLots();}
  public record PlanRequest(InspectionPlan plan,List<UUID> characteristicIds){}
