@@ -18,6 +18,11 @@ import com.digipals.wms.goodsmovement.entity.GoodsMovementType;
 import com.digipals.wms.goodsmovement.repository.GoodsMovementLineRepository;
 import com.digipals.wms.goodsmovement.repository.GoodsMovementRepository;
 import com.digipals.wms.inventory.service.InventoryService;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
+import com.digipals.wms.integration.procurement.GoodsReceiptApprovedEvent;
+import com.digipals.wms.quality.repository.InspectionPlanRepository;
+import com.digipals.wms.quality.service.QualityManagementService;
 import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
 import com.digipals.wms.security.CurrentUserService;
@@ -52,6 +57,9 @@ public class GoodsMovementServiceImpl
     private final InventoryService inventoryService;
 
     private final CurrentUserService currentUserService;
+    private final IntegrationOutboxService outboxService;
+    private final InspectionPlanRepository inspectionPlanRepository;
+    private final QualityManagementService qualityManagementService;
 
     /*
      * ============================================================
@@ -223,6 +231,37 @@ public class GoodsMovementServiceImpl
         movement =
                 goodsMovementRepository.save(
                         movement);
+
+        if (movement.getMovementType() == GoodsMovementType.GOODS_RECEIPT) {
+            BigDecimal receiptValue = lines.stream()
+                    .map(line -> line.getQuantity().multiply(line.getUnitCost() == null ? BigDecimal.ZERO : line.getUnitCost()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (receiptValue.signum() > 0) {
+                outboxService.enqueue(
+                        IntegrationEventTypes.PROCUREMENT_GOODS_RECEIPT_APPROVED,
+                        "GOODS_MOVEMENT",
+                        movement.getId(),
+                        new GoodsReceiptApprovedEvent(
+                                movement.getId(),
+                                movement.getMovementNumber(),
+                                "USD",
+                                receiptValue,
+                                java.time.LocalDateTime.now()),
+                        java.time.LocalDateTime.now());
+            }
+            for (GoodsMovementLine line : lines) {
+                if (inspectionPlanRepository.findFirstByProductIdAndPlantCodeAndStatusOrderByCreatedAtDesc(
+                        line.getProduct().getId(), warehouse.getCode(), "ACTIVE").isPresent()) {
+                    qualityManagementService.createLot(
+                            line.getProduct().getId(),
+                            warehouse.getCode(),
+                            "01",
+                            "GOODS_RECEIPT",
+                            movement.getId(),
+                            line.getQuantity());
+                }
+            }
+        }
 
         return GoodsMovementMapper.toResponse(
                 movement,
