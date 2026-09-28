@@ -3,7 +3,10 @@ package com.digipals.wms.payment.service;
 import com.digipals.wms.billing.entity.BillingDocument;
 import com.digipals.wms.billing.entity.BillingStatus;
 import com.digipals.wms.billing.repository.BillingDocumentRepository;
-import com.digipals.wms.finance.service.FinancePostingService;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.o2c.IncomingPaymentCancelledEvent;
+import com.digipals.wms.integration.o2c.IncomingPaymentReceivedEvent;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.payment.dto.CreateIncomingPaymentRequest;
 import com.digipals.wms.payment.entity.IncomingPayment;
 import com.digipals.wms.payment.entity.PaymentAllocation;
@@ -28,7 +31,7 @@ public class IncomingPaymentServiceImpl implements IncomingPaymentService {
     private final IncomingPaymentRepository paymentRepository;
     private final PaymentAllocationRepository allocationRepository;
     private final BillingDocumentRepository billingDocumentRepository;
-    private final FinancePostingService financePostingService;
+    private final IntegrationOutboxService outboxService;
 
     @Override
     public IncomingPayment receive(CreateIncomingPaymentRequest request) {
@@ -48,14 +51,49 @@ public class IncomingPaymentServiceImpl implements IncomingPaymentService {
         if (appliedAmount.compareTo(BigDecimal.ZERO) > 0) payment.addAllocation(PaymentAllocation.builder().billingDocument(billing).amount(appliedAmount).build());
         if (unappliedAmount.compareTo(BigDecimal.ZERO) > 0) payment.setStatus(PaymentStatus.PARTIALLY_APPLIED);
         IncomingPayment saved = paymentRepository.save(payment);
-        financePostingService.postIncomingPayment(saved.getId(), saved.getPaymentNumber(), saved.getCurrency(), saved.getAmount(), appliedAmount);
+        outboxService.enqueue(
+                IntegrationEventTypes.O2C_INCOMING_PAYMENT_RECEIVED,
+                "INCOMING_PAYMENT",
+                saved.getId(),
+                new IncomingPaymentReceivedEvent(
+                        saved.getId(),
+                        saved.getPaymentNumber(),
+                        saved.getCurrency(),
+                        saved.getAmount(),
+                        appliedAmount,
+                        saved.getPaymentDate()
+                ),
+                saved.getPaymentDate()
+        );
         return saved;
     }
     @Override
     public IncomingPayment cancel(UUID id) {
         IncomingPayment payment = paymentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Incoming payment not found: " + id));
         if (payment.getStatus() == PaymentStatus.CANCELLED) throw new IllegalStateException("Payment is already cancelled");
-        payment.setStatus(PaymentStatus.CANCELLED); return paymentRepository.save(payment);
+        BigDecimal appliedAmount = allocationRepository.findActiveByBillingDocumentIdForPayment(payment.getId(), PaymentStatus.CANCELLED)
+                .stream()
+                .map(PaymentAllocation::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        payment.setStatus(PaymentStatus.CANCELLED);
+        IncomingPayment saved = paymentRepository.save(payment);
+
+        outboxService.enqueue(
+                IntegrationEventTypes.O2C_INCOMING_PAYMENT_CANCELLED,
+                "INCOMING_PAYMENT",
+                saved.getId(),
+                new IncomingPaymentCancelledEvent(
+                        saved.getId(),
+                        saved.getPaymentNumber(),
+                        saved.getCurrency(),
+                        saved.getAmount(),
+                        appliedAmount,
+                        saved.getPaymentDate()
+                ),
+                LocalDateTime.now()
+        );
+        return saved;
     }
     @Override @Transactional(readOnly = true) public IncomingPayment findById(UUID id) { return paymentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Incoming payment not found: " + id)); }
     @Override @Transactional(readOnly = true) public List<IncomingPayment> findAll() { return paymentRepository.findAll(); }
