@@ -5,6 +5,13 @@ public class ManufacturingController {
  private final ManufacturingService service;
  @PostMapping("/recipes") public MasterRecipe recipe(@RequestBody MasterRecipe r){return service.createRecipe(r);}
  @GetMapping("/boms") public List<Bom> boms(){return service.listBoms();}
+ @GetMapping("/routings") public List<Routing> routings(){return service.listRoutings();}
+ @GetMapping("/recipes") public List<MasterRecipe> recipes(){return service.listRecipes();}
+ @GetMapping("/capacity") public List<CapacityRecord> capacity(){return service.listCapacity();}
+ @GetMapping("/kanban/cycles") public List<KanbanControlCycle> kanbanCycles(){return service.listKanbanCycles();}
+ @GetMapping("/kanban/signals") public List<KanbanSignal> kanbanSignals(){return service.listKanbanSignals();}
+ @GetMapping("/mrp/plans") public List<MrpPlan> mrpPlans(){return service.listMrpPlans();}
+ @GetMapping("/mrp/components") public List<MrpComponentRequirement> mrpComponents(@RequestParam(required=false) UUID planId){return service.listMrpComponents(planId);}
  @PostMapping("/boms") public Bom bom(@RequestBody Bom b){return service.createBom(b);}
  @PostMapping("/routings") public Routing routing(@RequestBody Routing r){return service.createRouting(r);}
  @GetMapping("/production-orders") public List<ProductionOrder> orders(){return service.listProductionOrders();}
