@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS qm_master_inspection_characteristics (
 );
 CREATE TABLE IF NOT EXISTS qm_inspection_plans (
  id UUID PRIMARY KEY, plan_number VARCHAR(50) NOT NULL UNIQUE, product_id UUID NOT NULL REFERENCES products(id),
- plant_code VARCHAR(30) NOT NULL, version VARCHAR(30), status VARCHAR(20) NOT NULL,
+ plant_code VARCHAR(30) NOT NULL, plan_bom_routing_version VARCHAR(30), status VARCHAR(20) NOT NULL,
  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
  active BOOLEAN DEFAULT TRUE, version BIGINT DEFAULT 0
 );
