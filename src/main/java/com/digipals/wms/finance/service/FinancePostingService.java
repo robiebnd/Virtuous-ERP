@@ -198,6 +198,23 @@ public class FinancePostingService {
         );
     }
 
+    public AccountingDocument postProductionReceipt(UUID orderId, String orderNumber, String currency, BigDecimal valuationAmount) {
+        BigDecimal amount = nvl(valuationAmount).setScale(2, RoundingMode.HALF_UP);
+        if (amount.signum() <= 0) throw new InvalidWorkflowException("Production valuation must be greater than zero.");
+        return postBalanced(
+                "PRODUCTION_CONFIRMATION",
+                "PRODUCTION_ORDER",
+                orderId,
+                orderNumber,
+                currency,
+                "Production receipt " + orderNumber,
+                List.of(
+                        new PostingLine("1320", amount, BigDecimal.ZERO, null, null, null, null, "Finished goods receipt"),
+                        new PostingLine("1340", BigDecimal.ZERO, amount, null, null, null, null, "Release production cost from WIP")
+                )
+        );
+    }
+
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String nextDocumentNumber() { return "FI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT); }
     public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement, String partnerCompanyCode, String taxCode, BigDecimal taxBase, BigDecimal taxAmount, UUID profitabilitySegmentId) {
