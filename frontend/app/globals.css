@@ -471,3 +471,15 @@
 @media(max-width:1250px){.quality-process{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1000px){.quality-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.quality-grid{grid-template-columns:1fr}.quality-wide{grid-column:auto}.quality-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.quality-stats{grid-template-columns:1fr}.quality-process{grid-template-columns:1fr 1fr;padding:12px}.quality-form-grid{grid-template-columns:1fr;padding:16px}}
+
+
+/* Warehouse bin management */
+.warehouse-bin-layout{display:grid;grid-template-columns:minmax(380px,.8fr) minmax(620px,1.5fr);gap:18px}
+.warehouse-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;padding:20px 22px}
+.warehouse-form-grid .form-field{min-width:0}
+.warehouse-form-grid .form-input{width:100%;min-width:0;box-sizing:border-box}
+.warehouse-form-wide{grid-column:1 / -1}
+.warehouse-textarea{height:auto;min-height:90px;resize:vertical}
+.warehouse-form-actions{grid-column:1 / -1;display:flex;justify-content:flex-end}
+@media(max-width:1100px){.warehouse-bin-layout{grid-template-columns:1fr}.warehouse-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.warehouse-form-grid{grid-template-columns:1fr;padding:16px}.warehouse-form-wide{grid-column:auto}.warehouse-bin-layout{grid-template-columns:1fr}}
