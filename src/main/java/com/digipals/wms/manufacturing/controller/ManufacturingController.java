@@ -7,6 +7,7 @@ import java.math.BigDecimal; import java.time.LocalDate; import java.util.*;
 @RestController @RequestMapping("/api/v1/manufacturing") @RequiredArgsConstructor
 public class ManufacturingController {
  private final ManufacturingService service;
+ @PostMapping("/recipes") public MasterRecipe recipe(@RequestBody MasterRecipe r){return service.createRecipe(r);}
  @PostMapping("/boms") public Bom bom(@RequestBody Bom b){return service.createBom(b);}
  @PostMapping("/routings") public Routing routing(@RequestBody Routing r){return service.createRouting(r);}
  @PostMapping("/production-orders") public ProductionOrder order(@RequestBody OrderRequest r){return service.createProductionOrder(r.productId(),r.plantCode(),r.orderType(),r.quantity(),r.plannedStartDate(),r.plannedFinishDate());}
