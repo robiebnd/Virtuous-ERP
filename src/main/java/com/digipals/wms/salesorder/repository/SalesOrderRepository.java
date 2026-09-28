@@ -1,6 +1,7 @@
 package com.digipals.wms.salesorder.repository;
 
 import com.digipals.wms.salesorder.entity.SalesOrder;
+import com.digipals.wms.salesorder.entity.SalesOrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -8,10 +9,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, UUID> {
-
-    Optional<SalesOrder> findByOrderNumber(String orderNumber);
-
-    Optional<SalesOrder> findBySapOrderNumber(String sapOrderNumber);
-
+    Optional<SalesOrder> findByOrderNumber(String n);
+    Optional<SalesOrder> findBySapOrderNumber(String n);
     List<SalesOrder> findByCustomerCodeOrderByOrderDateDesc(String customerCode);
+    List<SalesOrder> findByStatus(SalesOrderStatus status);
 }
