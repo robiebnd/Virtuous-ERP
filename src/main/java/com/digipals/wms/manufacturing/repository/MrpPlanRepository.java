@@ -1,0 +1,1 @@
+package com.digipals.wms.manufacturing.repository; import com.digipals.wms.manufacturing.entity.MrpPlan; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface MrpPlanRepository extends JpaRepository<MrpPlan,UUID>{List<MrpPlan> findByPlantCodeOrderByRunTimeDesc(String plant);}
