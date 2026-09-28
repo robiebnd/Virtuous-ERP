@@ -69,6 +69,10 @@ const groups = [
     { label: "Document Flow", href: "/order-to-cash/document-flow", icon: "hierarchy" as IconName },
     { label: "Customers", href: "/order-to-cash/customers", icon: "users" as IconName },
   ] },
+  { title: "Manufacturing & Quality", items: [
+    { label: "Manufacturing", href: "/manufacturing", icon: "package" as IconName },
+    { label: "Quality Management", href: "/quality", icon: "shield" as IconName },
+  ] },
   { title: "Procurement", items: [
     { label: "Purchase Requisitions", href: "/procurement/purchase-requisitions", icon: "document" as IconName },
     { label: "Purchase Orders", href: "/procurement/purchase-orders", icon: "bag" as IconName },
