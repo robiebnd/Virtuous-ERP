@@ -54,6 +54,26 @@ export const procurementApi = {
  closeGrIr:(purchaseOrderId:string)=>api<any>(`/api/procurement/gr-ir/purchase-order/${purchaseOrderId}/close`,{method:"POST"})
 };
 
+export const manufacturingApi = {
+  orders:()=>list<any>("/api/v1/manufacturing/production-orders"),
+  boms:()=>list<any>("/api/v1/manufacturing/boms"),
+  runMrp:(body:any)=>api<any>("/api/v1/manufacturing/mrp/run",{method:"POST",body:JSON.stringify(body)}),
+  release:(id:string)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/release`,{method:"POST"}),
+  confirm:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/confirm`,{method:"POST",body:JSON.stringify(body)}),
+  issue:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/issue-components`,{method:"POST",body:JSON.stringify(body)}),
+  receipt:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/receipt`,{method:"POST",body:JSON.stringify(body)}),
+  close:(id:string)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/close`,{method:"POST"})
+};
+
+export const qualityApi = {
+  openLots:()=>list<any>("/api/v1/quality/lots/open"),
+  createLot:(body:any)=>api<any>("/api/v1/quality/lots",{method:"POST",body:JSON.stringify(body)}),
+  result:(id:string,body:any)=>api<any>(`/api/v1/quality/lots/${id}/results`,{method:"POST",body:JSON.stringify(body)}),
+  decision:(id:string,body:any)=>api<any>(`/api/v1/quality/lots/${id}/decision`,{method:"POST",body:JSON.stringify(body)}),
+  notifications:(body:any)=>api<any>("/api/v1/quality/notifications",{method:"POST",body:JSON.stringify(body)}),
+  infoRecord:(supplierId:string,productId:string)=>api<any>(`/api/v1/quality/info-records/${supplierId}/${productId}`)
+};
+
 export const customerApi = {
   list:()=>list<any>("/api/customers"),
   get:(id:string)=>api<any>(`/api/customers/${id}`),
