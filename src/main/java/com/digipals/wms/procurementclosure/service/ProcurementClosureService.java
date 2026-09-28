@@ -9,6 +9,10 @@ import com.digipals.wms.goodsmovement.dto.CreateGoodsMovementRequest;
 import com.digipals.wms.goodsmovement.dto.GoodsMovementResponse;
 import com.digipals.wms.goodsmovement.entity.GoodsMovementType;
 import com.digipals.wms.goodsmovement.service.GoodsMovementService;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
+import com.digipals.wms.integration.procurement.VendorInvoiceMatchedEvent;
+import com.digipals.wms.integration.procurement.VendorPaymentPostedEvent;
 import com.digipals.wms.products.Product;
 import com.digipals.wms.products.ProductRepository;
 import com.digipals.wms.procurementclosure.dto.ProcurementClosureRequests.*;
@@ -45,6 +49,7 @@ public class ProcurementClosureService {
     private final WarehouseRepository warehouses;
     private final BinRepository bins;
     private final ProductRepository products;
+    private final IntegrationOutboxService outboxService;
 
     public Map<String,Object> verifyInvoice(SupplierInvoiceRequest r) {
         PurchaseOrder po=po(r.purchaseOrderNumber());
@@ -71,6 +76,13 @@ public class ProcurementClosureService {
         invoice.setSubtotal(total); invoice.setTotalAmount(total); invoice.setBalanceDue(total);
         SupplierInvoice saved=invoices.save(invoice);
         for(SupplierInvoiceLine l:invoice.getLines()) invoiceLines.save(l);
+        outboxService.enqueue(
+                IntegrationEventTypes.PROCUREMENT_VENDOR_INVOICE_MATCHED,
+                "SUPPLIER_INVOICE",
+                saved.getId(),
+                new VendorInvoiceMatchedEvent(saved.getId(), saved.getInvoiceNumber(), saved.getCurrency(), saved.getTotalAmount(), saved.getInvoiceDate()),
+                saved.getInvoiceDate()
+        );
         Map<String,Object> response=invoiceResponse(saved); response.put("threeWayMatch","PASSED"); response.put("matchBasis","PURCHASE_ORDER + GOODS_RECEIPT + SUPPLIER_INVOICE"); return response;
     }
 
@@ -80,6 +92,13 @@ public class ProcurementClosureService {
         if(r.paymentMethod()==null||r.paymentMethod().isBlank()) throw new InvalidWorkflowException("Payment method is required.");
         BigDecimal amount=nz(r.amount()); if(amount.signum()<=0) throw new InvalidWorkflowException("Payment amount must be greater than zero."); if(amount.compareTo(nz(invoice.getBalanceDue()))>0) throw new InvalidWorkflowException("Payment exceeds supplier invoice balance.");
         SupplierPayment payment=payments.save(SupplierPayment.builder().paymentNumber("VPAY-"+UUID.randomUUID().toString().substring(0,8).toUpperCase()).supplier(invoice.getSupplier()).invoice(invoice).paymentDate(LocalDateTime.now()).amount(amount).paymentMethod(r.paymentMethod()).reference(r.reference()).status(SupplierPaymentStatus.CLEARED).build());
+        outboxService.enqueue(
+                IntegrationEventTypes.PROCUREMENT_VENDOR_PAYMENT_POSTED,
+                "SUPPLIER_PAYMENT",
+                payment.getId(),
+                new VendorPaymentPostedEvent(payment.getId(), payment.getPaymentNumber(), invoice.getCurrency(), payment.getAmount(), payment.getPaymentDate()),
+                payment.getPaymentDate()
+        );
         invoice.setAmountPaid(nz(invoice.getAmountPaid()).add(amount)); invoice.setBalanceDue(invoice.getTotalAmount().subtract(invoice.getAmountPaid()).max(BigDecimal.ZERO)); invoice.setStatus(invoice.getBalanceDue().signum()==0?SupplierInvoiceStatus.PAID:SupplierInvoiceStatus.PARTIALLY_PAID); invoices.save(invoice);
         return Map.of("paymentNumber",payment.getPaymentNumber(),"invoiceNumber",invoice.getInvoiceNumber(),"amount",amount,"invoiceStatus",invoice.getStatus().name(),"balanceDue",invoice.getBalanceDue());
     }
