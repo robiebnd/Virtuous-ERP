@@ -1,0 +1,2 @@
+ALTER TABLE fx_rates ADD COLUMN IF NOT EXISTS rate_type VARCHAR(20) NOT NULL DEFAULT 'CLOSING';
+CREATE INDEX IF NOT EXISTS idx_fx_rates_lookup ON fx_rates(from_currency,to_currency,rate_type,rate_date);
