@@ -11,7 +11,7 @@ public class InspectionPlan extends BaseEntity {
  @Column(name="plan_number",nullable=false,unique=true) private String planNumber;
  @ManyToOne(optional=false) @JoinColumn(name="product_id") private Product product;
  @Column(nullable=false) private String plantCode;
- private String version;
+ private String planVersion;
  @Column(nullable=false) private String status;
  @OneToMany(mappedBy="plan",cascade=CascadeType.ALL,orphanRemoval=true) @Builder.Default private List<InspectionPlanCharacteristic> characteristics=new ArrayList<>();
 }
