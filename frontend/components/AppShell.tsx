@@ -87,7 +87,13 @@ const groups = [
   { title: "Warehouse", items: [
     { label: "Warehouse Monitor", href: "/warehouse/monitor", icon: "warehouse" as IconName },
     { label: "Products", href: "/warehouse/products", icon: "package" as IconName },
+    { label: "Bins", href: "/warehouse/bins", icon: "hierarchy" as IconName },
     { label: "Stock & Bins", href: "/warehouse/stock", icon: "hierarchy" as IconName },
+    { label: "Put-Away", href: "/warehouse/putaway", icon: "package" as IconName },
+    { label: "Stock Counts", href: "/warehouse/stock-counts", icon: "list" as IconName },
+    { label: "Stock Transfers", href: "/warehouse/stock-transfers", icon: "truck" as IconName },
+    { label: "Goods Movements", href: "/warehouse/goods-movements", icon: "refresh" as IconName },
+    { label: "Inventory Transactions", href: "/warehouse/inventory-transactions", icon: "document" as IconName },
   ] },
   { title: "Master Data", items: [
     { label: "Suppliers", href: "/master-data/suppliers", icon: "users" as IconName },
