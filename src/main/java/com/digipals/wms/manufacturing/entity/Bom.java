@@ -11,7 +11,7 @@ public class Bom extends BaseEntity {
  @Column(name="bom_number",nullable=false,unique=true) private String bomNumber;
  @ManyToOne(optional=false) @JoinColumn(name="product_id") private Product product;
  @Column(nullable=false) private String plantCode;
- private String version;
+ private String bomVersion;
  @Column(nullable=false) private String status;
  @OneToMany(mappedBy="bom",cascade=CascadeType.ALL,orphanRemoval=true) @Builder.Default private List<BomItem> items=new ArrayList<>();
 }
