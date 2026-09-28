@@ -24,7 +24,7 @@ class IntegrationOutboxServiceTest {
 
     @Test
     void enqueuePersistsSerializedPendingEvent() {
-        IntegrationOutboxService service = new IntegrationOutboxService(repository, new ObjectMapper());
+        IntegrationOutboxService service = new IntegrationOutboxService(repository, new ObjectMapper().findAndRegisterModules());
         UUID id = UUID.randomUUID();
         LocalDateTime postingDate = LocalDateTime.of(2026, 9, 28, 10, 0);
 
