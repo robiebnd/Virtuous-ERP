@@ -141,7 +141,7 @@ public class ManufacturingServiceImpl implements ManufacturingService {
    if(planned.signum()>0 && boms.findFirstByProductIdAndPlantCodeAndStatusOrderByCreatedAtDesc(component.getId(),plant,"ACTIVE").isPresent())
        generated=createProductionOrder(component.getId(),plant,"MRP_DEPENDENT",planned,LocalDate.now(),LocalDate.now());
    mrpComponents.save(MrpComponentRequirement.builder().mrpPlan(plan).componentProduct(component).parentProductId(parent.getId()).grossRequirement(gross).availableStock(stock).openSupply(supply).netRequirement(net).plannedOrderQuantity(planned).generatedProductionOrderId(generated==null?null:generated.getId()).bomLevel(level).build());
-   if(planned.signum()>0 && generated!=null)explodeBomRequirements(plan,component,planned,plant,lotSize,path,new HashSet<>(path));
+   if(planned.signum()>0 && generated!=null)explodeBomRequirements(plan,component,planned,plant,lotSize,path,level+1);
   }
   path.remove(parent.getId());
  }
