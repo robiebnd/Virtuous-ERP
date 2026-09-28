@@ -2,7 +2,9 @@ package com.digipals.wms.vendorpayment.service;
 
 import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.exception.ResourceNotFoundException;
-import com.digipals.wms.finance.service.FinancePostingService;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
+import com.digipals.wms.integration.procurement.VendorPaymentPostedEvent;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.supplier.entity.Supplier;
 import com.digipals.wms.users.entity.User;
@@ -27,7 +29,7 @@ public class VendorPaymentServiceImpl implements VendorPaymentService {
     private final VendorPaymentRepository paymentRepository;
     private final VendorInvoiceRepository invoiceRepository;
     private final CurrentUserService currentUserService;
-    private final FinancePostingService financePostingService;
+    private final IntegrationOutboxService outboxService;
 
     @Override
     public VendorPayment create(CreateVendorPaymentRequest request) {
@@ -57,7 +59,19 @@ public class VendorPaymentServiceImpl implements VendorPaymentService {
         if (invoice.getStatus() != VendorInvoiceStatus.MATCHED && invoice.getStatus() != VendorInvoiceStatus.POSTED) throw new InvalidWorkflowException("Vendor invoice is not payable.");
         payment.setStatus(VendorPaymentStatus.PAID); invoice.setStatus(VendorInvoiceStatus.PAID); invoiceRepository.save(invoice);
         VendorPayment saved = paymentRepository.save(payment);
-        financePostingService.postVendorPayment(saved.getId(), saved.getPaymentNumber(), saved.getCurrency(), saved.getAmount());
+        outboxService.enqueue(
+                IntegrationEventTypes.PROCUREMENT_VENDOR_PAYMENT_POSTED,
+                "VENDOR_PAYMENT",
+                saved.getId(),
+                new VendorPaymentPostedEvent(
+                        saved.getId(),
+                        saved.getPaymentNumber(),
+                        saved.getCurrency(),
+                        saved.getAmount(),
+                        saved.getPaymentDate()
+                ),
+                saved.getPaymentDate()
+        );
         return saved;
     }
 
