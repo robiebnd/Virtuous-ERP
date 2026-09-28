@@ -30,4 +30,10 @@ public class QualityManagementServiceImpl implements QualityManagementService {
  public QualityCatalogCode createCatalogCode(QualityCatalogCode c){if(c.getCatalogType()==null||c.getCode()==null||c.getDescription()==null)throw new InvalidWorkflowException("Catalog type, code and description are required.");return catalogCodes.save(c);} @Transactional(readOnly=true) public List<QualityCatalogCode> catalog(String type){return catalogCodes.findByCatalogTypeIgnoreCase(type);}
  public QualityNotification createNotification(QualityNotification n){if(n.getNotificationNumber()==null||n.getNotificationNumber().isBlank())n.setNotificationNumber("QN-"+UUID.randomUUID().toString().substring(0,10).toUpperCase());if(n.getStatus()==null)n.setStatus("OPEN");for(QualityNotificationItem i:n.getItems())i.setNotification(n);for(QualityNotificationTask t:n.getTasks())t.setNotification(n);return notifications.save(n);}
  @Transactional(readOnly=true) public List<InspectionLot> openLots(){return lots.findByStatusOrderByCreatedAtAsc("OPEN");}
+ @Transactional(readOnly=true) public List<MasterInspectionCharacteristic> listCharacteristics(){return characteristics.findAll();}
+ @Transactional(readOnly=true) public List<InspectionPlan> listPlans(){return plans.findAll();}
+ @Transactional(readOnly=true) public List<InspectionLot> listLots(){return lots.findAll();}
+ @Transactional(readOnly=true) public List<QualityNotification> listNotifications(){return notifications.findAll();}
+ @Transactional(readOnly=true) public List<QualityInfoRecord> listInfoRecords(){return qualityInfoRecords.findAll();}
+ @Transactional(readOnly=true) public List<QualityCatalogCode> listCatalogCodes(){return catalogCodes.findAll();}
 }
