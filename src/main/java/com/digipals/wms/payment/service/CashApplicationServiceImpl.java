@@ -3,6 +3,9 @@ package com.digipals.wms.payment.service;
 import com.digipals.wms.billing.entity.BillingDocument;
 import com.digipals.wms.billing.entity.BillingStatus;
 import com.digipals.wms.billing.repository.BillingDocumentRepository;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.o2c.CashApplicationPostedEvent;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.payment.dto.CashApplicationRequest;
 import com.digipals.wms.payment.entity.IncomingPayment;
 import com.digipals.wms.payment.entity.PaymentAllocation;
@@ -26,6 +29,7 @@ public class CashApplicationServiceImpl implements CashApplicationService {
     private final IncomingPaymentRepository paymentRepository;
     private final PaymentAllocationRepository allocationRepository;
     private final BillingDocumentRepository billingDocumentRepository;
+    private final IntegrationOutboxService outboxService;
 
     @Override
     public IncomingPayment apply(CashApplicationRequest request) {
@@ -82,7 +86,21 @@ public class CashApplicationServiceImpl implements CashApplicationService {
                 ? PaymentStatus.FULLY_APPLIED
                 : PaymentStatus.PARTIALLY_APPLIED);
 
-        return paymentRepository.save(payment);
+        IncomingPayment saved = paymentRepository.save(payment);
+        outboxService.enqueue(
+                IntegrationEventTypes.O2C_CASH_APPLICATION_POSTED,
+                "PAYMENT_ALLOCATION",
+                allocation.getId(),
+                new CashApplicationPostedEvent(
+                        allocation.getId(),
+                        "CA-" + allocation.getId().toString().substring(0, 8).toUpperCase(),
+                        payment.getCurrency(),
+                        applied,
+                        java.time.LocalDateTime.now()
+                ),
+                java.time.LocalDateTime.now()
+        );
+        return saved;
     }
 
     @Override
