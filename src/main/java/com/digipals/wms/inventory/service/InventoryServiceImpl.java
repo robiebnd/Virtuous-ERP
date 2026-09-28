@@ -60,9 +60,9 @@ public class InventoryServiceImpl implements InventoryService {
                         inventoryBin.setQuantityOnHand(BigDecimal.ZERO);
                 }
 
-                if (inventoryBin.getQuantityReserved() == null) {
-                        inventoryBin.setQuantityReserved(BigDecimal.ZERO);
-                }
+                if (inventoryBin.getQuantityReserved() == null) inventoryBin.setQuantityReserved(BigDecimal.ZERO);
+                if (inventoryBin.getQuantityQuality() == null) inventoryBin.setQuantityQuality(BigDecimal.ZERO);
+                if (inventoryBin.getQuantityBlocked() == null) inventoryBin.setQuantityBlocked(BigDecimal.ZERO);
 
                 return inventoryBinRepository.save(inventoryBin);
         }
@@ -184,6 +184,42 @@ public class InventoryServiceImpl implements InventoryService {
                                 performedBy);
 
                 return inventory;
+        }
+
+        @Override
+        public InventoryBin receiveQualityStock(Warehouse warehouse, Bin bin, Product product, BigDecimal quantity,
+                        String referenceNumber, String referenceType, String remarks, User performedBy) {
+                if (quantity == null || quantity.signum() <= 0) throw new RuntimeException("Quality receipt quantity must be greater than zero.");
+                InventoryBin inventory = inventoryBinRepository.findByWarehouseIdAndBinIdAndProductId(warehouse.getId(), bin.getId(), product.getId())
+                        .orElseGet(() -> InventoryBin.builder().warehouse(warehouse).bin(bin).product(product)
+                                .quantityOnHand(BigDecimal.ZERO).quantityReserved(BigDecimal.ZERO)
+                                .quantityQuality(BigDecimal.ZERO).quantityBlocked(BigDecimal.ZERO).build());
+                inventory.setQuantityQuality(inventory.getQuantityQuality().add(quantity));
+                return inventoryBinRepository.save(inventory);
+        }
+
+        @Override
+        public InventoryBin releaseQualityStock(Warehouse warehouse, Bin bin, Product product, BigDecimal quantity,
+                        String referenceNumber, String referenceType, String remarks, User performedBy) {
+                InventoryBin inventory = inventoryBinRepository.findByWarehouseIdAndBinIdAndProductId(warehouse.getId(), bin.getId(), product.getId())
+                        .orElseThrow(() -> new RuntimeException("Inventory does not exist."));
+                if (quantity == null || quantity.signum() <= 0 || inventory.getQuantityQuality().compareTo(quantity) < 0)
+                        throw new RuntimeException("Insufficient quality stock.");
+                inventory.setQuantityQuality(inventory.getQuantityQuality().subtract(quantity));
+                inventory.setQuantityOnHand(inventory.getQuantityOnHand().add(quantity));
+                return inventoryBinRepository.save(inventory);
+        }
+
+        @Override
+        public InventoryBin blockQualityStock(Warehouse warehouse, Bin bin, Product product, BigDecimal quantity,
+                        String referenceNumber, String referenceType, String remarks, User performedBy) {
+                InventoryBin inventory = inventoryBinRepository.findByWarehouseIdAndBinIdAndProductId(warehouse.getId(), bin.getId(), product.getId())
+                        .orElseThrow(() -> new RuntimeException("Inventory does not exist."));
+                if (quantity == null || quantity.signum() <= 0 || inventory.getQuantityQuality().compareTo(quantity) < 0)
+                        throw new RuntimeException("Insufficient quality stock.");
+                inventory.setQuantityQuality(inventory.getQuantityQuality().subtract(quantity));
+                inventory.setQuantityBlocked(inventory.getQuantityBlocked().add(quantity));
+                return inventoryBinRepository.save(inventory);
         }
 
         @Override
