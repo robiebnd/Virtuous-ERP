@@ -251,10 +251,10 @@ public class GoodsMovementServiceImpl
             }
             for (GoodsMovementLine line : lines) {
                 if (inspectionPlanRepository.findFirstByProductIdAndPlantCodeAndStatusOrderByCreatedAtDesc(
-                        line.getProduct().getId(), warehouse.getCode(), "ACTIVE").isPresent()) {
+                        line.getProduct().getId(), movement.getWarehouse().getCode(), "ACTIVE").isPresent()) {
                     qualityManagementService.createLot(
                             line.getProduct().getId(),
-                            warehouse.getCode(),
+                            movement.getWarehouse().getCode(),
                             "01",
                             "GOODS_RECEIPT",
                             movement.getId(),
