@@ -81,11 +81,24 @@ export const manufacturingApi = {
 
 export const qualityApi = {
   openLots:()=>list<any>("/api/v1/quality/lots/open"),
+  lots:()=>list<any>("/api/v1/quality/lots"),
+  characteristics:()=>list<any>("/api/v1/quality/characteristics"),
+  createCharacteristic:(body:any)=>api<any>("/api/v1/quality/characteristics",{method:"POST",body:JSON.stringify(body)}),
+  plans:()=>list<any>("/api/v1/quality/plans"),
+  createPlan:(body:any)=>api<any>("/api/v1/quality/plans",{method:"POST",body:JSON.stringify(body)}),
   createLot:(body:any)=>api<any>("/api/v1/quality/lots",{method:"POST",body:JSON.stringify(body)}),
-  result:(id:string,body:any)=>api<any>(`/api/v1/quality/lots/${id}/results`,{method:"POST",body:JSON.stringify(body)}),
-  decision:(id:string,body:any)=>api<any>(`/api/v1/quality/lots/${id}/decision`,{method:"POST",body:JSON.stringify(body)}),
-  notifications:(body:any)=>api<any>("/api/v1/quality/notifications",{method:"POST",body:JSON.stringify(body)}),
-  infoRecord:(supplierId:string,productId:string)=>api<any>(`/api/v1/quality/info-records/${supplierId}/${productId}`)
+  result:(id:string,body:any)=>api<any>("/api/v1/quality/lots/"+id+"/results",{method:"POST",body:JSON.stringify(body)}),
+  decision:(id:string,body:any)=>api<any>("/api/v1/quality/lots/"+id+"/decision",{method:"POST",body:JSON.stringify(body)}),
+  notifications:()=>list<any>("/api/v1/quality/notifications"),
+  createNotification:(body:any)=>api<any>("/api/v1/quality/notifications",{method:"POST",body:JSON.stringify(body)}),
+  completeTask:(id:string,taskId:string,notes?:string)=>api<any>("/api/v1/quality/notifications/"+id+"/tasks/"+taskId+"/complete"+(notes?"?notes="+encodeURIComponent(notes):""),{method:"POST"}),
+  closeNotification:(id:string)=>api<any>("/api/v1/quality/notifications/"+id+"/close",{method:"POST"}),
+  infoRecords:()=>list<any>("/api/v1/quality/info-records"),
+  createInfoRecord:(body:any)=>api<any>("/api/v1/quality/info-records",{method:"POST",body:JSON.stringify(body)}),
+  infoRecord:(supplierId:string,productId:string)=>api<any>("/api/v1/quality/info-records/"+supplierId+"/"+productId),
+  catalogs:()=>list<any>("/api/v1/quality/catalogs"),
+  catalogByType:(type:string)=>list<any>("/api/v1/quality/catalogs/"+encodeURIComponent(type)),
+  createCatalog:(body:any)=>api<any>("/api/v1/quality/catalogs",{method:"POST",body:JSON.stringify(body)})
 };
 
 export const customerApi = {
