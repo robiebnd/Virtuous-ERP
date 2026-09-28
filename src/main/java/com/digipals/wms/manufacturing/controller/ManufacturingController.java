@@ -4,8 +4,10 @@ import com.digipals.wms.manufacturing.entity.*; import com.digipals.wms.manufact
 public class ManufacturingController {
  private final ManufacturingService service;
  @PostMapping("/recipes") public MasterRecipe recipe(@RequestBody MasterRecipe r){return service.createRecipe(r);}
+ @GetMapping("/boms") public List<Bom> boms(){return service.listBoms();}
  @PostMapping("/boms") public Bom bom(@RequestBody Bom b){return service.createBom(b);}
  @PostMapping("/routings") public Routing routing(@RequestBody Routing r){return service.createRouting(r);}
+ @GetMapping("/production-orders") public List<ProductionOrder> orders(){return service.listProductionOrders();}
  @PostMapping("/production-orders") public ProductionOrder order(@RequestBody OrderRequest r){return service.createProductionOrder(r.productId(),r.plantCode(),r.orderType(),r.quantity(),r.plannedStartDate(),r.plannedFinishDate());}
  @PostMapping("/production-orders/{id}/release") public ProductionOrder release(@PathVariable UUID id){return service.releaseProductionOrder(id);}
  @PostMapping("/production-orders/{id}/issue-components") public void issue(@PathVariable UUID id,@RequestBody IssueRequest r){service.issueComponents(id,r.binId(),r.quantityMultiplier());}
