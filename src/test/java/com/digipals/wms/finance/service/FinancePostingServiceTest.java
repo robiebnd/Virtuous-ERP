@@ -113,6 +113,42 @@ class FinancePostingServiceTest {
     }
 
     @Test
+    void postsCashApplicationAsAdvanceToReceivableClearing() {
+        AccountingDocument document = service.postCashApplication(
+                UUID.randomUUID(), "CA-1001", "USD", new BigDecimal("25.00"));
+
+        assertEquals("CASH_APPLICATION", document.getDocumentType());
+        assertEquals(new BigDecimal("25.00"), document.getTotalDebit());
+        assertEquals(new BigDecimal("25.00"), document.getTotalCredit());
+        assertEquals("220000", document.getLines().get(0).getGlAccount().getAccountCode());
+        assertEquals("120000", document.getLines().get(1).getGlAccount().getAccountCode());
+    }
+
+    @Test
+    void reversesIncomingPaymentUsingOriginalAppliedAndUnappliedAmounts() {
+        AccountingDocument document = service.reverseIncomingPayment(
+                UUID.randomUUID(), "PAY-1001", "USD",
+                new BigDecimal("150.00"), new BigDecimal("100.00"));
+
+        assertEquals("INCOMING_PAYMENT_REVERSAL", document.getDocumentType());
+        assertEquals(new BigDecimal("150.00"), document.getTotalDebit());
+        assertEquals(new BigDecimal("150.00"), document.getTotalCredit());
+        assertEquals(3, document.getLines().size());
+    }
+
+    @Test
+    void postsStockAdjustmentValuation() {
+        AccountingDocument document = service.postStockAdjustment(
+                UUID.randomUUID(), "ADJ-1001", "USD",
+                new BigDecimal("80.00"), new BigDecimal("30.00"));
+
+        assertEquals("STOCK_ADJUSTMENT", document.getDocumentType());
+        assertEquals(new BigDecimal("110.00"), document.getTotalDebit());
+        assertEquals(new BigDecimal("110.00"), document.getTotalCredit());
+        assertEquals(4, document.getLines().size());
+    }
+
+    @Test
     void rejectsDuplicateReferenceId() {
         UUID referenceId = UUID.randomUUID();
         lenient().when(documentRepository.findFirstByReferenceTypeAndReferenceIdAndStatus("TEST_REF", referenceId, "POSTED"))
