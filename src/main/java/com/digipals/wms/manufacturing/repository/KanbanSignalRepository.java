@@ -1,0 +1,1 @@
+package com.digipals.wms.manufacturing.repository; import com.digipals.wms.manufacturing.entity.KanbanSignal; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface KanbanSignalRepository extends JpaRepository<KanbanSignal,UUID>{List<KanbanSignal> findByStatus(String status);}
