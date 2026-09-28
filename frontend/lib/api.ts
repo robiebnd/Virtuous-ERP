@@ -56,13 +56,27 @@ export const procurementApi = {
 
 export const manufacturingApi = {
   orders:()=>list<any>("/api/v1/manufacturing/production-orders"),
+  createOrder:(body:any)=>api<any>("/api/v1/manufacturing/production-orders",{method:"POST",body:JSON.stringify(body)}),
   boms:()=>list<any>("/api/v1/manufacturing/boms"),
+  createBom:(body:any)=>api<any>("/api/v1/manufacturing/boms",{method:"POST",body:JSON.stringify(body)}),
+  routings:()=>list<any>("/api/v1/manufacturing/routings"),
+  createRouting:(body:any)=>api<any>("/api/v1/manufacturing/routings",{method:"POST",body:JSON.stringify(body)}),
+  recipes:()=>list<any>("/api/v1/manufacturing/recipes"),
+  createRecipe:(body:any)=>api<any>("/api/v1/manufacturing/recipes",{method:"POST",body:JSON.stringify(body)}),
+  capacity:()=>list<any>("/api/v1/manufacturing/capacity"),
+  saveCapacity:(body:any)=>api<any>("/api/v1/manufacturing/capacity",{method:"POST",body:JSON.stringify(body)}),
+  kanbanCycles:()=>list<any>("/api/v1/manufacturing/kanban/cycles"),
+  kanbanSignals:()=>list<any>("/api/v1/manufacturing/kanban/signals"),
+  signalKanban:(id:string,triggerSource?:string)=>api<any>("/api/v1/manufacturing/kanban/"+id+"/signal"+(triggerSource?"?triggerSource="+encodeURIComponent(triggerSource):""),{method:"POST"}),
+  mrpPlans:()=>list<any>("/api/v1/manufacturing/mrp/plans"),
+  mrpComponents:(planId?:string)=>list<any>(planId?"/api/v1/manufacturing/mrp/components?planId="+encodeURIComponent(planId):"/api/v1/manufacturing/mrp/components"),
   runMrp:(body:any)=>api<any>("/api/v1/manufacturing/mrp/run",{method:"POST",body:JSON.stringify(body)}),
-  release:(id:string)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/release`,{method:"POST"}),
-  confirm:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/confirm`,{method:"POST",body:JSON.stringify(body)}),
-  issue:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/issue-components`,{method:"POST",body:JSON.stringify(body)}),
-  receipt:(id:string,body:any)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/receipt`,{method:"POST",body:JSON.stringify(body)}),
-  close:(id:string)=>api<any>(`/api/v1/manufacturing/production-orders/${id}/close`,{method:"POST"})
+  release:(id:string)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/release",{method:"POST"}),
+  confirm:(id:string,body:any)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/confirm",{method:"POST",body:JSON.stringify(body)}),
+  issue:(id:string,body:any)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/issue-components",{method:"POST",body:JSON.stringify(body)}),
+  receipt:(id:string,body:any)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/receipt",{method:"POST",body:JSON.stringify(body)}),
+  close:(id:string)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/close",{method:"POST"}),
+  schedule:(id:string,date:string)=>api<any>("/api/v1/manufacturing/production-orders/"+id+"/schedule?date="+encodeURIComponent(date),{method:"POST"})
 };
 
 export const qualityApi = {
