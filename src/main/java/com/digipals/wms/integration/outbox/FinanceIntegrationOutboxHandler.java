@@ -83,7 +83,8 @@ public class FinanceIntegrationOutboxHandler {
                     CashApplicationPostedEvent payload = objectMapper.readValue(event.getPayload(), CashApplicationPostedEvent.class);
                     financePostingService.postCashApplication(
                             payload.sourceDocumentId(), payload.sourceDocumentNumber(), payload.currency(), payload.amount());
-                }\n                case IntegrationEventTypes.MANUFACTURING_PRODUCTION_CONFIRMED -> {
+                }
+                case IntegrationEventTypes.MANUFACTURING_PRODUCTION_CONFIRMED -> {
                     ProductionConfirmedEvent payload = objectMapper.readValue(event.getPayload(), ProductionConfirmedEvent.class);
                     financePostingService.postProductionReceipt(
                             payload.sourceDocumentId(), payload.sourceDocumentNumber(), payload.currency(), payload.valuationAmount());
