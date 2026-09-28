@@ -195,7 +195,9 @@ public class InventoryServiceImpl implements InventoryService {
                                 .quantityOnHand(BigDecimal.ZERO).quantityReserved(BigDecimal.ZERO)
                                 .quantityQuality(BigDecimal.ZERO).quantityBlocked(BigDecimal.ZERO).build());
                 inventory.setQuantityQuality(inventory.getQuantityQuality().add(quantity));
-                return inventoryBinRepository.save(inventory);
+                inventory = inventoryBinRepository.save(inventory);
+                recordQualityTransaction(inventory, TransactionType.GOODS_RECEIPT, quantity, referenceNumber, referenceType, remarks, performedBy);
+                return inventory;
         }
 
         @Override
@@ -207,7 +209,9 @@ public class InventoryServiceImpl implements InventoryService {
                         throw new RuntimeException("Insufficient quality stock.");
                 inventory.setQuantityQuality(inventory.getQuantityQuality().subtract(quantity));
                 inventory.setQuantityOnHand(inventory.getQuantityOnHand().add(quantity));
-                return inventoryBinRepository.save(inventory);
+                inventory = inventoryBinRepository.save(inventory);
+                recordQualityTransaction(inventory, TransactionType.ADJUSTMENT_IN, quantity, referenceNumber, referenceType, remarks, performedBy);
+                return inventory;
         }
 
         @Override
@@ -219,7 +223,9 @@ public class InventoryServiceImpl implements InventoryService {
                         throw new RuntimeException("Insufficient quality stock.");
                 inventory.setQuantityQuality(inventory.getQuantityQuality().subtract(quantity));
                 inventory.setQuantityBlocked(inventory.getQuantityBlocked().add(quantity));
-                return inventoryBinRepository.save(inventory);
+                inventory = inventoryBinRepository.save(inventory);
+                recordQualityTransaction(inventory, TransactionType.ADJUSTMENT_OUT, quantity, referenceNumber, referenceType, remarks, performedBy);
+                return inventory;
         }
 
         @Override
@@ -263,6 +269,27 @@ public class InventoryServiceImpl implements InventoryService {
                                 performedBy);
 
                 return inventory;
+        }
+
+        private void recordQualityTransaction(
+                        InventoryBin inventory,
+                        TransactionType transactionType,
+                        BigDecimal quantity,
+                        String referenceNumber,
+                        String referenceType,
+                        String remarks,
+                        User performedBy) {
+                inventoryTransactionRepository.save(InventoryTransaction.builder()
+                                .inventoryBin(inventory)
+                                .transactionType(transactionType)
+                                .quantity(quantity)
+                                .balanceAfter(inventory.getQuantityQuality())
+                                .referenceNumber(referenceNumber)
+                                .referenceType(referenceType)
+                                .performedBy(performedBy)
+                                .remarks(remarks)
+                                .transactionDate(LocalDateTime.now())
+                                .build());
         }
 
         private void recordTransaction(
