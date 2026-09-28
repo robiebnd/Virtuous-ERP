@@ -12,6 +12,7 @@ public class ManufacturingController {
  @PostMapping("/production-orders/{id}/confirm") public ProductionConfirmation confirm(@PathVariable UUID id,@RequestBody ConfirmRequest r){return service.confirmProduction(id,r.quantity(),r.scrapQuantity(),r.operation(),r.remarks());}
  @PostMapping("/production-orders/{id}/receipt") public ProductionConfirmation receipt(@PathVariable UUID id,@RequestBody ReceiptRequest r){return service.receiveFinishedGoods(id,r.binId(),r.quantity());}
  @PostMapping("/production-orders/{id}/close") public ProductionOrder close(@PathVariable UUID id){return service.closeProductionOrder(id);}
+ @PostMapping("/production-orders/{id}/schedule") public CapacityRecord schedule(@PathVariable UUID id,@RequestParam LocalDate date){return service.scheduleProductionOrder(id,date);}
  @PostMapping("/capacity") public CapacityRecord capacity(@RequestBody CapacityRecord r){return service.saveCapacity(r);}
  @PostMapping("/mrp/run") public MrpPlan mrp(@RequestBody MrpRequest r){return r.productId()==null?service.runMrp(r.plantCode(),r.strategyGroup(),r.demandCount(),r.plannedOrderCount()):service.runMrp(r.productId(),r.plantCode(),r.strategyGroup(),r.grossDemand(),r.currentStock(),r.safetyStock(),r.lotSize());}
  @PostMapping("/kanban/{cycleId}/signal") public KanbanSignal signal(@PathVariable UUID cycleId,@RequestParam(required=false) String triggerSource){return service.signalKanban(cycleId,triggerSource);}
