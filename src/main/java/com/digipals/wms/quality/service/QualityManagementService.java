@@ -9,5 +9,7 @@ public interface QualityManagementService {
  InspectionResult recordResult(UUID lotId,UUID characteristicId,BigDecimal measured,String qualitative);
  UsageDecision decide(UUID lotId,String decision,String stockAction,String remarks);
  QualityNotification createNotification(QualityNotification n);
+ QualityCatalogCode createCatalogCode(QualityCatalogCode c);
+ List<QualityCatalogCode> catalog(String type);
  List<InspectionLot> openLots();
 }
