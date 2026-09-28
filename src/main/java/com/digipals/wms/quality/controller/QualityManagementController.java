@@ -1,0 +1,22 @@
+package com.digipals.wms.quality.controller;
+import com.digipals.wms.quality.entity.*;
+import com.digipals.wms.quality.service.QualityManagementService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
+import java.util.*;
+@RestController @RequestMapping("/api/v1/quality") @RequiredArgsConstructor
+public class QualityManagementController {
+ private final QualityManagementService service;
+ @PostMapping("/characteristics") public MasterInspectionCharacteristic characteristic(@RequestBody MasterInspectionCharacteristic c){return service.createCharacteristic(c);}
+ @PostMapping("/plans") public InspectionPlan plan(@RequestBody PlanRequest r){return service.createPlan(r.plan(),r.characteristicIds()==null?List.of():r.characteristicIds());}
+ @PostMapping("/lots") public InspectionLot lot(@RequestBody LotRequest r){return service.createLot(r.productId(),r.plantCode(),r.inspectionType(),r.sourceDocumentType(),r.sourceDocumentId(),r.quantity());}
+ @PostMapping("/lots/{id}/results") public InspectionResult result(@PathVariable UUID id,@RequestBody ResultRequest r){return service.recordResult(id,r.characteristicId(),r.measuredValue(),r.qualitativeResult());}
+ @PostMapping("/lots/{id}/decision") public UsageDecision decision(@PathVariable UUID id,@RequestBody DecisionRequest r){return service.decide(id,r.decisionCode(),r.stockAction(),r.remarks());}
+ @PostMapping("/notifications") public QualityNotification notification(@RequestBody QualityNotification n){return service.createNotification(n);}
+ @GetMapping("/lots/open") public List<InspectionLot> open(){return service.openLots();}
+ public record PlanRequest(InspectionPlan plan,List<UUID> characteristicIds){}
+ public record LotRequest(UUID productId,String plantCode,String inspectionType,String sourceDocumentType,UUID sourceDocumentId,BigDecimal quantity){}
+ public record ResultRequest(UUID characteristicId,BigDecimal measuredValue,String qualitativeResult){}
+ public record DecisionRequest(String decisionCode,String stockAction,String remarks){}
+}
