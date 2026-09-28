@@ -316,15 +316,15 @@ public class GoodsMovementServiceImpl
                             "Goods Receipt requires a destination bin.");
                 }
 
-                inventoryService.receiveStock(
-                        warehouse,
-                        line.getToBin(),
-                        product,
-                        quantity,
-                        referenceNumber,
-                        referenceType,
-                        remarks,
-                        performedBy);
+                boolean qualityRequired = inspectionPlanRepository.findFirstByProductIdAndPlantCodeAndStatusOrderByCreatedAtDesc(
+                        product.getId(), warehouse.getCode(), "ACTIVE").isPresent();
+                if (qualityRequired) {
+                    inventoryService.receiveQualityStock(warehouse, line.getToBin(), product, quantity,
+                            referenceNumber, referenceType, "Goods receipt awaiting quality inspection", performedBy);
+                } else {
+                    inventoryService.receiveStock(warehouse, line.getToBin(), product, quantity,
+                            referenceNumber, referenceType, remarks, performedBy);
+                }
             }
 
             case CUSTOMER_RETURN -> {
