@@ -12,13 +12,15 @@ public class QualityManagementController {
  @PostMapping("/plans") public InspectionPlan plan(@RequestBody PlanRequest r){return service.createPlan(r.plan(),r.characteristicIds()==null?List.of():r.characteristicIds());}
  @PostMapping("/lots") public InspectionLot lot(@RequestBody LotRequest r){return service.createLot(r.productId(),r.plantCode(),r.inspectionType(),r.sourceDocumentType(),r.sourceDocumentId(),r.quantity());}
  @PostMapping("/lots/{id}/results") public InspectionResult result(@PathVariable UUID id,@RequestBody ResultRequest r){return service.recordResult(id,r.characteristicId(),r.measuredValue(),r.qualitativeResult());}
- @PostMapping("/lots/{id}/decision") public UsageDecision decision(@PathVariable UUID id,@RequestBody DecisionRequest r){return service.decide(id,r.decisionCode(),r.stockAction(),r.remarks());}
+ @PostMapping("/lots/{id}/decision") public UsageDecision decision(@PathVariable UUID id,@RequestBody DecisionRequest r){return service.decide(id,r.decisionCode(),r.stockAction(),r.remarks(),r.binId());}
  @PostMapping("/catalogs") public QualityCatalogCode catalogCode(@RequestBody QualityCatalogCode c){return service.createCatalogCode(c);}
  @GetMapping("/catalogs/{type}") public List<QualityCatalogCode> catalog(@PathVariable String type){return service.catalog(type);}
  @PostMapping("/notifications") public QualityNotification notification(@RequestBody QualityNotification n){return service.createNotification(n);}
+ @PostMapping("/notifications/{id}/tasks/{taskId}/complete") public QualityNotification completeTask(@PathVariable UUID id,@PathVariable UUID taskId,@RequestParam(required=false) String notes){return service.completeTask(id,taskId,notes);}
+ @PostMapping("/notifications/{id}/close") public QualityNotification closeNotification(@PathVariable UUID id){return service.closeNotification(id);}
  @GetMapping("/lots/open") public List<InspectionLot> open(){return service.openLots();}
  public record PlanRequest(InspectionPlan plan,List<UUID> characteristicIds){}
  public record LotRequest(UUID productId,String plantCode,String inspectionType,String sourceDocumentType,UUID sourceDocumentId,BigDecimal quantity){}
  public record ResultRequest(UUID characteristicId,BigDecimal measuredValue,String qualitativeResult){}
- public record DecisionRequest(String decisionCode,String stockAction,String remarks){}
+ public record DecisionRequest(String decisionCode,String stockAction,String remarks,UUID binId){}
 }
