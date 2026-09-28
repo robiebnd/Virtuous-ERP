@@ -71,7 +71,7 @@ public class IncomingPaymentServiceImpl implements IncomingPaymentService {
     public IncomingPayment cancel(UUID id) {
         IncomingPayment payment = paymentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Incoming payment not found: " + id));
         if (payment.getStatus() == PaymentStatus.CANCELLED) throw new IllegalStateException("Payment is already cancelled");
-        BigDecimal appliedAmount = allocationRepository.findActiveByBillingDocumentIdForPayment(payment.getId(), PaymentStatus.CANCELLED)
+        BigDecimal appliedAmount = allocationRepository.findActiveByPaymentId(payment.getId(), PaymentStatus.CANCELLED)
                 .stream()
                 .map(PaymentAllocation::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
