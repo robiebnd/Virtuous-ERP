@@ -19,7 +19,7 @@ public class ProductionOrder extends BaseEntity {
  @Column(name="plant_code",nullable=false) private String plantCode;
  @Column(nullable=false) private BigDecimal plannedQuantity;
  @Column(nullable=false) private BigDecimal confirmedQuantity;
- @Column(nullable=false) private BigDecimal receivedQuantity;
+ @Column(nullable=false) @Builder.Default private BigDecimal receivedQuantity=BigDecimal.ZERO;
  @Column(nullable=false) private String orderType;
  @Column(nullable=false) private String status;
  private LocalDate plannedStartDate;
