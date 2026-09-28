@@ -9,7 +9,7 @@ public interface ManufacturingService {
  void issueComponents(UUID orderId, UUID binId, BigDecimal quantityMultiplier);
  ProductionConfirmation receiveFinishedGoods(UUID orderId, UUID binId, BigDecimal quantity);
  ProductionOrder closeProductionOrder(UUID id);
- CapacityRecord saveCapacity(CapacityRecord r);
+ CapacityRecord saveCapacity(CapacityRecord r); CapacityRecord scheduleProductionOrder(UUID orderId,LocalDate date);
  MrpPlan runMrp(String plant,String strategy,int demand,int planned);
  MrpPlan runMrp(UUID productId,String plant,String strategy,BigDecimal grossDemand,BigDecimal currentStock,BigDecimal safetyStock,BigDecimal lotSize);
  KanbanSignal signalKanban(UUID cycleId,String trigger);
