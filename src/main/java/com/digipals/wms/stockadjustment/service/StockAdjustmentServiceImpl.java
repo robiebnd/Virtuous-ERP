@@ -1,6 +1,7 @@
 package com.digipals.wms.stockadjustment.service;
 
 import com.digipals.wms.common.document.DocumentType;
+import com.digipals.wms.common.exception.InvalidWorkflowException;
 import com.digipals.wms.common.document.service.DocumentNumberService;
 import com.digipals.wms.common.mapper.StockAdjustmentMapper;
 import com.digipals.wms.bin.entity.Bin;
@@ -10,6 +11,9 @@ import com.digipals.wms.inventorybin.repository.InventoryBinRepository;
 import com.digipals.wms.inventorytransaction.entity.InventoryTransaction;
 import com.digipals.wms.inventorytransaction.entity.TransactionType;
 import com.digipals.wms.inventorytransaction.repository.InventoryTransactionRepository;
+import com.digipals.wms.integration.IntegrationEventTypes;
+import com.digipals.wms.integration.inventory.StockAdjustmentPostedEvent;
+import com.digipals.wms.integration.outbox.IntegrationOutboxService;
 import com.digipals.wms.security.CurrentUserService;
 import com.digipals.wms.stockadjustment.dto.CreateStockAdjustmentRequest;
 import com.digipals.wms.stockadjustment.dto.StockAdjustmentResponse;
@@ -50,6 +54,7 @@ public class StockAdjustmentServiceImpl implements StockAdjustmentService {
     private final StockCountLineRepository stockCountLineRepository;
     private final StockCountRepository stockCountRepository;
     private final CurrentUserService currentUserService;
+    private final IntegrationOutboxService outboxService;
 
     private InventoryBin getInventoryBin(UUID warehouseId, UUID binId, UUID productId) {
         return inventoryBinRepository.findByWarehouseIdAndBinIdAndProductId(
@@ -159,6 +164,9 @@ public class StockAdjustmentServiceImpl implements StockAdjustmentService {
             throw new RuntimeException("Adjustment contains no lines.");
         }
 
+        BigDecimal inventoryIncreaseValue = BigDecimal.ZERO;
+        BigDecimal inventoryDecreaseValue = BigDecimal.ZERO;
+
         for (StockAdjustmentLine line : lines) {
             InventoryBin inventory = getInventoryBin(
                     adjustment.getWarehouse().getId(),
@@ -171,6 +179,18 @@ public class StockAdjustmentServiceImpl implements StockAdjustmentService {
 
             if (countedQty.compareTo(BigDecimal.ZERO) < 0) {
                 throw new RuntimeException("Counted quantity cannot be negative.");
+            }
+
+            BigDecimal unitCost = line.getProduct().getCostPrice();
+            if (difference.compareTo(BigDecimal.ZERO) != 0 && (unitCost == null || unitCost.compareTo(BigDecimal.ZERO) <= 0)) {
+                throw new InvalidWorkflowException("A positive product cost price is required for stock adjustment: " + line.getProduct().getSku());
+            }
+
+            BigDecimal valuation = difference.abs().multiply(unitCost == null ? BigDecimal.ZERO : unitCost).setScale(2, java.math.RoundingMode.HALF_UP);
+            if (difference.compareTo(BigDecimal.ZERO) > 0) {
+                inventoryIncreaseValue = inventoryIncreaseValue.add(valuation);
+            } else if (difference.compareTo(BigDecimal.ZERO) < 0) {
+                inventoryDecreaseValue = inventoryDecreaseValue.add(valuation);
             }
 
             inventory.setQuantityOnHand(countedQty);
@@ -195,6 +215,23 @@ public class StockAdjustmentServiceImpl implements StockAdjustmentService {
         adjustment.setPostedAt(LocalDateTime.now());
         adjustment.setStatus(AdjustmentStatus.POSTED);
         adjustment = repository.save(adjustment);
+
+        if (inventoryIncreaseValue.compareTo(BigDecimal.ZERO) > 0 || inventoryDecreaseValue.compareTo(BigDecimal.ZERO) > 0) {
+            outboxService.enqueue(
+                    IntegrationEventTypes.INVENTORY_STOCK_ADJUSTMENT_POSTED,
+                    "STOCK_ADJUSTMENT",
+                    adjustment.getId(),
+                    new StockAdjustmentPostedEvent(
+                            adjustment.getId(),
+                            adjustment.getAdjustmentNumber(),
+                            "USD",
+                            inventoryIncreaseValue,
+                            inventoryDecreaseValue,
+                            adjustment.getPostedAt()
+                    ),
+                    adjustment.getPostedAt()
+            );
+        }
 
         stockCountRepository.findByStockAdjustmentId(adjustment.getId()).ifPresent(count -> {
             count.setStatus(StockCountStatus.RECONCILED);
