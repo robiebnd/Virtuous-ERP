@@ -9,5 +9,5 @@ public interface QualityManagementService {
  QualityInfoRecord createQualityInfoRecord(QualityInfoRecord r); QualityInfoRecord getQualityInfoRecord(UUID supplierId,UUID productId);
  QualityCatalogCode createCatalogCode(QualityCatalogCode c); List<QualityCatalogCode> catalog(String type);
  QualityNotification createNotification(QualityNotification n); QualityNotification completeTask(UUID notificationId,UUID taskId,String notes); QualityNotification closeNotification(UUID notificationId);
- List<InspectionLot> openLots();
+ List<InspectionLot> openLots(); List<MasterInspectionCharacteristic> listCharacteristics(); List<InspectionPlan> listPlans(); List<InspectionLot> listLots(); List<QualityNotification> listNotifications(); List<QualityInfoRecord> listInfoRecords(); List<QualityCatalogCode> listCatalogCodes();
 }
