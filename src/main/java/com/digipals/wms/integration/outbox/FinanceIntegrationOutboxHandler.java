@@ -8,6 +8,7 @@ import com.digipals.wms.integration.o2c.CashApplicationPostedEvent;
 import com.digipals.wms.integration.o2c.CustomerBillingPostedEvent;
 import com.digipals.wms.integration.o2c.IncomingPaymentCancelledEvent;
 import com.digipals.wms.integration.o2c.IncomingPaymentReceivedEvent;
+import com.digipals.wms.integration.manufacturing.ProductionConfirmedEvent;
 import com.digipals.wms.integration.procurement.GoodsReceiptApprovedEvent;
 import com.digipals.wms.integration.procurement.VendorInvoiceMatchedEvent;
 import com.digipals.wms.integration.procurement.VendorPaymentPostedEvent;
@@ -82,6 +83,10 @@ public class FinanceIntegrationOutboxHandler {
                     CashApplicationPostedEvent payload = objectMapper.readValue(event.getPayload(), CashApplicationPostedEvent.class);
                     financePostingService.postCashApplication(
                             payload.sourceDocumentId(), payload.sourceDocumentNumber(), payload.currency(), payload.amount());
+                }\n                case IntegrationEventTypes.MANUFACTURING_PRODUCTION_CONFIRMED -> {
+                    ProductionConfirmedEvent payload = objectMapper.readValue(event.getPayload(), ProductionConfirmedEvent.class);
+                    financePostingService.postProductionReceipt(
+                            payload.sourceDocumentId(), payload.sourceDocumentNumber(), payload.currency(), payload.valuationAmount());
                 }
                 default -> throw new IllegalArgumentException("Unsupported integration outbox event type: " + event.getEventType());
             }
