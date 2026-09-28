@@ -121,6 +121,83 @@ public class FinancePostingService {
         return postBalanced("INCOMING_PAYMENT", "INCOMING_PAYMENT", id, paymentNumber, currency, "Incoming payment " + paymentNumber, lines);
     }
 
+    public AccountingDocument postCashApplication(UUID allocationId, String applicationNumber, String currency, BigDecimal amount) {
+        BigDecimal applied = nvl(amount).setScale(2, RoundingMode.HALF_UP);
+        if (applied.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidWorkflowException("Cash application amount must be greater than zero.");
+        }
+        return postBalanced(
+                "CASH_APPLICATION",
+                "PAYMENT_ALLOCATION",
+                allocationId,
+                applicationNumber,
+                currency,
+                "Customer cash application " + applicationNumber,
+                List.of(
+                        new PostingLine("220000", applied, BigDecimal.ZERO, null, null, null, null, "Release customer advance / unapplied cash"),
+                        new PostingLine("120000", BigDecimal.ZERO, applied, null, null, null, null, "Clear customer receivable")
+                )
+        );
+    }
+
+    public AccountingDocument reverseIncomingPayment(UUID paymentId, String paymentNumber, String currency, BigDecimal paymentAmount, BigDecimal appliedAmount) {
+        BigDecimal payment = nvl(paymentAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal applied = nvl(appliedAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal unapplied = payment.subtract(applied);
+        if (payment.compareTo(BigDecimal.ZERO) <= 0 || applied.compareTo(BigDecimal.ZERO) < 0 || unapplied.compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidWorkflowException("Invalid incoming payment reversal amounts.");
+        }
+
+        List<PostingLine> lines = new java.util.ArrayList<>();
+        if (applied.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine("120000", applied, BigDecimal.ZERO, null, null, null, null, "Reverse customer receivable clearing"));
+        }
+        if (unapplied.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine("220000", unapplied, BigDecimal.ZERO, null, null, null, null, "Reverse customer advance / unapplied cash"));
+        }
+        lines.add(new PostingLine("100000", BigDecimal.ZERO, payment, null, null, null, null, "Reverse bank receipt"));
+
+        return postBalanced(
+                "INCOMING_PAYMENT_REVERSAL",
+                "INCOMING_PAYMENT_REVERSAL",
+                paymentId,
+                paymentNumber,
+                currency,
+                "Reverse incoming payment " + paymentNumber,
+                lines
+        );
+    }
+
+    public AccountingDocument postStockAdjustment(UUID adjustmentId, String adjustmentNumber, String currency,
+                                                   BigDecimal inventoryIncreaseAmount, BigDecimal inventoryDecreaseAmount) {
+        BigDecimal increase = nvl(inventoryIncreaseAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal decrease = nvl(inventoryDecreaseAmount).setScale(2, RoundingMode.HALF_UP);
+        if (increase.compareTo(BigDecimal.ZERO) < 0 || decrease.compareTo(BigDecimal.ZERO) < 0
+                || (increase.compareTo(BigDecimal.ZERO) == 0 && decrease.compareTo(BigDecimal.ZERO) == 0)) {
+            throw new InvalidWorkflowException("Stock adjustment must contain a positive increase or decrease value.");
+        }
+
+        List<PostingLine> lines = new java.util.ArrayList<>();
+        if (increase.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine("110000", increase, BigDecimal.ZERO, null, null, null, null, "Inventory adjustment increase"));
+            lines.add(new PostingLine("530000", BigDecimal.ZERO, increase, null, null, null, null, "Inventory adjustment gain"));
+        }
+        if (decrease.compareTo(BigDecimal.ZERO) > 0) {
+            lines.add(new PostingLine("530000", decrease, BigDecimal.ZERO, null, null, null, null, "Inventory write-off / adjustment loss"));
+            lines.add(new PostingLine("110000", BigDecimal.ZERO, decrease, null, null, null, null, "Inventory adjustment decrease"));
+        }
+
+        return postBalanced(
+                "STOCK_ADJUSTMENT",
+                "STOCK_ADJUSTMENT",
+                adjustmentId,
+                adjustmentNumber,
+                currency,
+                "Inventory stock adjustment " + adjustmentNumber,
+                lines
+        );
+    }
+
     private BigDecimal nvl(BigDecimal value) { return value == null ? BigDecimal.ZERO : value; }
     private String nextDocumentNumber() { return "FI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT); }
     public record PostingLine(String accountCode, BigDecimal debit, BigDecimal credit, String costCenter, String profitCenter, String functionalArea, String segment, String lineText, String internalOrderCode, String wbsElement, String partnerCompanyCode, String taxCode, BigDecimal taxBase, BigDecimal taxAmount, UUID profitabilitySegmentId) {
