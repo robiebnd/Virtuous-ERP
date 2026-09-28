@@ -2,6 +2,7 @@ package com.digipals.wms.manufacturing.service;
 import com.digipals.wms.manufacturing.entity.*;
 import java.math.BigDecimal; import java.time.LocalDate; import java.util.UUID;
 public interface ManufacturingService {
+ List<ProductionOrder> listProductionOrders(); List<Bom> listBoms();
  MasterRecipe createRecipe(MasterRecipe r); Bom createBom(Bom b); Routing createRouting(Routing r);
  ProductionOrder createProductionOrder(UUID productId,String plant,String type,BigDecimal qty,LocalDate start,LocalDate finish);
  ProductionOrder releaseProductionOrder(UUID id);
