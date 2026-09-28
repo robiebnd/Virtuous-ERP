@@ -21,6 +21,12 @@ public class QualityManagementController {
  @PostMapping("/notifications/{id}/tasks/{taskId}/complete") public QualityNotification completeTask(@PathVariable UUID id,@PathVariable UUID taskId,@RequestParam(required=false) String notes){return service.completeTask(id,taskId,notes);}
  @PostMapping("/notifications/{id}/close") public QualityNotification closeNotification(@PathVariable UUID id){return service.closeNotification(id);}
  @GetMapping("/lots/open") public List<InspectionLot> open(){return service.openLots();}
+ @GetMapping("/characteristics") public List<MasterInspectionCharacteristic> characteristics(){return service.listCharacteristics();}
+ @GetMapping("/plans") public List<InspectionPlan> plans(){return service.listPlans();}
+ @GetMapping("/lots") public List<InspectionLot> lots(){return service.listLots();}
+ @GetMapping("/notifications") public List<QualityNotification> notifications(){return service.listNotifications();}
+ @GetMapping("/info-records") public List<QualityInfoRecord> infoRecords(){return service.listInfoRecords();}
+ @GetMapping("/catalogs") public List<QualityCatalogCode> catalogs(){return service.listCatalogCodes();}
  public record PlanRequest(InspectionPlan plan,List<UUID> characteristicIds){}
  public record LotRequest(UUID productId,String plantCode,String inspectionType,String sourceDocumentType,UUID sourceDocumentId,BigDecimal quantity){}
  public record ResultRequest(UUID characteristicId,BigDecimal measuredValue,String qualitativeResult){}
