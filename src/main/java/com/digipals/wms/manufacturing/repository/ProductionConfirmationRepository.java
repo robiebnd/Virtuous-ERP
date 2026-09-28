@@ -1,0 +1,1 @@
+package com.digipals.wms.manufacturing.repository; import com.digipals.wms.manufacturing.entity.ProductionConfirmation; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ProductionConfirmationRepository extends JpaRepository<ProductionConfirmation,UUID>{List<ProductionConfirmation> findByProductionOrderId(UUID id);}
