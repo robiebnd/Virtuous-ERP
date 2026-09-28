@@ -11,7 +11,7 @@ public class Routing extends BaseEntity {
  @Column(name="routing_number",nullable=false,unique=true) private String routingNumber;
  @ManyToOne(optional=false) @JoinColumn(name="product_id") private Product product;
  @Column(nullable=false) private String plantCode;
- private String version;
+ private String routingVersion;
  @Column(nullable=false) private String status;
  @OneToMany(mappedBy="routing",cascade=CascadeType.ALL,orphanRemoval=true) @Builder.Default private List<RoutingOperation> operations=new ArrayList<>();
 }
