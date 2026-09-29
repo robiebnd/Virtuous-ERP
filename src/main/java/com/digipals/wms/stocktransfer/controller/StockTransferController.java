@@ -66,6 +66,15 @@ public class StockTransferController {
     }
 
     /**
+     * Cancel Stock Transfer
+     */
+    @PutMapping("/{id}/cancel")
+    public StockTransferResponse cancel(
+            @PathVariable UUID id) {
+        return service.cancel(id);
+    }
+
+    /**
      * Receive Stock Transfer
      */
     @PutMapping("/{id}/receive")
