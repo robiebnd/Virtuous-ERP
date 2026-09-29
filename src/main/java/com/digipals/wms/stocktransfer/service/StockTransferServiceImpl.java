@@ -294,24 +294,16 @@ public class StockTransferServiceImpl
                         /*
                          * Move inventory.
                          */
-                        inventoryService.moveStock(
-
+                        inventoryService.transferStock(
                                         transfer.getSourceWarehouse(),
-
                                         sourceBin,
-
+                                        transfer.getDestinationWarehouse(),
                                         destinationBin,
-
                                         line.getProduct(),
-
                                         line.getQuantity(),
-
                                         transfer.getTransferNumber(),
-
                                         "STOCK_TRANSFER",
-
                                         "Warehouse Transfer",
-
                                         currentUser);
                 }
 
