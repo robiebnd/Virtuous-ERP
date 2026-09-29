@@ -246,6 +246,7 @@ export const warehouseExecutionApi = {
   bins:(warehouseId:string)=>list<any>("/api/bins/warehouse/"+warehouseId),
   allBins:()=>list<any>("/api/bins"),
   createBin:(body:any)=>api<any>("/api/bins",{method:"POST",body:JSON.stringify(body)}),
+  updateBin:(id:string,body:any)=>api<any>("/api/bins/"+id,{method:"PUT",body:JSON.stringify(body)}),
   deleteBin:(id:string)=>api<any>("/api/bins/"+id,{method:"DELETE"}),
   products:()=>list<any>("/api/warehouse-execution/products"),
   adjust:(id:string,quantity:number)=>api<any>("/api/warehouse-execution/inventory/"+id+"/adjust?quantity="+quantity,{method:"POST"}),
