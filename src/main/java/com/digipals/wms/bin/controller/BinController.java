@@ -2,6 +2,7 @@ package com.digipals.wms.bin.controller;
 
 import com.digipals.wms.bin.dto.BinResponse;
 import com.digipals.wms.bin.dto.CreateBinRequest;
+import com.digipals.wms.bin.dto.UpdateBinRequest;
 import com.digipals.wms.bin.service.BinService;
 import com.digipals.wms.warehouse.entity.Warehouse;
 import com.digipals.wms.warehouse.repository.WarehouseRepository;
@@ -28,6 +29,13 @@ public class BinController {
             @Valid @RequestBody CreateBinRequest request) {
 
         return service.create(request);
+    }
+
+    @PutMapping("/{id}")
+    public BinResponse update(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateBinRequest request) {
+        return service.update(id, request);
     }
 
     @GetMapping
