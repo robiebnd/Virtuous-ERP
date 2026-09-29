@@ -91,6 +91,7 @@ const groups = [
     { label: "Stock & Bins", href: "/warehouse/stock", icon: "hierarchy" as IconName },
     { label: "Put-Away", href: "/warehouse/putaway", icon: "package" as IconName },
     { label: "Stock Counts", href: "/warehouse/stock-counts", icon: "list" as IconName },
+    { label: "Stock Adjustments", href: "/warehouse/stock-adjustments", icon: "refresh" as IconName },
     { label: "Stock Transfers", href: "/warehouse/stock-transfers", icon: "truck" as IconName },
     { label: "Goods Movements", href: "/warehouse/goods-movements", icon: "refresh" as IconName },
     { label: "Inventory Transactions", href: "/warehouse/inventory-transactions", icon: "document" as IconName },
