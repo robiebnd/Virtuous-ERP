@@ -20,6 +20,7 @@ public interface InventoryService {
     InventoryBin blockQualityStock(Warehouse warehouse,Bin bin,Product product,BigDecimal quantity,String referenceNumber,String referenceType,String remarks,User performedBy);
     InventoryBin issueStock(Warehouse warehouse,Bin bin,Product product,BigDecimal quantity,String referenceNumber,String referenceType,String remarks,User performedBy);
     void moveStock(Warehouse warehouse,Bin fromBin,Bin toBin,Product product,BigDecimal quantity,String referenceNumber,String referenceType,String remarks,User performedBy);
+    void transferStock(Warehouse sourceWarehouse,Bin fromBin,Warehouse destinationWarehouse,Bin toBin,Product product,BigDecimal quantity,String referenceNumber,String referenceType,String remarks,User performedBy);
     InventoryBin reserveStock(UUID inventoryBinId,BigDecimal quantity); InventoryBin releaseReservation(UUID inventoryBinId,BigDecimal quantity);
     BigDecimal availableStock(UUID inventoryBinId);
     boolean inventoryExists(UUID warehouseId,UUID binId,UUID productId);
