@@ -32,6 +32,14 @@ public class BinResponse {
 
     private Boolean active;
 
+    private Boolean receivingBin;
+
+    private String description;
+
+    private String status;
+
+    private BigDecimal usedCapacity;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
