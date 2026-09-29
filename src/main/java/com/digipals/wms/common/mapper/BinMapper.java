@@ -21,6 +21,10 @@ public class BinMapper {
                 .type(bin.getType())
                 .capacity(bin.getCapacity())
                 .active(bin.getActive())
+                .receivingBin(bin.getReceivingBin())
+                .description(bin.getDescription())
+                .status(bin.getStatus() == null ? null : bin.getStatus().name())
+                .usedCapacity(bin.getUsedCapacity())
                 .createdAt(bin.getCreatedAt())
                 .updatedAt(bin.getUpdatedAt())
                 .build();
