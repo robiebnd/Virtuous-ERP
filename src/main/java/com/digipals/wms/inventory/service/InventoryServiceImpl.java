@@ -334,6 +334,65 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         @Override
+        public void transferStock(
+                        Warehouse sourceWarehouse,
+                        Bin fromBin,
+                        Warehouse destinationWarehouse,
+                        Bin toBin,
+                        Product product,
+                        BigDecimal quantity,
+                        String referenceNumber,
+                        String referenceType,
+                        String remarks,
+                        User performedBy) {
+
+                if (quantity == null || quantity.signum() <= 0) {
+                        throw new RuntimeException("Transfer quantity must be greater than zero.");
+                }
+                if (fromBin.getId().equals(toBin.getId())) {
+                        throw new RuntimeException("Source and destination bins cannot be the same.");
+                }
+                if (!fromBin.getWarehouse().getId().equals(sourceWarehouse.getId())) {
+                        throw new RuntimeException("Source bin does not belong to the source warehouse.");
+                }
+                if (!toBin.getWarehouse().getId().equals(destinationWarehouse.getId())) {
+                        throw new RuntimeException("Destination bin does not belong to the destination warehouse.");
+                }
+
+                InventoryBin sourceInventory = inventoryBinRepository
+                                .findByWarehouseIdAndBinIdAndProductId(
+                                                sourceWarehouse.getId(), fromBin.getId(), product.getId())
+                                .orElseThrow(() -> new RuntimeException("Source inventory not found."));
+
+                if (sourceInventory.getQuantityOnHand().compareTo(quantity) < 0) {
+                        throw new RuntimeException("Insufficient stock in source bin.");
+                }
+
+                InventoryBin destinationInventory = inventoryBinRepository
+                                .findByWarehouseIdAndBinIdAndProductId(
+                                                destinationWarehouse.getId(), toBin.getId(), product.getId())
+                                .orElseGet(() -> InventoryBin.builder()
+                                                .warehouse(destinationWarehouse)
+                                                .bin(toBin)
+                                                .product(product)
+                                                .quantityOnHand(BigDecimal.ZERO)
+                                                .quantityReserved(BigDecimal.ZERO)
+                                                .quantityQuality(BigDecimal.ZERO)
+                                                .quantityBlocked(BigDecimal.ZERO)
+                                                .build());
+
+                sourceInventory.setQuantityOnHand(sourceInventory.getQuantityOnHand().subtract(quantity));
+                destinationInventory.setQuantityOnHand(destinationInventory.getQuantityOnHand().add(quantity));
+                inventoryBinRepository.save(sourceInventory);
+                destinationInventory = inventoryBinRepository.save(destinationInventory);
+
+                recordTransaction(sourceInventory, TransactionType.TRANSFER_OUT, quantity.negate(),
+                                referenceNumber, referenceType, fromBin, toBin, remarks, performedBy);
+                recordTransaction(destinationInventory, TransactionType.TRANSFER_IN, quantity,
+                                referenceNumber, referenceType, fromBin, toBin, remarks, performedBy);
+        }
+
+        @Override
         public void moveStock(
                         Warehouse warehouse,
                         Bin fromBin,
