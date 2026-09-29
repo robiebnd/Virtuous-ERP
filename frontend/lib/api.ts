@@ -260,6 +260,7 @@ export const warehouseExecutionApi = {
   putAways:()=>list<any>("/api/put-aways"),
   createPutAway:(body:any)=>api<any>("/api/put-aways",{method:"POST",body:JSON.stringify(body)}),
   completePutAway:(id:string)=>api<any>("/api/put-aways/"+id+"/complete",{method:"POST"}),
+  putAwayLines:(id:string)=>list<any>("/api/put-aways/"+id+"/lines"),
   cancelPutAway:(id:string)=>api<any>("/api/put-aways/"+id+"/cancel",{method:"POST"}),
   putAwayLine:(lineId:string,body:any)=>api<any>("/api/put-aways/lines/"+lineId+"/put-away",{method:"POST",body:JSON.stringify(body)}),
   stockCounts:()=>list<any>("/api/stock-counts"),
