@@ -279,6 +279,7 @@ export const warehouseExecutionApi = {
   approveStockTransfer:(id:string)=>api<any>("/api/stock-transfers/"+id+"/approve",{method:"PUT"}),
   issueStockTransfer:(id:string)=>api<any>("/api/stock-transfers/"+id+"/issue",{method:"PUT"}),
   receiveStockTransfer:(id:string)=>api<any>("/api/stock-transfers/"+id+"/receive",{method:"PUT"}),
+  cancelStockTransfer:(id:string)=>api<any>("/api/stock-transfers/"+id+"/cancel",{method:"PUT"}),
   goodsMovements:()=>list<any>("/api/goods-movements"),
   createGoodsMovement:(body:any)=>api<any>("/api/goods-movements",{method:"POST",body:JSON.stringify(body)}),
   postGoodsMovement:(id:string)=>api<any>("/api/goods-movements/"+id+"/post",{method:"POST"}),
